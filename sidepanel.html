@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="styles/common.css">
+  <style>
+    body { width: 100%; height: 100vh; display: flex; flex-direction: column; padding: 16px; }
+    .header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+    .logo { width: 32px; height: 32px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; }
+    .btn-icon { background: transparent; padding: 4px; margin-left: auto; }
+    .settings-panel { display: none; background: var(--bg-secondary); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+    .settings-panel.active { display: block; }
+    .settings-panel h3 { font-size: 14px; margin-bottom: 12px; }
+    .settings-panel label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+    .key-input { margin-bottom: 12px; }
+    .location-card { background: var(--bg-secondary); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+    .location-card h3 { font-size: 14px; margin-bottom: 8px; }
+    .coords { font-family: monospace; font-size: 12px; color: var(--text-muted); }
+    .address { font-size: 13px; margin-top: 4px; }
+    .chat-container { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; padding-right: 4px; }
+    .message { background: var(--bg-secondary); border-radius: 8px; padding: 12px; max-width: 100%; }
+    .message.user { border-left: 3px solid var(--primary); }
+    .message.assistant { border-left: 3px solid var(--success); }
+    .message-header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 12px; font-weight: 500; color: var(--text-muted); }
+    .message-content { font-size: 13px; line-height: 1.6; white-space: pre-wrap; }
+    .input-area { display: flex; gap: 8px; }
+    .quick-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    .quick-action-btn { background: var(--bg-secondary); font-size: 11px; padding: 6px 10px; }
+    .quick-action-btn:hover { background: var(--border); }
+  </style>
+</head>
+<body>
+  <div class="header"><div class="logo">G</div><h2>GeoClaude</h2><button class="btn-icon" id="toggleSettings">⚙️</button></div>
+  <div class="settings-panel" id="settingsPanel">
+    <h3>Settings</h3>
+    <label>Anthropic API Key</label>
+    <input type="password" id="apiKeyInput" class="key-input" placeholder="sk-ant-...">
+    <button id="saveKey" style="width: 100%">Save API Key</button>
+    <div id="keyStatus"></div>
+  </div>
+  <div class="location-card"><h3>📍 Current Location</h3><div class="coords" id="locationCoords">Detecting...</div><div class="address" id="locationAddress"></div></div>
+  <div class="quick-actions">
+    <button class="quick-action-btn" data-prompt="What's interesting about this area?">🔍 Explore area</button>
+    <button class="quick-action-btn" data-prompt="What are the best restaurants nearby?">🍽️ Restaurants</button>
+    <button class="quick-action-btn" data-prompt="What are popular attractions here?">🎯 Attractions</button>
+    <button class="quick-action-btn" data-prompt="Tell me about the local culture">🎨 Culture</button>
+  </div>
+  <div class="chat-container" id="chatContainer"></div>
+  <div class="input-area"><input type="text" id="messageInput" placeholder="Ask about this location..."><button id="sendMessage">Send</button></div>
+  <script src="sidepanel.js"></script>
+</body>
+</html>

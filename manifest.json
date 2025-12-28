@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "GeoClaude - Geospatial AI Insights",
+  "version": "2.0.0",
+  "description": "Get AI-powered insights about any location on the web. Powered by Anthropic's Claude.",
+  "permissions": ["activeTab", "storage", "sidePanel", "geolocation"],
+  "host_permissions": ["https://api.anthropic.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Open GeoClaude"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "icons": {
+    "16": "icons/icon16.svg",
+    "48": "icons/icon48.svg",
+    "128": "icons/icon128.svg"
+  }
+}
