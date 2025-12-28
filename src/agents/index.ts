@@ -999,3 +999,20 @@ export {
 	type TAC12SwarmIntegration,
 	type TAC12Task,
 } from "./tac12-sdk.js";
+// AIRIS-Inspired Causal Reasoning - ASI Alliance proto-AGI concepts
+export {
+	type CausalAction,
+	type CausalEngineConfig,
+	type CausalHypothesis,
+	type CausalLink,
+	CausalReasoningEngine,
+	createCausalTools,
+	DEFAULT_CAUSAL_CONFIG,
+	getCausalEngine,
+	getTradingCausalEngine,
+	type Prediction,
+	resetCausalEngine,
+	StateGraph,
+	TradingCausalEngine,
+	type WorldState,
+} from "./airis-causal.js";
