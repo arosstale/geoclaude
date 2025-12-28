@@ -1107,3 +1107,21 @@ export {
 	SandboxManager,
 	type SandboxSession,
 } from "./browser-use-adapter.js";
+// Aitmpl Adapter - aitmpl.com Claude Code templates platform
+export {
+	type AitmplComponent,
+	type AitmplConfig,
+	AitmplClient,
+	AITMPL_PLATFORMS,
+	AnalyticsTracker,
+	type ComponentType,
+	getAitmplClient,
+	HealthChecker,
+	type HealthCheckResult,
+	initAitmpl,
+	type PerformanceReport,
+	type PlatformIntegration,
+	type Plugin,
+	PluginManager,
+	TemplateRegistry,
+} from "./aitmpl-adapter.js";

@@ -4134,6 +4134,72 @@ const slashCommands = [
 		)
 		.addSubcommand((sub) => sub.setName("pages").setDescription("List active browser pages"))
 		.addSubcommand((sub) => sub.setName("close").setDescription("Close all browser pages")),
+
+	// Aitmpl - Claude Code templates platform (aitmpl.com/agents)
+	new SlashCommandBuilder()
+		.setName("aitmpl")
+		.setDescription("Claude Code templates - registry, analytics, health, plugins")
+		.addSubcommand((sub) => sub.setName("status").setDescription("Check aitmpl platform status"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("install")
+				.setDescription("Install a platform integration")
+				.addStringOption((opt) =>
+					opt.setName("platform").setDescription("Platform to install").setRequired(true).addChoices(
+						{ name: "OpenAI", value: "openai" },
+						{ name: "Anthropic", value: "anthropic" },
+						{ name: "Stripe", value: "stripe" },
+						{ name: "AWS", value: "aws" },
+						{ name: "GitHub", value: "github" },
+						{ name: "Supabase", value: "supabase" },
+					),
+				),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("search")
+				.setDescription("Search for templates and components")
+				.addStringOption((opt) => opt.setName("query").setDescription("Search query").setRequired(true))
+				.addStringOption((opt) =>
+					opt.setName("type").setDescription("Component type").addChoices(
+						{ name: "All", value: "all" },
+						{ name: "Agent", value: "agent" },
+						{ name: "Command", value: "command" },
+						{ name: "Setting", value: "setting" },
+						{ name: "Hook", value: "hook" },
+						{ name: "MCP", value: "mcp" },
+						{ name: "Skill", value: "skill" },
+					),
+				),
+		)
+		.addSubcommand((sub) => sub.setName("platforms").setDescription("List available platform integrations"))
+		.addSubcommand((sub) => sub.setName("health").setDescription("Run health checks on installed components"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("analytics")
+				.setDescription("View performance analytics")
+				.addStringOption((opt) =>
+					opt.setName("period").setDescription("Time period").addChoices(
+						{ name: "Hour", value: "hour" },
+						{ name: "Day", value: "day" },
+						{ name: "Week", value: "week" },
+						{ name: "Month", value: "month" },
+					),
+				),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("plugin")
+				.setDescription("Manage plugins")
+				.addStringOption((opt) =>
+					opt.setName("action").setDescription("Plugin action").setRequired(true).addChoices(
+						{ name: "List", value: "list" },
+						{ name: "Enable", value: "enable" },
+						{ name: "Disable", value: "disable" },
+					),
+				)
+				.addStringOption((opt) => opt.setName("plugin_id").setDescription("Plugin ID (for enable/disable)")),
+		),
 ];
 
 // ============================================================================
@@ -18908,6 +18974,234 @@ async function main() {
 					} catch (error) {
 						const errMsg = error instanceof Error ? error.message : String(error);
 						await interaction.editReply(`❌ Browser error: ${errMsg}`);
+					}
+					break;
+				}
+
+				case "aitmpl": {
+					await interaction.deferReply();
+					const aitmplSubcommand = interaction.options.getSubcommand();
+
+					try {
+						const aitmplModule = await import("./agents/aitmpl-adapter.js");
+						const { getAitmplClient, AITMPL_PLATFORMS } = aitmplModule;
+						const client = getAitmplClient();
+
+						switch (aitmplSubcommand) {
+							case "status": {
+								const status = client.getStatus();
+
+								const embed = new EmbedBuilder()
+									.setTitle("📦 Aitmpl Platform Status")
+									.setColor(0x9b59b6)
+									.addFields(
+										{ name: "Components", value: String(status.registry.total), inline: true },
+										{ name: "Platforms", value: String(status.platforms.installed), inline: true },
+										{ name: "Plugins", value: String(status.plugins.total), inline: true },
+									)
+									.addFields(
+										{ name: "Stacks", value: String(status.registry.stacks), inline: true },
+										{ name: "Enabled Plugins", value: String(status.plugins.enabled), inline: true },
+									)
+									.setDescription("Claude Code template and component management platform")
+									.setFooter({ text: "aitmpl.com/agents" })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "install": {
+								const platformId = interaction.options.getString("platform", true);
+
+								await interaction.editReply(`⏳ Installing platform: ${platformId}...`);
+
+								const success = client.installPlatform(platformId);
+
+								const platform = AITMPL_PLATFORMS.find((p: { id: string }) => p.id === platformId);
+
+								const embed = new EmbedBuilder()
+									.setTitle(success ? "✅ Platform Installed" : "❌ Installation Failed")
+									.setColor(success ? 0x00ff00 : 0xff0000)
+									.addFields(
+										{ name: "Platform", value: platform?.name || platformId, inline: true },
+										{ name: "Auth Type", value: platform?.authType || "unknown", inline: true },
+									)
+									.setDescription(
+										success
+											? `Installed ${platform?.name || platformId} (${platform?.category || "unknown"})`
+											: `Platform ${platformId} not found or missing env vars`,
+									)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "search": {
+								const query = interaction.options.getString("query", true);
+								const typeFilter = interaction.options.getString("type") || "all";
+
+								let results = client.registry.search(query);
+								if (typeFilter !== "all") {
+									results = results.filter((c: { type: string }) => c.type === typeFilter);
+								}
+
+								if (results.length === 0) {
+									await interaction.editReply(`📭 No components found for "${query}"`);
+									break;
+								}
+
+								const embed = new EmbedBuilder()
+									.setTitle(`🔍 Search Results: "${query}"`)
+									.setColor(0x9b59b6)
+									.setDescription(
+										results
+											.slice(0, 10)
+											.map(
+												(c: { type: string; name: string; description: string }, i: number) =>
+													`**${i + 1}.** [${c.type.toUpperCase()}] **${c.name}**\n   ${c.description.slice(0, 80)}`,
+											)
+											.join("\n\n"),
+									)
+									.setFooter({ text: `${results.length} result(s)` })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "platforms": {
+								const embed = new EmbedBuilder()
+									.setTitle("📦 Available Platform Integrations")
+									.setColor(0x9b59b6)
+									.setDescription(
+										AITMPL_PLATFORMS.map(
+											(p: { id: string; name: string; category: string; authType: string }) =>
+												`**${p.name}** (\`${p.id}\`)\n   Category: ${p.category} | Auth: ${p.authType}`,
+										).join("\n\n"),
+									)
+									.setFooter({ text: `${AITMPL_PLATFORMS.length} platforms available` })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "health": {
+								await interaction.editReply("⏳ Running health checks...");
+
+								const results = await client.healthChecker.runAll();
+								const healthy = results.filter((r: { status: string }) => r.status === "healthy").length;
+
+								const embed = new EmbedBuilder()
+									.setTitle("🏥 Health Check Results")
+									.setColor(healthy === results.length ? 0x00ff00 : healthy > 0 ? 0xffcc00 : 0xff0000)
+									.addFields(
+										{ name: "Healthy", value: String(healthy), inline: true },
+										{ name: "Total", value: String(results.length), inline: true },
+									)
+									.setDescription(
+										results.length === 0
+											? "No health checks registered"
+											: results
+													.map(
+														(r: { component: string; status: string; message: string }) =>
+															`${r.status === "healthy" ? "✅" : r.status === "degraded" ? "⚠️" : "❌"} **${r.component}**: ${r.message}`,
+													)
+													.join("\n"),
+									)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "analytics": {
+								const period = (interaction.options.getString("period") || "day") as
+									| "hour"
+									| "day"
+									| "week"
+									| "month";
+
+								const report = client.analytics.getReport(period);
+
+								const embed = new EmbedBuilder()
+									.setTitle(`📊 Analytics Report (${period})`)
+									.setColor(0x9b59b6)
+									.addFields(
+										{ name: "Tool Calls", value: String(report.toolCalls), inline: true },
+										{ name: "Success Rate", value: `${(report.successRate * 100).toFixed(1)}%`, inline: true },
+										{ name: "Avg Response", value: `${report.avgResponseTime.toFixed(0)}ms`, inline: true },
+									)
+									.setDescription(
+										report.topTools.length === 0
+											? "No tool calls recorded yet"
+											: `**Top Tools:**\n${report.topTools.slice(0, 5).map((t: { toolName: string; callCount: number }) => `• ${t.toolName}: ${t.callCount} calls`).join("\n")}`,
+									)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "plugin": {
+								const action = interaction.options.getString("action", true);
+								const pluginId = interaction.options.getString("plugin_id");
+
+								switch (action) {
+									case "list": {
+										const plugins = client.pluginManager.getAll();
+
+										if (plugins.length === 0) {
+											await interaction.editReply("📭 No plugins installed");
+											break;
+										}
+
+										const embed = new EmbedBuilder()
+											.setTitle("🔌 Installed Plugins")
+											.setColor(0x9b59b6)
+											.setDescription(
+												plugins
+													.map(
+														(p: { enabled: boolean; name: string; id: string; version: string }) =>
+															`${p.enabled ? "✅" : "❌"} **${p.name}** (\`${p.id}\`)\n   Version: ${p.version}`,
+													)
+													.join("\n\n"),
+											)
+											.setFooter({ text: `${plugins.length} plugin(s)` })
+											.setTimestamp();
+
+										await interaction.editReply({ embeds: [embed] });
+										break;
+									}
+
+									case "enable":
+									case "disable": {
+										if (!pluginId) {
+											await interaction.editReply("❌ Plugin ID required for enable/disable");
+											break;
+										}
+
+										const success = client.pluginManager.setEnabled(pluginId, action === "enable");
+
+										await interaction.editReply(
+											success
+												? `✅ Plugin \`${pluginId}\` ${action}d`
+												: `❌ Failed to ${action} plugin \`${pluginId}\``,
+										);
+										break;
+									}
+								}
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown aitmpl subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`❌ Aitmpl error: ${errMsg}`);
 					}
 					break;
 				}
