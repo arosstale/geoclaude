@@ -3946,6 +3946,194 @@ const slashCommands = [
 		.addSubcommand((sub) => sub.setName("costs").setDescription("View cost tracking data"))
 		.addSubcommand((sub) => sub.setName("agents").setDescription("List all TAC-12 agents"))
 		.addSubcommand((sub) => sub.setName("patterns").setDescription("List available orchestration patterns")),
+
+	// Claude-Flow - Enterprise AI orchestration (ruvnet/claude-flow)
+	new SlashCommandBuilder()
+		.setName("claude-flow")
+		.setDescription("Enterprise AI orchestration - AgentDB, HiveMind swarms, skills")
+		.addSubcommand((sub) => sub.setName("status").setDescription("Check Claude-Flow connection and AgentDB stats"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("remember")
+				.setDescription("Store a memory in AgentDB with vector indexing")
+				.addStringOption((opt) => opt.setName("content").setDescription("Memory content to store").setRequired(true))
+				.addStringOption((opt) => opt.setName("namespace").setDescription("Optional namespace for organization")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("search")
+				.setDescription("Vector search across stored memories (96x faster)")
+				.addStringOption((opt) => opt.setName("query").setDescription("Search query").setRequired(true))
+				.addIntegerOption((opt) => opt.setName("limit").setDescription("Max results (default: 5)")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("swarm")
+				.setDescription("Initialize HiveMind swarm with queen and workers")
+				.addStringOption((opt) => opt.setName("task").setDescription("Task for the swarm to execute").setRequired(true))
+				.addIntegerOption((opt) => opt.setName("workers").setDescription("Number of worker agents (default: 3)")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("reflect")
+				.setDescription("Store experience with outcome for learning")
+				.addStringOption((opt) => opt.setName("experience").setDescription("What happened").setRequired(true))
+				.addStringOption((opt) =>
+					opt
+						.setName("outcome")
+						.setDescription("Was it successful?")
+						.setRequired(true)
+						.addChoices({ name: "Success", value: "success" }, { name: "Failure", value: "failure" }),
+				)
+				.addStringOption((opt) => opt.setName("lessons").setDescription("Lessons learned (comma-separated)").setRequired(true)),
+		)
+		.addSubcommand((sub) => sub.setName("skills").setDescription("List available Claude skills from skill activator")),
+
+	// Claude-Mem - Persistent memory compression (thedotmack/claude-mem)
+	new SlashCommandBuilder()
+		.setName("claude-mem")
+		.setDescription("Persistent memory with compression and progressive disclosure")
+		.addSubcommand((sub) => sub.setName("status").setDescription("Check Claude-Mem session status and memory stats"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("observe")
+				.setDescription("Record an observation with auto-tagging")
+				.addStringOption((opt) => opt.setName("content").setDescription("Observation content").setRequired(true))
+				.addStringOption((opt) =>
+					opt.setName("type").setDescription("Observation type").addChoices(
+						{ name: "Code", value: "code" },
+						{ name: "Architecture", value: "architecture" },
+						{ name: "Bug", value: "bug" },
+						{ name: "Decision", value: "decision" },
+						{ name: "Todo", value: "todo" },
+						{ name: "Insight", value: "insight" },
+					),
+				),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("search")
+				.setDescription("Search memories with FTS5 full-text search")
+				.addStringOption((opt) => opt.setName("query").setDescription("Search query").setRequired(true))
+				.addStringOption((opt) =>
+					opt.setName("type").setDescription("Search type").addChoices(
+						{ name: "All", value: "all" },
+						{ name: "By Concept", value: "concept" },
+						{ name: "By File", value: "file" },
+					),
+				),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("context")
+				.setDescription("Get progressive disclosure context for content")
+				.addStringOption((opt) => opt.setName("content").setDescription("Content to get context for").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("compress")
+				.setDescription("Compress text for token efficiency")
+				.addStringOption((opt) => opt.setName("content").setDescription("Content to compress").setRequired(true))
+				.addIntegerOption((opt) => opt.setName("target_tokens").setDescription("Target token count (default: 500)")),
+		),
+
+	// Continuity - Session continuity and handoffs (parcadei/Continuous-Claude)
+	new SlashCommandBuilder()
+		.setName("continuity")
+		.setDescription("Session continuity - ledger, handoffs, tracing")
+		.addSubcommand((sub) => sub.setName("status").setDescription("Check continuity system status"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("ledger")
+				.setDescription("View or update the session ledger")
+				.addStringOption((opt) =>
+					opt.setName("action").setDescription("Ledger action").addChoices(
+						{ name: "View", value: "view" },
+						{ name: "Add Goal", value: "add_goal" },
+						{ name: "Mark Complete", value: "mark_complete" },
+						{ name: "Add Note", value: "add_note" },
+					),
+				)
+				.addStringOption((opt) => opt.setName("content").setDescription("Content for the action")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("handoff")
+				.setDescription("Create a session handoff for future continuity")
+				.addStringOption((opt) => opt.setName("context").setDescription("Context summary for the handoff").setRequired(true))
+				.addStringOption((opt) => opt.setName("next_steps").setDescription("Recommended next steps (comma-separated)")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("resume")
+				.setDescription("Resume from a previous handoff")
+				.addStringOption((opt) => opt.setName("handoff_id").setDescription("Handoff ID to resume from")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("trace")
+				.setDescription("View session trace for debugging")
+				.addStringOption((opt) =>
+					opt.setName("action").setDescription("Trace action").addChoices(
+						{ name: "Start", value: "start" },
+						{ name: "View", value: "view" },
+						{ name: "End", value: "end" },
+					),
+				),
+		),
+
+	// Browser - Combined dev-browser + browser-use AI browser agent
+	new SlashCommandBuilder()
+		.setName("browser")
+		.setDescription("AI browser automation - persistent pages, sandboxes, extraction")
+		.addSubcommand((sub) =>
+			sub
+				.setName("goto")
+				.setDescription("Navigate to a URL and get LLM-friendly DOM snapshot")
+				.addStringOption((opt) => opt.setName("url").setDescription("URL to navigate to").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("click")
+				.setDescription("Click an element on the current page")
+				.addStringOption((opt) => opt.setName("selector").setDescription("CSS selector to click").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("fill")
+				.setDescription("Fill a form field on the current page")
+				.addStringOption((opt) => opt.setName("selector").setDescription("CSS selector for input").setRequired(true))
+				.addStringOption((opt) => opt.setName("value").setDescription("Value to fill").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("extract")
+				.setDescription("Extract structured data from a URL")
+				.addStringOption((opt) => opt.setName("url").setDescription("URL to extract from").setRequired(true))
+				.addStringOption((opt) =>
+					opt.setName("type").setDescription("Extraction type").addChoices(
+						{ name: "Text", value: "text" },
+						{ name: "Tables", value: "table" },
+						{ name: "Links", value: "links" },
+						{ name: "Forms", value: "form" },
+					),
+				),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("agent")
+				.setDescription("Run AI browser agent with natural language task")
+				.addStringOption((opt) => opt.setName("task").setDescription("Natural language task description").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("sandbox")
+				.setDescription("Run browser task in isolated sandbox")
+				.addStringOption((opt) => opt.setName("task").setDescription("Task to run in sandbox").setRequired(true))
+				.addIntegerOption((opt) => opt.setName("timeout").setDescription("Timeout in seconds (default: 60)")),
+		)
+		.addSubcommand((sub) => sub.setName("pages").setDescription("List active browser pages"))
+		.addSubcommand((sub) => sub.setName("close").setDescription("Close all browser pages")),
 ];
 
 // ============================================================================
@@ -18075,6 +18263,651 @@ async function main() {
 					} catch (error) {
 						const errMsg = error instanceof Error ? error.message : String(error);
 						await interaction.editReply(`❌ TAC-12 error: ${errMsg}`);
+					}
+					break;
+				}
+
+				// Claude-Flow - Enterprise AI orchestration (ruvnet/claude-flow)
+				case "claude-flow": {
+					await interaction.deferReply();
+					const cfSubcommand = interaction.options.getSubcommand();
+
+					try {
+						const cfModule = await import("./agents/claude-flow-adapter.js");
+						const { getClaudeFlowClient } = cfModule;
+
+						const client = getClaudeFlowClient();
+
+						switch (cfSubcommand) {
+							case "status": {
+								const stats = client.agentDb.getStats();
+								const hiveStatus = client.hiveMind.getStatus();
+
+								const embed = new EmbedBuilder()
+									.setTitle("🔄 Claude-Flow Status")
+									.setColor(0x00ff00)
+									.addFields(
+										{ name: "AgentDB Memories", value: String(stats.total), inline: true },
+										{ name: "Embeddings", value: String(stats.embeddingsCount), inline: true },
+										{ name: "Namespaces", value: String(Object.keys(stats.byNamespace).length), inline: true },
+										{ name: "Queen Active", value: hiveStatus.queen ? "✅" : "❌", inline: true },
+										{ name: "Workers", value: String(hiveStatus.workers.length), inline: true },
+										{ name: "Pending Tasks", value: String(hiveStatus.pendingTasks), inline: true },
+									)
+									.setDescription("Claude-Flow enterprise AI orchestration with 96x-164x faster vector search")
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "remember": {
+								const content = interaction.options.getString("content", true);
+								const namespace = interaction.options.getString("namespace") || undefined;
+
+								const memory = await client.agentDb.store(`discord-${Date.now()}`, content, namespace);
+
+								await interaction.editReply(
+									`✅ **Memory Stored**\n\n🆔 ID: \`${memory.id}\`\n📦 Namespace: ${namespace || "default"}\n📝 Content: ${content.slice(0, 200)}${content.length > 200 ? "..." : ""}`,
+								);
+								break;
+							}
+
+							case "search": {
+								const query = interaction.options.getString("query", true);
+								const limit = interaction.options.getInteger("limit") || 5;
+
+								const results = await client.agentDb.vectorSearch(query, { k: limit });
+
+								if (results.length === 0) {
+									await interaction.editReply(`🔍 No memories found matching: "${query}"`);
+									break;
+								}
+
+								const embed = new EmbedBuilder()
+									.setTitle("🔍 AgentDB Vector Search Results")
+									.setColor(0x00ff00)
+									.setDescription(
+										results
+											.map((r: { score: number; content: string }, i: number) => `**${i + 1}.** (${(r.score * 100).toFixed(1)}%) ${r.content.slice(0, 150)}${r.content.length > 150 ? "..." : ""}`)
+											.join("\n\n")
+											.slice(0, 2000),
+									)
+									.setFooter({ text: `Query: ${query} | Results: ${results.length}` })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "swarm": {
+								const task = interaction.options.getString("task", true);
+								const workerCount = interaction.options.getInteger("workers") || 3;
+
+								await interaction.editReply("⏳ Initializing HiveMind swarm...");
+
+								// Initialize queen
+								const queen = await client.hiveMind.initialize(task);
+
+								// Spawn workers with valid roles
+								const workerRoles: Array<"worker" | "scout" | "builder"> = ["worker", "scout", "builder"];
+								for (let i = 0; i < workerCount; i++) {
+									const role = workerRoles[i % workerRoles.length];
+									await client.hiveMind.spawnWorker(role, `${role} for: ${task}`);
+								}
+
+								// Execute task
+								const result = await client.hiveMind.executeTask({
+									id: `discord-swarm-${Date.now()}`,
+									prompt: task,
+									priority: "high",
+								});
+
+								const embed = new EmbedBuilder()
+									.setTitle("🐝 HiveMind Swarm Results")
+									.setColor(result.success ? 0x00ff00 : 0xff0000)
+									.addFields(
+										{ name: "Queen", value: queen.id.slice(0, 20), inline: true },
+										{ name: "Workers", value: String(workerCount), inline: true },
+										{ name: "Status", value: result.success ? "✅ Success" : "❌ Failed", inline: true },
+									)
+									.setDescription(`\`\`\`\n${(result.output || "Task completed").slice(0, 1800)}\n\`\`\``)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "reflect": {
+								const experience = interaction.options.getString("experience", true);
+								const outcome = interaction.options.getString("outcome", true) as "success" | "failure";
+								const lessonsRaw = interaction.options.getString("lessons", true);
+								const lessons = lessonsRaw.split(",").map((l: string) => l.trim());
+
+								await client.agentDb.reflect(experience, outcome, lessons);
+
+								await interaction.editReply(
+									`✅ **Experience Recorded**\n\n📝 Experience: ${experience.slice(0, 200)}\n${outcome === "success" ? "✅" : "❌"} Outcome: ${outcome}\n📚 Lessons:\n${lessons.map((l: string) => `• ${l}`).join("\n")}`,
+								);
+								break;
+							}
+
+							case "skills": {
+								const skills = cfModule.CLAUDE_FLOW_SKILLS;
+
+								const embed = new EmbedBuilder()
+									.setTitle("🎯 Claude-Flow Skills")
+									.setColor(0x00ff00)
+									.setDescription(
+										skills
+											.map((s: { name: string; triggers: string[]; description: string }) => `**${s.name}** (\`${s.triggers[0] || "N/A"}\`)\n${s.description}`)
+											.join("\n\n")
+											.slice(0, 2000),
+									)
+									.setFooter({ text: `${skills.length} skills available` })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown claude-flow subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`❌ Claude-Flow error: ${errMsg}`);
+					}
+					break;
+				}
+
+				// Claude-Mem - Persistent memory compression (thedotmack/claude-mem)
+				case "claude-mem": {
+					await interaction.deferReply();
+					const cmSubcommand = interaction.options.getSubcommand();
+
+					try {
+						const cmModule = await import("./agents/claude-mem-adapter.js");
+						const { getClaudeMemClient } = cmModule;
+
+						const client = getClaudeMemClient();
+
+						// Start a session if not already started
+						client.startSession(workingDir);
+
+						switch (cmSubcommand) {
+							case "status": {
+								const stats = client.getStats();
+
+								const embed = new EmbedBuilder()
+									.setTitle("🧠 Claude-Mem Status")
+									.setColor(0x00ff00)
+									.addFields(
+										{ name: "Session Active", value: stats.currentSession ? "✅" : "❌", inline: true },
+										{ name: "Observations", value: String(stats.search.observations), inline: true },
+										{ name: "Sessions", value: String(stats.search.sessions), inline: true },
+										{ name: "Concepts", value: String(stats.search.concepts), inline: true },
+										{ name: "Disclosure Level", value: stats.disclosureLevel, inline: true },
+									)
+									.setDescription("Persistent memory with compression and progressive disclosure")
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "observe": {
+								const content = interaction.options.getString("content", true);
+								const type = (interaction.options.getString("type") || "discovery") as "decision" | "bugfix" | "feature" | "refactor" | "discovery" | "change";
+
+								const observation = client.observe(content, { type });
+
+								await interaction.editReply(
+									`✅ **Observation Recorded**\n\n🆔 ID: \`${observation.id}\`\n📂 Type: ${type}\n📝 Content: ${content.slice(0, 200)}${content.length > 200 ? "..." : ""}`,
+								);
+								break;
+							}
+
+							case "search": {
+								const query = interaction.options.getString("query", true);
+								const searchType = interaction.options.getString("type") || "all";
+
+								type MemQueryType = "observations" | "sessions" | "prompts" | "concepts" | "files" | "types" | "recent" | "timeline";
+								let memType: MemQueryType = "observations";
+								if (searchType === "concept") {
+									memType = "concepts";
+								} else if (searchType === "file") {
+									memType = "files";
+								}
+
+								const results = client.memSearch({ query, type: memType });
+
+								if (results.length === 0) {
+									await interaction.editReply(`🔍 No memories found matching: "${query}"`);
+									break;
+								}
+
+								const embed = new EmbedBuilder()
+									.setTitle("🔍 Claude-Mem Search Results")
+									.setColor(0x00ff00)
+									.setDescription(
+										results
+											.slice(0, 10)
+											.map((r: { type: string; content: string }, i: number) => `**${i + 1}.** [${r.type}] ${r.content.slice(0, 150)}${r.content.length > 150 ? "..." : ""}`)
+											.join("\n\n")
+											.slice(0, 2000),
+									)
+									.setFooter({ text: `Query: ${query} | Results: ${results.length}` })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "context": {
+								const content = interaction.options.getString("content", true);
+								const layered = client.getContext(content);
+
+								const embed = new EmbedBuilder()
+									.setTitle("📚 Progressive Disclosure Context")
+									.setColor(0x00ff00)
+									.addFields(
+										{ name: "Level", value: layered.level, inline: true },
+										{ name: "Token Count", value: String(layered.tokenCount), inline: true },
+									)
+									.setDescription(`\`\`\`\n${layered.content.slice(0, 1800)}\n\`\`\``)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "compress": {
+								const content = interaction.options.getString("content", true);
+								const targetTokens = interaction.options.getInteger("target_tokens") || 500;
+
+								const compressor = new cmModule.MemoryCompressor();
+								const compressed = compressor.compress(content, targetTokens);
+
+								const originalTokens = Math.ceil(content.length / 4);
+								const compressedTokens = Math.ceil(compressed.length / 4);
+								const savings = Math.round((1 - compressedTokens / originalTokens) * 100);
+
+								const embed = new EmbedBuilder()
+									.setTitle("🗜️ Memory Compression Result")
+									.setColor(0x00ff00)
+									.addFields(
+										{ name: "Original", value: `~${originalTokens} tokens`, inline: true },
+										{ name: "Compressed", value: `~${compressedTokens} tokens`, inline: true },
+										{ name: "Savings", value: `${savings}%`, inline: true },
+									)
+									.setDescription(`\`\`\`\n${compressed.slice(0, 1800)}\n\`\`\``)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown claude-mem subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`❌ Claude-Mem error: ${errMsg}`);
+					}
+					break;
+				}
+
+				// Continuity - Session continuity and handoffs (parcadei/Continuous-Claude)
+				case "continuity": {
+					await interaction.deferReply();
+					const contSubcommand = interaction.options.getSubcommand();
+
+					try {
+						const contModule = await import("./agents/continuous-claude-adapter.js");
+						const { getContinuousClaudeClient } = contModule;
+
+						const client = getContinuousClaudeClient();
+
+						// Initialize session
+						const channelSessionId = `discord-${interaction.channelId}`;
+						client.initSession(workingDir);
+
+						switch (contSubcommand) {
+							case "status": {
+								const currentLedger = client.ledgerManager.getCurrent();
+								const latestHandoff = client.handoffManager.getLatest(workingDir);
+								const currentTrace = client.sessionTracer.getCurrentTrace();
+
+								const embed = new EmbedBuilder()
+									.setTitle("🔄 Continuity System Status")
+									.setColor(0x00ff00)
+									.addFields(
+										{ name: "Ledger Active", value: currentLedger ? "✅" : "❌", inline: true },
+										{ name: "Last Handoff", value: latestHandoff ? new Date(latestHandoff.createdAt).toLocaleDateString() : "None", inline: true },
+										{ name: "Tracing Active", value: currentTrace ? "✅" : "❌", inline: true },
+									)
+									.setDescription("Session continuity with ledger, handoffs, and Braintrust tracing")
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "ledger": {
+								const action = interaction.options.getString("action") || "view";
+								const content = interaction.options.getString("content");
+
+								const ledger = client.ledgerManager.getOrCreate(channelSessionId, workingDir);
+
+								if (action === "view") {
+									const markdown = client.ledgerManager.toMarkdown(ledger);
+
+									const embed = new EmbedBuilder()
+										.setTitle("📋 Session Ledger")
+										.setColor(0x00ff00)
+										.setDescription(`\`\`\`markdown\n${markdown.slice(0, 1900)}\n\`\`\``)
+										.setFooter({ text: `Session: ${channelSessionId.slice(0, 30)}` })
+										.setTimestamp();
+
+									await interaction.editReply({ embeds: [embed] });
+								} else if (action === "add_goal" && content) {
+									client.saveLedger({ goal: content });
+									await interaction.editReply(`✅ **Goal Added**\n\n📎 ${content}`);
+								} else if (action === "mark_complete" && content) {
+									client.saveLedger({ completed: [content] });
+									await interaction.editReply(`✅ **Goal Completed**\n\n✓ ${content}`);
+								} else if (action === "add_note" && content) {
+									client.saveLedger({ keyDecisions: [content] });
+									await interaction.editReply(`✅ **Note Added**\n\n📝 ${content}`);
+								} else {
+									await interaction.editReply("Please provide content for the action");
+								}
+								break;
+							}
+
+							case "handoff": {
+								const context = interaction.options.getString("context", true);
+								const nextStepsRaw = interaction.options.getString("next_steps");
+								const nextSteps = nextStepsRaw ? nextStepsRaw.split(",").map((s: string) => s.trim()) : [];
+
+								const handoff = client.createHandoff({
+									title: `Discord Handoff - ${new Date().toISOString()}`,
+									context,
+									nextSteps,
+								});
+
+								if (!handoff) {
+									await interaction.editReply("❌ Failed to create handoff (start a session first)");
+									break;
+								}
+
+								const embed = new EmbedBuilder()
+									.setTitle("🤝 Session Handoff Created")
+									.setColor(0x00ff00)
+									.addFields(
+										{ name: "Handoff ID", value: `\`${handoff.id}\``, inline: true },
+										{ name: "Session", value: channelSessionId.slice(0, 20), inline: true },
+									)
+									.setDescription(`**Context:**\n${context.slice(0, 500)}\n\n**Next Steps:**\n${nextSteps.map((s: string) => `• ${s}`).join("\n") || "None specified"}`)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "resume": {
+								const handoffId = interaction.options.getString("handoff_id");
+
+								let handoff;
+								if (handoffId) {
+									const handoffs = client.handoffManager.query({ search: handoffId });
+									handoff = handoffs[0];
+								} else {
+									// Get latest handoff for this project
+									handoff = client.handoffManager.getLatest(workingDir);
+								}
+
+								if (!handoff) {
+									await interaction.editReply("❌ No handoff found to resume from");
+									break;
+								}
+
+								const embed = new EmbedBuilder()
+									.setTitle("🔄 Resuming from Handoff")
+									.setColor(0x00ff00)
+									.addFields(
+										{ name: "Handoff ID", value: `\`${handoff.id}\``, inline: true },
+										{ name: "Created", value: new Date(handoff.createdAt).toLocaleString(), inline: true },
+									)
+									.setDescription(`**Context:**\n${handoff.context.slice(0, 800)}\n\n**Next Steps:**\n${handoff.nextSteps?.map((s: string) => `• ${s}`).join("\n") || "None"}`)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "trace": {
+								const action = interaction.options.getString("action") || "view";
+
+								if (action === "start") {
+									client.sessionTracer.startSession(workingDir);
+									await interaction.editReply("✅ **Tracing Started**\n\nSession tracing is now active for debugging.");
+								} else if (action === "view") {
+									const trace = client.sessionTracer.getCurrentTrace();
+									if (!trace) {
+										await interaction.editReply("No active trace. Use `/continuity trace action:start` to begin.");
+										break;
+									}
+
+									const embed = new EmbedBuilder()
+										.setTitle("🔍 Session Trace")
+										.setColor(0x00ff00)
+										.addFields(
+											{ name: "Session ID", value: trace.id.slice(0, 30), inline: true },
+											{ name: "Spans", value: String(trace.spans.length), inline: true },
+											{ name: "Started", value: new Date(trace.startedAt).toLocaleString(), inline: true },
+										)
+										.setDescription(
+											trace.spans.length > 0
+												? trace.spans
+														.slice(-5)
+														.map((s, i) => `**${i + 1}.** [${s.type}] ${String(s.input || "").slice(0, 80)}...`)
+														.join("\n\n")
+														.slice(0, 1800)
+												: "No spans recorded yet",
+										)
+										.setTimestamp();
+
+									await interaction.editReply({ embeds: [embed] });
+								} else if (action === "end") {
+									client.sessionTracer.endSession();
+									await interaction.editReply("✅ **Tracing Ended**\n\nSession trace has been saved.");
+								}
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown continuity subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`❌ Continuity error: ${errMsg}`);
+					}
+					break;
+				}
+
+				// Browser - Combined dev-browser + browser-use AI browser agent
+				case "browser": {
+					await interaction.deferReply();
+					const browserSubcommand = interaction.options.getSubcommand();
+
+					try {
+						// Import both browser adapters
+						const devBrowserModule = await import("./agents/dev-browser-adapter.js");
+						const browserUseModule = await import("./agents/browser-use-adapter.js");
+
+						const { getDevBrowserClient } = devBrowserModule;
+						const { getBrowserUseClient } = browserUseModule;
+
+						const devClient = getDevBrowserClient();
+						const useClient = getBrowserUseClient();
+
+						switch (browserSubcommand) {
+							case "goto": {
+								const url = interaction.options.getString("url", true);
+
+								await interaction.editReply(`⏳ Navigating to ${url}...`);
+
+								const result = await devClient.goto(url);
+
+								const embed = new EmbedBuilder()
+									.setTitle("🌐 Browser Navigation")
+									.setColor(0x00ff00)
+									.addFields(
+										{ name: "URL", value: url.slice(0, 100), inline: true },
+										{ name: "Page ID", value: result.page.id.slice(0, 20), inline: true },
+									)
+									.setDescription(`**LLM-Friendly DOM Snapshot:**\n\`\`\`\n${result.snapshot.slice(0, 1600)}\n\`\`\``)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "click": {
+								const selector = interaction.options.getString("selector", true);
+
+								const result = await devClient.click(selector);
+
+								await interaction.editReply(
+									result.success
+										? `✅ **Clicked Element**\n\nSelector: \`${selector}\``
+										: `❌ **Click Failed**\n\n${result.error}`,
+								);
+								break;
+							}
+
+							case "fill": {
+								const selector = interaction.options.getString("selector", true);
+								const value = interaction.options.getString("value", true);
+
+								const result = await devClient.fill(selector, value);
+
+								await interaction.editReply(
+									result.success
+										? `✅ **Field Filled**\n\nSelector: \`${selector}\`\nValue: ${value.slice(0, 50)}`
+										: `❌ **Fill Failed**\n\n${result.error}`,
+								);
+								break;
+							}
+
+							case "extract": {
+								const url = interaction.options.getString("url", true);
+								const type = (interaction.options.getString("type") || "text") as "text" | "table" | "links" | "form";
+
+								await interaction.editReply(`⏳ Extracting ${type} from ${url}...`);
+
+								const data = await useClient.extract(url, type);
+
+								const embed = new EmbedBuilder()
+									.setTitle(`📥 Extracted ${type.charAt(0).toUpperCase() + type.slice(1)}`)
+									.setColor(0x00ff00)
+									.addFields(
+										{ name: "URL", value: url.slice(0, 100), inline: true },
+										{ name: "Type", value: type, inline: true },
+									)
+									.setDescription(`\`\`\`json\n${JSON.stringify(data, null, 2).slice(0, 1700)}\n\`\`\``)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "agent": {
+								const task = interaction.options.getString("task", true);
+
+								await interaction.editReply(`⏳ Running AI browser agent...\n\n**Task:** ${task}`);
+
+								const result = await useClient.run(task);
+
+								const embed = new EmbedBuilder()
+									.setTitle("🤖 AI Browser Agent Result")
+									.setColor(result.status === "completed" ? 0x00ff00 : 0xff0000)
+									.addFields(
+										{ name: "Status", value: result.status, inline: true },
+										{ name: "Steps", value: String(result.steps.length), inline: true },
+									)
+									.setDescription(
+										`**Task:** ${task}\n\n**Result:**\n\`\`\`\n${(result.result || "Task completed").slice(0, 1500)}\n\`\`\``,
+									)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "sandbox": {
+								const task = interaction.options.getString("task", true);
+
+								await interaction.editReply(`⏳ Running in sandbox environment...\n\n**Task:** ${task}`);
+
+								const result = await useClient.runInSandbox(task);
+
+								const embed = new EmbedBuilder()
+									.setTitle("🔒 Sandbox Execution Result")
+									.setColor(result.task.status === "completed" ? 0x00ff00 : 0xff0000)
+									.addFields(
+										{ name: "Sandbox ID", value: result.session.id.slice(0, 20), inline: true },
+										{ name: "Status", value: result.task.status, inline: true },
+										{ name: "Steps", value: String(result.task.steps.length), inline: true },
+									)
+									.setDescription(
+										`**Task:** ${task}\n\n**Result:**\n\`\`\`\n${(result.task.result || "Task completed").slice(0, 1400)}\n\`\`\``,
+									)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "pages": {
+								const pages = devClient.sessionManager.getAllPages();
+
+								if (pages.length === 0) {
+									await interaction.editReply("📭 No active browser pages");
+									break;
+								}
+
+								const embed = new EmbedBuilder()
+									.setTitle("📑 Active Browser Pages")
+									.setColor(0x00ff00)
+									.setDescription(
+										pages
+											.map((p: { id: string; url: string }, i: number) => `**${i + 1}.** \`${p.id.slice(0, 15)}\`\n   ${p.url.slice(0, 60)}${p.url.length > 60 ? "..." : ""}`)
+											.join("\n\n")
+											.slice(0, 2000),
+									)
+									.setFooter({ text: `${pages.length} active page(s)` })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "close": {
+								// Close all pages by disconnecting
+								await devClient.disconnect();
+								await interaction.editReply("✅ **Browser Disconnected**");
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown browser subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`❌ Browser error: ${errMsg}`);
 					}
 					break;
 				}
