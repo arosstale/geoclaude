@@ -1253,3 +1253,14 @@ export {
 	type GitSnapshot,
 	resetBundleSystem,
 } from "./context-bundle.js";
+
+// Class 3.7 Output Style System (TAC Pattern: Configurable formats)
+export {
+	BUILTIN_STYLES,
+	getStyleManager,
+	type OutputStyle,
+	OutputStyleManager,
+	resetStyleManager,
+	type StyleConfig,
+	type StylePreset,
+} from "./output-styles.js";

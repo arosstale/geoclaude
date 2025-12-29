@@ -4684,6 +4684,51 @@ const slashCommands = [
 				.setDescription("Delete a bundle")
 				.addStringOption((opt) => opt.setName("id").setDescription("Bundle ID to delete").setRequired(true)),
 		),
+
+	// Class 3.7 Output Style System (TAC Pattern)
+	new SlashCommandBuilder()
+		.setName("style")
+		.setDescription("Output Style - configurable response formats (TAC pattern)")
+		.addSubcommand((sub) => sub.setName("list").setDescription("List all available output styles"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("set")
+				.setDescription("Set output style for current session")
+				.addStringOption((opt) =>
+					opt
+						.setName("style")
+						.setDescription("Style to use")
+						.setRequired(true)
+						.addChoices(
+							{ name: "Concise Ultra - Bullets only", value: "concise-ultra" },
+							{ name: "Concise TTS - Voice-friendly", value: "concise-tts" },
+							{ name: "Verbose YAML - Structured", value: "verbose-yaml" },
+							{ name: "Observable Tools - Show tool calls", value: "observable-tools" },
+							{ name: "Markdown Rich - Full formatting", value: "markdown-rich" },
+							{ name: "JSON Structured - Machine parse", value: "json-structured" },
+							{ name: "Discord Embed - Optimized", value: "discord-embed" },
+							{ name: "Trading Report - Signals format", value: "trading-report" },
+						),
+				),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("preview")
+				.setDescription("Preview a style with sample text")
+				.addStringOption((opt) =>
+					opt
+						.setName("style")
+						.setDescription("Style to preview")
+						.setRequired(true)
+						.addChoices(
+							{ name: "Concise Ultra", value: "concise-ultra" },
+							{ name: "Concise TTS", value: "concise-tts" },
+							{ name: "Discord Embed", value: "discord-embed" },
+							{ name: "Trading Report", value: "trading-report" },
+						),
+				),
+		)
+		.addSubcommand((sub) => sub.setName("current").setDescription("Show current style settings")),
 ];
 
 // ============================================================================
@@ -21287,6 +21332,122 @@ async function main() {
 					} catch (error) {
 						const errMsg = error instanceof Error ? error.message : String(error);
 						await interaction.editReply(`Bundle error: ${errMsg}`);
+					}
+					break;
+				}
+
+				case "style": {
+					await interaction.deferReply();
+					const styleSubcommand = interaction.options.getSubcommand();
+
+					try {
+						const { getStyleManager, BUILTIN_STYLES } = await import("./agents/output-styles.js");
+						const styleManager = getStyleManager();
+
+						switch (styleSubcommand) {
+							case "list": {
+								const styles = styleManager.listStyles();
+
+								const styleList = styles.map((s) => `**${s.name}** (\`${s.id}\`)\n${s.description}`);
+
+								const embed = new EmbedBuilder()
+									.setTitle("🎨 Output Styles")
+									.setColor(0x9b59b6)
+									.setDescription(styleList.join("\n\n"))
+									.setFooter({ text: "Use /style set to change your style" })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "set": {
+								const styleId = interaction.options.getString("style", true);
+								const style = styleManager.getStyle(styleId);
+
+								if (!style) {
+									await interaction.editReply(`Style not found: \`${styleId}\``);
+									break;
+								}
+
+								// Set for user (using channel as session key)
+								styleManager.setAgentStyle(channelId, styleId as any);
+
+								const embed = new EmbedBuilder()
+									.setTitle("✅ Style Updated")
+									.setColor(0x2ecc71)
+									.addFields(
+										{ name: "Style", value: style.name, inline: true },
+										{ name: "ID", value: style.id, inline: true },
+									)
+									.addFields({ name: "Description", value: style.description })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "preview": {
+								const styleId = interaction.options.getString("style", true);
+								const style = styleManager.getStyle(styleId);
+
+								if (!style) {
+									await interaction.editReply(`Style not found: \`${styleId}\``);
+									break;
+								}
+
+								// Sample text to preview
+								const sampleText = `Here's an analysis of the trading signals:
+
+The BTC/USDT pair shows strong bullish momentum with RSI at 65.
+Key resistance at $45,000 with support at $42,500.
+Volume is increasing, suggesting continued upward pressure.
+
+Recommendation: Consider a long position with stop-loss at $42,000.`;
+
+								const processed = styleManager.processOutput(sampleText, styleId);
+
+								const embed = new EmbedBuilder()
+									.setTitle(`🎨 Style Preview: ${style.name}`)
+									.setColor(0x3498db)
+									.addFields(
+										{ name: "Original", value: sampleText.slice(0, 500), inline: false },
+										{ name: "Processed", value: processed.slice(0, 500), inline: false },
+									)
+									.setFooter({ text: style.formatInstructions })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "current": {
+								const currentStyle = styleManager.getAgentStyle(channelId);
+								const config = styleManager.getConfig();
+
+								const embed = new EmbedBuilder()
+									.setTitle("⚙️ Current Style Settings")
+									.setColor(0x3498db)
+									.addFields(
+										{ name: "Active Style", value: currentStyle.name, inline: true },
+										{ name: "Style ID", value: currentStyle.id, inline: true },
+										{ name: "Default", value: config.defaultStyle, inline: true },
+										{ name: "Post-Processing", value: config.enablePostProcessing ? "Enabled" : "Disabled", inline: true },
+										{ name: "Max Length", value: String(config.maxOutputLength), inline: true },
+									)
+									.addFields({ name: "Format Instructions", value: currentStyle.formatInstructions })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown style subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`Style error: ${errMsg}`);
 					}
 					break;
 				}
