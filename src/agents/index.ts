@@ -1240,3 +1240,16 @@ export {
 	type MetaAgentConfig,
 	resetMetaAgent,
 } from "./meta-agent.js";
+
+// Class 3.6 Context Bundle System (TAC Pattern: Session persistence)
+export {
+	type BundleConfig,
+	type BundleSummary,
+	type ContextBundle,
+	ContextBundleSystem,
+	type ConversationEntry,
+	type FileSnapshot,
+	getBundleSystem,
+	type GitSnapshot,
+	resetBundleSystem,
+} from "./context-bundle.js";

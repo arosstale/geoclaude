@@ -4640,6 +4640,50 @@ const slashCommands = [
 				.addStringOption((opt) => opt.setName("agent_id").setDescription("Agent ID to clone").setRequired(true))
 				.addStringOption((opt) => opt.setName("modifications").setDescription("Modifications to apply").setRequired(true)),
 		),
+
+	// Class 3.6 Context Bundle System (TAC Pattern)
+	new SlashCommandBuilder()
+		.setName("bundle")
+		.setDescription("Context Bundle - capture and replay session state (TAC pattern)")
+		.addSubcommand((sub) =>
+			sub
+				.setName("capture")
+				.setDescription("Capture current context as a bundle")
+				.addStringOption((opt) => opt.setName("name").setDescription("Bundle name").setRequired(true))
+				.addStringOption((opt) => opt.setName("description").setDescription("Bundle description"))
+				.addStringOption((opt) => opt.setName("files").setDescription("Files to include (comma-separated)")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("quick")
+				.setDescription("Quick capture with auto-detected files")
+				.addStringOption((opt) => opt.setName("name").setDescription("Bundle name").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("load")
+				.setDescription("Load a bundle by ID or name")
+				.addStringOption((opt) => opt.setName("id").setDescription("Bundle ID or name").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("apply")
+				.setDescription("Apply bundle context to generate prompt")
+				.addStringOption((opt) => opt.setName("id").setDescription("Bundle ID").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("list")
+				.setDescription("List all bundles")
+				.addStringOption((opt) => opt.setName("tag").setDescription("Filter by tag"))
+				.addIntegerOption((opt) => opt.setName("limit").setDescription("Max bundles to show")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("delete")
+				.setDescription("Delete a bundle")
+				.addStringOption((opt) => opt.setName("id").setDescription("Bundle ID to delete").setRequired(true)),
+		),
 ];
 
 // ============================================================================
@@ -21085,6 +21129,164 @@ async function main() {
 					} catch (error) {
 						const errMsg = error instanceof Error ? error.message : String(error);
 						await interaction.editReply(`Meta-agent error: ${errMsg}`);
+					}
+					break;
+				}
+
+				case "bundle": {
+					await interaction.deferReply();
+					const bundleSubcommand = interaction.options.getSubcommand();
+
+					try {
+						const { getBundleSystem } = await import("./agents/context-bundle.js");
+						const bundleSystem = getBundleSystem(workingDir);
+
+						switch (bundleSubcommand) {
+							case "capture": {
+								const name = interaction.options.getString("name", true);
+								const description = interaction.options.getString("description");
+								const filesStr = interaction.options.getString("files");
+								const files = filesStr ? filesStr.split(",").map((f) => f.trim()) : [];
+
+								const bundle = await bundleSystem.captureBundle({
+									name,
+									description: description || undefined,
+									files,
+									tags: ["manual"],
+								});
+
+								const embed = new EmbedBuilder()
+									.setTitle("📦 Context Bundle Captured")
+									.setColor(0x2ecc71)
+									.addFields(
+										{ name: "ID", value: `\`${bundle.id.slice(0, 8)}\``, inline: true },
+										{ name: "Name", value: bundle.name, inline: true },
+										{ name: "Size", value: `${(bundle.size / 1024).toFixed(1)} KB`, inline: true },
+										{ name: "Files", value: String(bundle.files.length), inline: true },
+										{ name: "Git Branch", value: bundle.git?.branch || "N/A", inline: true },
+										{ name: "Compressed", value: bundle.compressed ? "Yes" : "No", inline: true },
+									)
+									.setFooter({ text: "Use /bundle load to restore this context" })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "quick": {
+								const name = interaction.options.getString("name", true);
+								const bundle = await bundleSystem.quickCapture(name);
+
+								const embed = new EmbedBuilder()
+									.setTitle("⚡ Quick Capture Complete")
+									.setColor(0x3498db)
+									.addFields(
+										{ name: "ID", value: `\`${bundle.id.slice(0, 8)}\``, inline: true },
+										{ name: "Name", value: bundle.name, inline: true },
+										{ name: "Files", value: String(bundle.files.length), inline: true },
+									)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "load": {
+								const idOrName = interaction.options.getString("id", true);
+
+								// Try by ID first, then by name
+								let bundle = bundleSystem.loadBundle(idOrName);
+								if (!bundle) {
+									bundle = bundleSystem.loadBundleByName(idOrName);
+								}
+
+								if (!bundle) {
+									await interaction.editReply(`Bundle not found: \`${idOrName}\``);
+									break;
+								}
+
+								const embed = new EmbedBuilder()
+									.setTitle(`📦 Bundle: ${bundle.name}`)
+									.setColor(0x9b59b6)
+									.addFields(
+										{ name: "ID", value: `\`${bundle.id}\``, inline: false },
+										{ name: "Created", value: bundle.createdAt.toISOString(), inline: true },
+										{ name: "Size", value: `${(bundle.size / 1024).toFixed(1)} KB`, inline: true },
+										{ name: "Files", value: String(bundle.files.length), inline: true },
+										{ name: "Git", value: bundle.git ? `${bundle.git.branch} @ ${bundle.git.commit.slice(0, 7)}` : "N/A", inline: false },
+									)
+									.setTimestamp();
+
+								if (bundle.currentTask) {
+									embed.addFields({ name: "Current Task", value: bundle.currentTask.slice(0, 200) });
+								}
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "apply": {
+								const id = interaction.options.getString("id", true);
+								const bundle = bundleSystem.loadBundle(id);
+
+								if (!bundle) {
+									await interaction.editReply(`Bundle not found: \`${id}\``);
+									break;
+								}
+
+								const summary = bundleSystem.generateContextSummary(bundle);
+
+								await interaction.editReply(
+									`**📋 Context Applied from "${bundle.name}"**\n\n\`\`\`md\n${summary.slice(0, 1800)}\n\`\`\``,
+								);
+								break;
+							}
+
+							case "list": {
+								const tag = interaction.options.getString("tag");
+								const limit = interaction.options.getInteger("limit") || 10;
+
+								const bundles = bundleSystem.listBundles({ tag: tag || undefined, limit });
+
+								if (bundles.length === 0) {
+									await interaction.editReply("No bundles found.");
+									break;
+								}
+
+								const bundleList = bundles.map((b, i) => {
+									const date = b.createdAt.toLocaleDateString();
+									return `${i + 1}. **${b.name}** (\`${b.id.slice(0, 8)}\`)\n   ${b.fileCount} files | ${(b.size / 1024).toFixed(1)} KB | ${date}`;
+								});
+
+								const embed = new EmbedBuilder()
+									.setTitle("📚 Context Bundles")
+									.setColor(0x3498db)
+									.setDescription(bundleList.join("\n\n"))
+									.setFooter({ text: `Showing ${bundles.length} bundle(s)` })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "delete": {
+								const id = interaction.options.getString("id", true);
+								const deleted = bundleSystem.deleteBundle(id);
+
+								if (deleted) {
+									await interaction.editReply(`🗑️ Bundle deleted: \`${id.slice(0, 8)}\``);
+								} else {
+									await interaction.editReply(`Bundle not found: \`${id}\``);
+								}
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown bundle subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`Bundle error: ${errMsg}`);
 					}
 					break;
 				}
