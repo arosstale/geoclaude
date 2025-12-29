@@ -5033,6 +5033,81 @@ const slashCommands = [
 					),
 				),
 		),
+	new SlashCommandBuilder()
+		.setName("discover")
+		.setDescription("Agent Discovery - dynamic agent registration and discovery (TAC pattern)")
+		.addSubcommand((sub) => sub.setName("stats").setDescription("Show discovery statistics"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("register")
+				.setDescription("Register a new agent")
+				.addStringOption((opt) => opt.setName("id").setDescription("Agent ID").setRequired(true))
+				.addStringOption((opt) => opt.setName("name").setDescription("Agent name").setRequired(true))
+				.addStringOption((opt) => opt.setName("description").setDescription("Agent description"))
+				.addStringOption((opt) => opt.setName("tags").setDescription("Comma-separated tags"))
+				.addIntegerOption((opt) => opt.setName("priority").setDescription("Priority 1-10")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("unregister")
+				.setDescription("Unregister an agent")
+				.addStringOption((opt) => opt.setName("id").setDescription("Agent ID").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("find")
+				.setDescription("Find agents by capability")
+				.addStringOption((opt) => opt.setName("capability").setDescription("Capability to search for").setRequired(true))
+				.addIntegerOption((opt) => opt.setName("min_health").setDescription("Minimum health score 0-100")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("get")
+				.setDescription("Get agent details")
+				.addStringOption((opt) => opt.setName("id").setDescription("Agent ID").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("list")
+				.setDescription("List all agents")
+				.addStringOption((opt) =>
+					opt.setName("status").setDescription("Filter by status").addChoices(
+						{ name: "Online", value: "online" },
+						{ name: "Offline", value: "offline" },
+						{ name: "Busy", value: "busy" },
+						{ name: "Degraded", value: "degraded" },
+					),
+				),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("heartbeat")
+				.setDescription("Send heartbeat for an agent")
+				.addStringOption((opt) => opt.setName("id").setDescription("Agent ID").setRequired(true))
+				.addIntegerOption((opt) => opt.setName("load").setDescription("Current load")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("status")
+				.setDescription("Update agent status")
+				.addStringOption((opt) => opt.setName("id").setDescription("Agent ID").setRequired(true))
+				.addStringOption((opt) =>
+					opt.setName("status").setDescription("New status").setRequired(true).addChoices(
+						{ name: "Online", value: "online" },
+						{ name: "Offline", value: "offline" },
+						{ name: "Busy", value: "busy" },
+						{ name: "Degraded", value: "degraded" },
+						{ name: "Maintenance", value: "maintenance" },
+					),
+				),
+		)
+		.addSubcommand((sub) => sub.setName("capabilities").setDescription("List all unique capabilities"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("deps")
+				.setDescription("Resolve agent dependencies")
+				.addStringOption((opt) => opt.setName("id").setDescription("Agent ID").setRequired(true)),
+		),
 ];
 
 // ============================================================================
@@ -22847,6 +22922,278 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 					} catch (error) {
 						const errMsg = error instanceof Error ? error.message : String(error);
 						await interaction.editReply(`Version error: ${errMsg}`);
+					}
+					break;
+				}
+
+				case "discover": {
+					await interaction.deferReply();
+					const discoverSubcommand = interaction.options.getSubcommand();
+
+					try {
+						const { getDiscoverySystem } = await import("./agents/agent-discovery.js");
+						const discoverySystem = getDiscoverySystem(workingDir);
+
+						switch (discoverSubcommand) {
+							case "stats": {
+								const stats = discoverySystem.getStats();
+
+								const embed = new EmbedBuilder()
+									.setTitle("Agent Discovery Statistics")
+									.setColor(0x16a085)
+									.addFields(
+										{ name: "Total Agents", value: stats.totalAgents.toString(), inline: true },
+										{ name: "Online", value: stats.onlineAgents.toString(), inline: true },
+										{ name: "Offline", value: stats.offlineAgents.toString(), inline: true },
+										{ name: "Busy", value: stats.busyAgents.toString(), inline: true },
+										{ name: "Degraded", value: stats.degradedAgents.toString(), inline: true },
+										{ name: "Avg Health", value: `${Math.round(stats.avgHealthScore)}%`, inline: true },
+										{ name: "Total Capabilities", value: stats.totalCapabilities.toString(), inline: true },
+										{ name: "Unique Capabilities", value: stats.uniqueCapabilities.toString(), inline: true },
+										{ name: "Queries/min", value: stats.queriesPerMinute.toString(), inline: true },
+									)
+									.setFooter({ text: "Agent Discovery System" })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "register": {
+								const id = interaction.options.getString("id", true);
+								const name = interaction.options.getString("name", true);
+								const description = interaction.options.getString("description") ?? "";
+								const tagsStr = interaction.options.getString("tags");
+								const priority = interaction.options.getInteger("priority") ?? 5;
+
+								const tags = tagsStr ? tagsStr.split(",").map((t) => t.trim()) : [];
+
+								const agent = discoverySystem.registerAgent({
+									id,
+									name,
+									description,
+									tags,
+									priority: Math.min(10, Math.max(1, priority)),
+								});
+
+								const embed = new EmbedBuilder()
+									.setTitle("Agent Registered")
+									.setColor(0x2ecc71)
+									.addFields(
+										{ name: "ID", value: `\`${agent.id}\``, inline: true },
+										{ name: "Name", value: agent.name, inline: true },
+										{ name: "Status", value: agent.status, inline: true },
+										{ name: "Priority", value: agent.priority.toString(), inline: true },
+									)
+									.setTimestamp();
+
+								if (tags.length > 0) {
+									embed.addFields({ name: "Tags", value: tags.map((t) => `\`${t}\``).join(", "), inline: false });
+								}
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "unregister": {
+								const id = interaction.options.getString("id", true);
+								const success = discoverySystem.unregisterAgent(id);
+
+								if (success) {
+									await interaction.editReply(`Agent unregistered: \`${id}\``);
+								} else {
+									await interaction.editReply(`Agent not found: \`${id}\``);
+								}
+								break;
+							}
+
+							case "find": {
+								const capability = interaction.options.getString("capability", true);
+								const minHealth = interaction.options.getInteger("min_health") ?? 0;
+
+								const result = discoverySystem.discover({
+									capability,
+									minHealthScore: minHealth,
+								});
+
+								if (result.agents.length === 0) {
+									await interaction.editReply(`No agents found with capability: \`${capability}\``);
+									break;
+								}
+
+								const list = result.agents.slice(0, 10).map((a) => {
+									const load = `${a.currentLoad}/${a.maxConcurrency}`;
+									return `\`${a.id}\` | ${a.name} | Health: ${a.healthScore}% | Load: ${load}`;
+								}).join("\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Agents with: ${capability}`)
+									.setColor(0x3498db)
+									.setDescription(list)
+									.setFooter({ text: `${result.totalMatches} matches` })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "get": {
+								const id = interaction.options.getString("id", true);
+								const agent = discoverySystem.getAgent(id);
+
+								if (!agent) {
+									await interaction.editReply(`Agent not found: \`${id}\``);
+									break;
+								}
+
+								const statusEmoji: Record<string, string> = {
+									online: "[ON]",
+									offline: "[OFF]",
+									busy: "[BUSY]",
+									degraded: "[DEG]",
+									maintenance: "[MAINT]",
+								};
+
+								const capList = agent.capabilities.length > 0
+									? agent.capabilities.map((c) => `\`${c.name}@${c.version}\``).join(", ")
+									: "None";
+
+								const embed = new EmbedBuilder()
+									.setTitle(`${statusEmoji[agent.status] ?? "[?]"} ${agent.name}`)
+									.setColor(agent.status === "online" ? 0x2ecc71 : 0xe74c3c)
+									.addFields(
+										{ name: "ID", value: `\`${agent.id}\``, inline: true },
+										{ name: "Status", value: agent.status, inline: true },
+										{ name: "Health", value: `${agent.healthScore}%`, inline: true },
+										{ name: "Priority", value: agent.priority.toString(), inline: true },
+										{ name: "Load", value: `${agent.currentLoad}/${agent.maxConcurrency}`, inline: true },
+										{ name: "Last Heartbeat", value: `${Math.round((Date.now() - agent.lastHeartbeat) / 1000)}s ago`, inline: true },
+										{ name: "Capabilities", value: capList, inline: false },
+									)
+									.setTimestamp(agent.registeredAt);
+
+								if (agent.description) {
+									embed.setDescription(agent.description);
+								}
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "list": {
+								const statusFilter = interaction.options.getString("status") as "online" | "offline" | "busy" | "degraded" | undefined;
+								const agents = discoverySystem.listAgents(statusFilter);
+
+								if (agents.length === 0) {
+									await interaction.editReply(statusFilter ? `No ${statusFilter} agents` : "No agents registered");
+									break;
+								}
+
+								const statusEmoji: Record<string, string> = {
+									online: "[ON]",
+									offline: "[OFF]",
+									busy: "[BUSY]",
+									degraded: "[DEG]",
+									maintenance: "[MAINT]",
+								};
+
+								const list = agents.slice(0, 15).map((a) => {
+									const emoji = statusEmoji[a.status] ?? "[?]";
+									return `${emoji} \`${a.id}\` | ${a.name} | ${a.healthScore}%`;
+								}).join("\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Registered Agents (${agents.length})`)
+									.setColor(0x3498db)
+									.setDescription(list)
+									.setFooter({ text: statusFilter ? `Filtered: ${statusFilter}` : "All agents" })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "heartbeat": {
+								const id = interaction.options.getString("id", true);
+								const load = interaction.options.getInteger("load") ?? undefined;
+
+								const success = discoverySystem.heartbeat(id, load);
+
+								if (success) {
+									await interaction.editReply(`Heartbeat received for: \`${id}\`${load !== undefined ? ` (load: ${load})` : ""}`);
+								} else {
+									await interaction.editReply(`Agent not found: \`${id}\``);
+								}
+								break;
+							}
+
+							case "status": {
+								const id = interaction.options.getString("id", true);
+								const newStatus = interaction.options.getString("status", true) as "online" | "offline" | "busy" | "degraded" | "maintenance";
+
+								const success = discoverySystem.updateAgentStatus(id, newStatus);
+
+								if (success) {
+									await interaction.editReply(`Status updated: \`${id}\` -> **${newStatus}**`);
+								} else {
+									await interaction.editReply(`Agent not found: \`${id}\``);
+								}
+								break;
+							}
+
+							case "capabilities": {
+								const capabilities = discoverySystem.getAllCapabilities();
+
+								if (capabilities.length === 0) {
+									await interaction.editReply("No capabilities registered");
+									break;
+								}
+
+								const list = capabilities.slice(0, 20).map((c) => {
+									return `**${c.name}** v${c.version} | Cost: ${c.cost} | Latency: ${c.latency}ms`;
+								}).join("\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Capabilities (${capabilities.length})`)
+									.setColor(0x9b59b6)
+									.setDescription(list)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "deps": {
+								const id = interaction.options.getString("id", true);
+								const { resolved, missing } = discoverySystem.resolveDependencies(id);
+
+								if (resolved.length === 0 && missing.length > 0) {
+									await interaction.editReply(`Agent not found: \`${id}\``);
+									break;
+								}
+
+								const resolvedList = resolved.map((a) => `[OK] \`${a.id}\``).join("\n") || "None";
+								const missingList = missing.map((m) => `[MISS] \`${m}\``).join("\n") || "None";
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Dependencies: ${id}`)
+									.setColor(missing.length > 0 ? 0xe74c3c : 0x2ecc71)
+									.addFields(
+										{ name: "Resolved", value: resolvedList, inline: true },
+										{ name: "Missing", value: missingList, inline: true },
+									)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown discover subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`Discovery error: ${errMsg}`);
 					}
 					break;
 				}

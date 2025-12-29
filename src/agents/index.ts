@@ -1343,3 +1343,19 @@ export {
 	type VersioningStats,
 	type VersionTag,
 } from "./agent-versioning.js";
+
+// Class 3.13 Agent Discovery System (TAC Pattern: Dynamic agent registration)
+export {
+	type AgentCapability,
+	AgentDiscoverySystem,
+	type AgentEndpoint,
+	type AgentStatus as DiscoveryAgentStatus,
+	type DiscoveryConfig,
+	type DiscoveryQuery,
+	type DiscoveryResult,
+	type DiscoveryStats,
+	getDiscoverySystem,
+	type HealthCheckResult as DiscoveryHealthCheckResult,
+	type RegisteredAgent,
+	resetDiscoverySystem,
+} from "./agent-discovery.js";
