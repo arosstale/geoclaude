@@ -1359,3 +1359,20 @@ export {
 	type RegisteredAgent,
 	resetDiscoverySystem,
 } from "./agent-discovery.js";
+
+// Class 3.14 Health Monitoring System (TAC Pattern: Comprehensive health checks)
+export {
+	type AlertThreshold,
+	type ComponentHealth,
+	type ComponentType as MonitoringComponentType,
+	getHealthMonitoring,
+	type HealthAlert,
+	type HealthCheck as MonitoringHealthCheck,
+	type HealthChecker as MonitoringHealthChecker,
+	type HealthMetric,
+	HealthMonitoringSystem,
+	type HealthStatus,
+	type MonitoringConfig,
+	resetHealthMonitoring,
+	type SystemHealth,
+} from "./health-monitoring.js";

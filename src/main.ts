@@ -5108,6 +5108,93 @@ const slashCommands = [
 				.setDescription("Resolve agent dependencies")
 				.addStringOption((opt) => opt.setName("id").setDescription("Agent ID").setRequired(true)),
 		),
+	new SlashCommandBuilder()
+		.setName("health")
+		.setDescription("Health Monitoring - comprehensive health checks and metrics (TAC pattern)")
+		.addSubcommand((sub) => sub.setName("status").setDescription("Show system health status"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("register")
+				.setDescription("Register a component for monitoring")
+				.addStringOption((opt) => opt.setName("id").setDescription("Component ID").setRequired(true))
+				.addStringOption((opt) => opt.setName("name").setDescription("Component name").setRequired(true))
+				.addStringOption((opt) =>
+					opt.setName("type").setDescription("Component type").setRequired(true).addChoices(
+						{ name: "Agent", value: "agent" },
+						{ name: "Database", value: "database" },
+						{ name: "API", value: "api" },
+						{ name: "Queue", value: "queue" },
+						{ name: "Cache", value: "cache" },
+						{ name: "External", value: "external" },
+						{ name: "System", value: "system" },
+					),
+				),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("check")
+				.setDescription("Record a health check")
+				.addStringOption((opt) => opt.setName("id").setDescription("Component ID").setRequired(true))
+				.addBooleanOption((opt) => opt.setName("healthy").setDescription("Is healthy").setRequired(true))
+				.addStringOption((opt) => opt.setName("message").setDescription("Status message")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("component")
+				.setDescription("Get component health details")
+				.addStringOption((opt) => opt.setName("id").setDescription("Component ID").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("metric")
+				.setDescription("Record a metric value")
+				.addStringOption((opt) => opt.setName("id").setDescription("Component ID").setRequired(true))
+				.addStringOption((opt) => opt.setName("name").setDescription("Metric name").setRequired(true))
+				.addNumberOption((opt) => opt.setName("value").setDescription("Metric value").setRequired(true))
+				.addStringOption((opt) => opt.setName("unit").setDescription("Unit (e.g., ms, %, count)")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("threshold")
+				.setDescription("Set an alert threshold")
+				.addStringOption((opt) => opt.setName("id").setDescription("Component ID").setRequired(true))
+				.addStringOption((opt) => opt.setName("metric").setDescription("Metric name").setRequired(true))
+				.addStringOption((opt) =>
+					opt.setName("operator").setDescription("Comparison operator").setRequired(true).addChoices(
+						{ name: "> Greater than", value: ">" },
+						{ name: "< Less than", value: "<" },
+						{ name: ">= Greater or equal", value: ">=" },
+						{ name: "<= Less or equal", value: "<=" },
+					),
+				)
+				.addNumberOption((opt) => opt.setName("value").setDescription("Threshold value").setRequired(true))
+				.addStringOption((opt) =>
+					opt.setName("severity").setDescription("Alert severity").addChoices(
+						{ name: "Info", value: "info" },
+						{ name: "Warning", value: "warning" },
+						{ name: "Critical", value: "critical" },
+					),
+				),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("alerts")
+				.setDescription("View active alerts")
+				.addBooleanOption((opt) => opt.setName("all").setDescription("Include acknowledged alerts")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("ack")
+				.setDescription("Acknowledge an alert")
+				.addStringOption((opt) => opt.setName("alert_id").setDescription("Alert ID").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("history")
+				.setDescription("View health check history")
+				.addStringOption((opt) => opt.setName("id").setDescription("Component ID").setRequired(true))
+				.addIntegerOption((opt) => opt.setName("limit").setDescription("Number of checks to show")),
+		),
 ];
 
 // ============================================================================
@@ -23194,6 +23281,256 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 					} catch (error) {
 						const errMsg = error instanceof Error ? error.message : String(error);
 						await interaction.editReply(`Discovery error: ${errMsg}`);
+					}
+					break;
+				}
+
+				case "health": {
+					await interaction.deferReply();
+					const healthSubcommand = interaction.options.getSubcommand();
+
+					try {
+						const { getHealthMonitoring } = await import("./agents/health-monitoring.js");
+						const healthSystem = getHealthMonitoring(workingDir);
+
+						switch (healthSubcommand) {
+							case "status": {
+								const systemHealth = healthSystem.getSystemHealth();
+
+								const statusEmoji: Record<string, string> = {
+									healthy: "[OK]",
+									degraded: "[WARN]",
+									unhealthy: "[CRIT]",
+									unknown: "[?]",
+								};
+
+								const componentList = systemHealth.components.slice(0, 10).map((c) => {
+									const emoji = statusEmoji[c.status] ?? "[?]";
+									return `${emoji} \`${c.id}\` | ${c.name} | ${c.uptimePercent}%`;
+								}).join("\n") || "No components";
+
+								const alertList = systemHealth.activeAlerts.slice(0, 5).map((a) => {
+									const sev = a.severity === "critical" ? "[CRIT]" : a.severity === "warning" ? "[WARN]" : "[INFO]";
+									return `${sev} ${a.message}`;
+								}).join("\n") || "No active alerts";
+
+								const statusColor = systemHealth.status === "healthy" ? 0x2ecc71 :
+									systemHealth.status === "degraded" ? 0xf39c12 : 0xe74c3c;
+
+								const embed = new EmbedBuilder()
+									.setTitle(`System Health: ${systemHealth.status.toUpperCase()}`)
+									.setColor(statusColor)
+									.addFields(
+										{ name: "Total Components", value: systemHealth.metrics.totalComponents.toString(), inline: true },
+										{ name: "Healthy", value: systemHealth.metrics.healthyComponents.toString(), inline: true },
+										{ name: "Unhealthy", value: systemHealth.metrics.unhealthyComponents.toString(), inline: true },
+										{ name: "Avg Uptime", value: `${systemHealth.metrics.avgUptimePercent}%`, inline: true },
+										{ name: "Avg Latency", value: `${systemHealth.metrics.avgLatencyMs}ms`, inline: true },
+										{ name: "Active Alerts", value: systemHealth.activeAlerts.length.toString(), inline: true },
+										{ name: "Components", value: componentList, inline: false },
+										{ name: "Alerts", value: alertList, inline: false },
+									)
+									.setFooter({ text: "Health Monitoring System" })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "register": {
+								const id = interaction.options.getString("id", true);
+								const name = interaction.options.getString("name", true);
+								const type = interaction.options.getString("type", true) as "agent" | "database" | "api" | "queue" | "cache" | "external" | "system";
+
+								const component = healthSystem.registerComponent({ id, type, name });
+
+								const embed = new EmbedBuilder()
+									.setTitle("Component Registered")
+									.setColor(0x2ecc71)
+									.addFields(
+										{ name: "ID", value: `\`${component.id}\``, inline: true },
+										{ name: "Name", value: component.name, inline: true },
+										{ name: "Type", value: component.type, inline: true },
+									)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "check": {
+								const id = interaction.options.getString("id", true);
+								const healthy = interaction.options.getBoolean("healthy", true);
+								const message = interaction.options.getString("message") ?? "";
+
+								const check = healthSystem.recordHealthCheck({
+									componentId: id,
+									healthy,
+									message,
+								});
+
+								await interaction.editReply(
+									`Health check recorded: \`${id}\` - ${healthy ? "[OK]" : "[FAIL]"}${message ? ` (${message})` : ""}`
+								);
+								break;
+							}
+
+							case "component": {
+								const id = interaction.options.getString("id", true);
+								const component = healthSystem.getComponentHealth(id);
+
+								if (!component) {
+									await interaction.editReply(`Component not found: \`${id}\``);
+									break;
+								}
+
+								const statusEmoji: Record<string, string> = {
+									healthy: "[OK]",
+									degraded: "[WARN]",
+									unhealthy: "[CRIT]",
+									unknown: "[?]",
+								};
+
+								const statusColor = component.status === "healthy" ? 0x2ecc71 :
+									component.status === "degraded" ? 0xf39c12 : 0xe74c3c;
+
+								const lastCheckInfo = component.lastCheck
+									? `${component.lastCheck.status} (${Math.round((Date.now() - component.lastCheck.checkedAt) / 1000)}s ago)`
+									: "No checks yet";
+
+								const embed = new EmbedBuilder()
+									.setTitle(`${statusEmoji[component.status]} ${component.name}`)
+									.setColor(statusColor)
+									.addFields(
+										{ name: "ID", value: `\`${component.id}\``, inline: true },
+										{ name: "Type", value: component.type, inline: true },
+										{ name: "Status", value: component.status, inline: true },
+										{ name: "Uptime", value: `${component.uptimePercent}%`, inline: true },
+										{ name: "Avg Latency", value: `${component.avgLatencyMs}ms`, inline: true },
+										{ name: "Check Count", value: component.checkCount.toString(), inline: true },
+										{ name: "Consecutive Failures", value: component.consecutiveFailures.toString(), inline: true },
+										{ name: "Last Check", value: lastCheckInfo, inline: false },
+									)
+									.setTimestamp(component.registeredAt);
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "metric": {
+								const id = interaction.options.getString("id", true);
+								const metricName = interaction.options.getString("name", true);
+								const value = interaction.options.getNumber("value", true);
+								const unit = interaction.options.getString("unit") ?? "";
+
+								const metric = healthSystem.recordMetric({
+									componentId: id,
+									metricName,
+									value,
+									unit,
+								});
+
+								await interaction.editReply(
+									`Metric recorded: \`${id}\` | ${metricName} = ${value}${unit ? ` ${unit}` : ""}`
+								);
+								break;
+							}
+
+							case "threshold": {
+								const id = interaction.options.getString("id", true);
+								const metric = interaction.options.getString("metric", true);
+								const operator = interaction.options.getString("operator", true) as ">" | "<" | ">=" | "<=";
+								const value = interaction.options.getNumber("value", true);
+								const severity = (interaction.options.getString("severity") ?? "warning") as "info" | "warning" | "critical";
+
+								const threshold = healthSystem.setThreshold({
+									componentId: id,
+									metricName: metric,
+									operator,
+									threshold: value,
+									severity,
+								});
+
+								await interaction.editReply(
+									`Threshold set: \`${id}\` | ${metric} ${operator} ${value} (${severity})`
+								);
+								break;
+							}
+
+							case "alerts": {
+								const showAll = interaction.options.getBoolean("all") ?? false;
+								const alerts = healthSystem.getAlerts({
+									acknowledged: showAll ? undefined : false,
+								});
+
+								if (alerts.length === 0) {
+									await interaction.editReply(showAll ? "No alerts" : "No active alerts");
+									break;
+								}
+
+								const list = alerts.slice(0, 15).map((a) => {
+									const sev = a.severity === "critical" ? "[CRIT]" : a.severity === "warning" ? "[WARN]" : "[INFO]";
+									const ack = a.acknowledged ? " (ack)" : "";
+									const ago = Math.round((Date.now() - a.triggeredAt) / 60000);
+									return `${sev}${ack} \`${a.componentId}\` | ${a.message} | ${ago}m ago`;
+								}).join("\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Alerts (${alerts.length})`)
+									.setColor(alerts.some((a) => a.severity === "critical") ? 0xe74c3c : 0xf39c12)
+									.setDescription(list)
+									.setFooter({ text: showAll ? "All alerts" : "Active alerts only" })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "ack": {
+								const alertId = interaction.options.getString("alert_id", true);
+								const success = healthSystem.acknowledgeAlert(alertId, user.id);
+
+								if (success) {
+									await interaction.editReply(`Alert acknowledged: \`${alertId}\``);
+								} else {
+									await interaction.editReply(`Alert not found or already acknowledged: \`${alertId}\``);
+								}
+								break;
+							}
+
+							case "history": {
+								const id = interaction.options.getString("id", true);
+								const limit = interaction.options.getInteger("limit") ?? 20;
+								const history = healthSystem.getHealthHistory(id, limit);
+
+								if (history.length === 0) {
+									await interaction.editReply(`No health history for: \`${id}\``);
+									break;
+								}
+
+								const list = history.slice(0, 15).map((h) => {
+									const status = h.status === "healthy" ? "[OK]" : "[FAIL]";
+									const ago = Math.round((Date.now() - h.checkedAt) / 60000);
+									return `${status} ${ago}m ago | ${h.latencyMs}ms | ${h.message.slice(0, 30) || "-"}`;
+								}).join("\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Health History: ${id}`)
+									.setColor(0x3498db)
+									.setDescription(list)
+									.setFooter({ text: `${history.length} checks shown` })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown health subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`Health error: ${errMsg}`);
 					}
 					break;
 				}
