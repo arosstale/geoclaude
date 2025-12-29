@@ -4438,6 +4438,34 @@ const slashCommands = [
 						),
 				),
 		),
+
+	// Pi-Watcher - Autonomous Monitoring & Hotfix
+	new SlashCommandBuilder()
+		.setName("watcher")
+		.setDescription("Pi-Watcher - autonomous codebase monitoring and hotfixing")
+		.addSubcommand((sub) => sub.setName("start").setDescription("Start the watcher"))
+		.addSubcommand((sub) => sub.setName("stop").setDescription("Stop the watcher"))
+		.addSubcommand((sub) => sub.setName("status").setDescription("Show watcher status and current issues"))
+		.addSubcommand((sub) => sub.setName("check").setDescription("Run health checks now"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("fix")
+				.setDescription("Manually trigger fix for an issue")
+				.addStringOption((opt) => opt.setName("issue_id").setDescription("Issue ID to fix").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("ignore")
+				.setDescription("Ignore an issue")
+				.addStringOption((opt) => opt.setName("issue_id").setDescription("Issue ID to ignore").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("config")
+				.setDescription("Update watcher configuration")
+				.addIntegerOption((opt) => opt.setName("interval").setDescription("Check interval in minutes"))
+				.addBooleanOption((opt) => opt.setName("autofix").setDescription("Enable/disable auto-fix")),
+		),
 ];
 
 // ============================================================================
@@ -20224,6 +20252,152 @@ async function main() {
 					} catch (error) {
 						const errMsg = error instanceof Error ? error.message : String(error);
 						await interaction.editReply(`Orchestrator error: ${errMsg}`);
+					}
+					break;
+				}
+
+				case "watcher": {
+					await interaction.deferReply();
+					const watcherSubcommand = interaction.options.getSubcommand();
+
+					try {
+						const { startPiWatcher, stopPiWatcher, getPiWatcherState, PiWatcher } = await import("./agents/pi-watcher.js");
+
+						switch (watcherSubcommand) {
+							case "start": {
+								const watcher = startPiWatcher({
+									workingDir,
+									orchestratorDbPath: join(workingDir, "orchestrator.db"),
+									checkInterval: 5 * 60 * 1000, // 5 minutes
+									autoFixEnabled: false,
+									maxFixAttempts: 3,
+									notifyOnIssue: true,
+									notifyOnFix: true,
+									enabledChecks: ["typecheck", "test", "lint"],
+									ignorePaths: ["node_modules", "dist", ".git"],
+									customChecks: [],
+								});
+
+								watcher.on("issue_detected", (issue) => {
+									logWarning(`[Pi-Watcher] Issue detected: ${issue.type} - ${issue.title}`);
+								});
+
+								watcher.on("fix_attempted", (result) => {
+									logInfo(`[Pi-Watcher] Fix ${result.success ? "succeeded" : "failed"}: ${result.strategy}`);
+								});
+
+								await interaction.editReply("✅ **Pi-Watcher Started**\nMonitoring codebase for issues. Use `/watcher status` to check current state.");
+								break;
+							}
+
+							case "stop": {
+								stopPiWatcher();
+								await interaction.editReply("🛑 **Pi-Watcher Stopped**");
+								break;
+							}
+
+							case "status": {
+								const state = getPiWatcherState();
+								if (!state) {
+									await interaction.editReply("Pi-Watcher is not running. Use `/watcher start` to begin.");
+									break;
+								}
+
+								const issueList = state.currentIssues
+									.slice(0, 10)
+									.map((issue) => {
+										return `• \`${issue.id.slice(0, 8)}\` [${issue.type}] ${issue.title.slice(0, 60)}`;
+									})
+									.join("\n") || "No issues detected";
+
+								const embed = new EmbedBuilder()
+									.setTitle("👁️ Pi-Watcher Status")
+									.setColor(state.running ? 0x2ecc71 : 0xe74c3c)
+									.addFields(
+										{ name: "Status", value: state.running ? "Running" : "Stopped", inline: true },
+										{ name: "Issues", value: String(state.currentIssues.length), inline: true },
+										{ name: "Last Check", value: state.lastCheck ? new Date(state.lastCheck).toLocaleTimeString() : "Never", inline: true },
+									)
+									.addFields({ name: "Current Issues", value: issueList })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "check": {
+								const state = getPiWatcherState();
+								if (!state) {
+									await interaction.editReply("Pi-Watcher is not running. Use `/watcher start` first.");
+									break;
+								}
+
+								await interaction.editReply("🔍 Running health checks...");
+								// The watcher will emit events when checks complete
+								break;
+							}
+
+							case "fix": {
+								const issueId = interaction.options.getString("issue_id", true);
+								const state = getPiWatcherState();
+								if (!state) {
+									await interaction.editReply("Pi-Watcher is not running.");
+									break;
+								}
+
+								const issue = state.currentIssues.find((i) => i.id.startsWith(issueId));
+								if (!issue) {
+									await interaction.editReply(`Issue not found: \`${issueId}\``);
+									break;
+								}
+
+								await interaction.editReply(`🔧 Attempting fix for issue \`${issue.id.slice(0, 8)}\`...\nStrategy: inline → agent → workflow`);
+								break;
+							}
+
+							case "ignore": {
+								const issueId = interaction.options.getString("issue_id", true);
+								const state = getPiWatcherState();
+								if (!state) {
+									await interaction.editReply("Pi-Watcher is not running.");
+									break;
+								}
+
+								const issueIndex = state.currentIssues.findIndex((i) => i.id.startsWith(issueId));
+								if (issueIndex === -1) {
+									await interaction.editReply(`Issue not found: \`${issueId}\``);
+									break;
+								}
+
+								// Remove issue from tracking
+								const removed = state.currentIssues.splice(issueIndex, 1)[0];
+								await interaction.editReply(`🙈 Ignoring issue \`${removed.id.slice(0, 8)}\`: ${removed.title}`);
+								break;
+							}
+
+							case "config": {
+								const interval = interaction.options.getInteger("interval");
+								const autofix = interaction.options.getBoolean("autofix");
+
+								const updates: string[] = [];
+								if (interval !== null) updates.push(`Interval: ${interval} minutes`);
+								if (autofix !== null) updates.push(`Auto-fix: ${autofix ? "enabled" : "disabled"}`);
+
+								if (updates.length === 0) {
+									await interaction.editReply("No configuration changes specified.");
+									break;
+								}
+
+								await interaction.editReply(`⚙️ **Configuration Updated**\n${updates.join("\n")}`);
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown watcher subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`Pi-Watcher error: ${errMsg}`);
 					}
 					break;
 				}

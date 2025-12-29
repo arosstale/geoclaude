@@ -1161,3 +1161,20 @@ export {
 	SECURITY_GATE,
 	TESTS_PASS_GATE,
 } from "./adw-wrapper.js";
+// Pi-Watcher - Autonomous Monitoring & Hotfix (Clopus-Watcher inspired)
+export {
+	type CustomCheck,
+	DEFAULT_WATCHER_CONFIG,
+	type DetectedIssue,
+	type FixAttempt,
+	getPiWatcher,
+	getPiWatcherState,
+	type HealthCheckResult as WatcherHealthCheckResult,
+	type HealthCheckType,
+	PiWatcher,
+	startPiWatcher,
+	stopPiWatcher,
+	type WatcherConfig,
+	type WatcherEvent,
+	type WatcherState,
+} from "./pi-watcher.js";
