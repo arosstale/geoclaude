@@ -47,7 +47,8 @@ import {
 	type AgentDomain,
 	// Agentic Properties (IndyDevDan's 6 Properties Framework)
 	AgenticAgent,
-	type AgentSkill,
+	// GOAT Presets (Mario, Vercel)
+	AgenticPresets,
 	// Aerospace-Inspired Pattern Modules (ANG13T research)
 	AnomalyDetectorPresets,
 	AnomalySeverity,
@@ -57,7 +58,6 @@ import {
 	backtestIfaStrategy,
 	// Hook System
 	CheckpointUtils,
-	CLAUDE_MODELS,
 	ClaudeAgentPresets,
 	// Agent Experts (TAC Lesson 13)
 	CODEBASE_EXPERTS,
@@ -100,6 +100,8 @@ import {
 	// Claude SDK Two-Agent Pattern
 	executeClaudeFeature,
 	executeWithAutoExpert,
+	filterToJustBashTools,
+	filterToMinimalistTools,
 	formatSkillsForPrompt as formatInternalSkillsForPrompt,
 	type GEPAAgentType,
 	type GEPAExample,
@@ -116,7 +118,6 @@ import {
 	getAnomalyDetector,
 	getARCAgentStatus,
 	getAutonomousDaemon,
-	getBestSDK,
 	getChannelHookIntegration,
 	getClaudeTaskStatus,
 	getCTMStatus,
@@ -159,7 +160,6 @@ import {
 	initializeTradingGenes,
 	isAgentAvailable,
 	isARCAgentAvailable,
-	isClaudeAgentAvailable,
 	isE2BAvailable,
 	isOpenCodeAvailable,
 	isOpenEvolveAvailable,
@@ -223,10 +223,6 @@ import {
 	type TradingStrategyGenes,
 	think,
 	wrapToolWithHooks,
-	// GOAT Presets (Mario, Vercel)
-	AgenticPresets,
-	filterToMinimalistTools,
-	filterToJustBashTools,
 } from "./agents/index.js";
 import { Analytics } from "./analytics.js";
 import { browserAutomation } from "./browser/index.js";
@@ -260,7 +256,6 @@ import { TaskScheduler } from "./scheduler.js";
 import { ChannelStore } from "./store.js";
 import {
 	createTelegramBot,
-	getTelegramWebhookHandler,
 	getWebhookPath,
 	setDiscordClient,
 	setupTelegramWebhook,
@@ -3916,7 +3911,9 @@ const slashCommands = [
 			sub
 				.setName("scout")
 				.setDescription("Scout-Builder pattern: scout explores, builder implements")
-				.addStringOption((opt) => opt.setName("prompt").setDescription("Task to scout and build").setRequired(true)),
+				.addStringOption((opt) =>
+					opt.setName("prompt").setDescription("Task to scout and build").setRequired(true),
+				),
 		)
 		.addSubcommand((sub) =>
 			sub
@@ -3924,11 +3921,14 @@ const slashCommands = [
 				.setDescription("Run task in parallel across multiple SDKs")
 				.addStringOption((opt) => opt.setName("prompt").setDescription("Task prompt").setRequired(true))
 				.addStringOption((opt) =>
-					opt.setName("aggregation").setDescription("How to aggregate results").addChoices(
-						{ name: "Best result", value: "best" },
-						{ name: "First result", value: "first" },
-						{ name: "All results", value: "all" },
-					),
+					opt
+						.setName("aggregation")
+						.setDescription("How to aggregate results")
+						.addChoices(
+							{ name: "Best result", value: "best" },
+							{ name: "First result", value: "first" },
+							{ name: "All results", value: "all" },
+						),
 				),
 		)
 		.addSubcommand((sub) =>
@@ -3956,7 +3956,9 @@ const slashCommands = [
 			sub
 				.setName("remember")
 				.setDescription("Store a memory in AgentDB with vector indexing")
-				.addStringOption((opt) => opt.setName("content").setDescription("Memory content to store").setRequired(true))
+				.addStringOption((opt) =>
+					opt.setName("content").setDescription("Memory content to store").setRequired(true),
+				)
 				.addStringOption((opt) => opt.setName("namespace").setDescription("Optional namespace for organization")),
 		)
 		.addSubcommand((sub) =>
@@ -3970,7 +3972,9 @@ const slashCommands = [
 			sub
 				.setName("swarm")
 				.setDescription("Initialize HiveMind swarm with queen and workers")
-				.addStringOption((opt) => opt.setName("task").setDescription("Task for the swarm to execute").setRequired(true))
+				.addStringOption((opt) =>
+					opt.setName("task").setDescription("Task for the swarm to execute").setRequired(true),
+				)
 				.addIntegerOption((opt) => opt.setName("workers").setDescription("Number of worker agents (default: 3)")),
 		)
 		.addSubcommand((sub) =>
@@ -3985,9 +3989,13 @@ const slashCommands = [
 						.setRequired(true)
 						.addChoices({ name: "Success", value: "success" }, { name: "Failure", value: "failure" }),
 				)
-				.addStringOption((opt) => opt.setName("lessons").setDescription("Lessons learned (comma-separated)").setRequired(true)),
+				.addStringOption((opt) =>
+					opt.setName("lessons").setDescription("Lessons learned (comma-separated)").setRequired(true),
+				),
 		)
-		.addSubcommand((sub) => sub.setName("skills").setDescription("List available Claude skills from skill activator")),
+		.addSubcommand((sub) =>
+			sub.setName("skills").setDescription("List available Claude skills from skill activator"),
+		),
 
 	// Claude-Mem - Persistent memory compression (thedotmack/claude-mem)
 	new SlashCommandBuilder()
@@ -4000,14 +4008,17 @@ const slashCommands = [
 				.setDescription("Record an observation with auto-tagging")
 				.addStringOption((opt) => opt.setName("content").setDescription("Observation content").setRequired(true))
 				.addStringOption((opt) =>
-					opt.setName("type").setDescription("Observation type").addChoices(
-						{ name: "Code", value: "code" },
-						{ name: "Architecture", value: "architecture" },
-						{ name: "Bug", value: "bug" },
-						{ name: "Decision", value: "decision" },
-						{ name: "Todo", value: "todo" },
-						{ name: "Insight", value: "insight" },
-					),
+					opt
+						.setName("type")
+						.setDescription("Observation type")
+						.addChoices(
+							{ name: "Code", value: "code" },
+							{ name: "Architecture", value: "architecture" },
+							{ name: "Bug", value: "bug" },
+							{ name: "Decision", value: "decision" },
+							{ name: "Todo", value: "todo" },
+							{ name: "Insight", value: "insight" },
+						),
 				),
 		)
 		.addSubcommand((sub) =>
@@ -4016,25 +4027,32 @@ const slashCommands = [
 				.setDescription("Search memories with FTS5 full-text search")
 				.addStringOption((opt) => opt.setName("query").setDescription("Search query").setRequired(true))
 				.addStringOption((opt) =>
-					opt.setName("type").setDescription("Search type").addChoices(
-						{ name: "All", value: "all" },
-						{ name: "By Concept", value: "concept" },
-						{ name: "By File", value: "file" },
-					),
+					opt
+						.setName("type")
+						.setDescription("Search type")
+						.addChoices(
+							{ name: "All", value: "all" },
+							{ name: "By Concept", value: "concept" },
+							{ name: "By File", value: "file" },
+						),
 				),
 		)
 		.addSubcommand((sub) =>
 			sub
 				.setName("context")
 				.setDescription("Get progressive disclosure context for content")
-				.addStringOption((opt) => opt.setName("content").setDescription("Content to get context for").setRequired(true)),
+				.addStringOption((opt) =>
+					opt.setName("content").setDescription("Content to get context for").setRequired(true),
+				),
 		)
 		.addSubcommand((sub) =>
 			sub
 				.setName("compress")
 				.setDescription("Compress text for token efficiency")
 				.addStringOption((opt) => opt.setName("content").setDescription("Content to compress").setRequired(true))
-				.addIntegerOption((opt) => opt.setName("target_tokens").setDescription("Target token count (default: 500)")),
+				.addIntegerOption((opt) =>
+					opt.setName("target_tokens").setDescription("Target token count (default: 500)"),
+				),
 		),
 
 	// Continuity - Session continuity and handoffs (parcadei/Continuous-Claude)
@@ -4047,12 +4065,15 @@ const slashCommands = [
 				.setName("ledger")
 				.setDescription("View or update the session ledger")
 				.addStringOption((opt) =>
-					opt.setName("action").setDescription("Ledger action").addChoices(
-						{ name: "View", value: "view" },
-						{ name: "Add Goal", value: "add_goal" },
-						{ name: "Mark Complete", value: "mark_complete" },
-						{ name: "Add Note", value: "add_note" },
-					),
+					opt
+						.setName("action")
+						.setDescription("Ledger action")
+						.addChoices(
+							{ name: "View", value: "view" },
+							{ name: "Add Goal", value: "add_goal" },
+							{ name: "Mark Complete", value: "mark_complete" },
+							{ name: "Add Note", value: "add_note" },
+						),
 				)
 				.addStringOption((opt) => opt.setName("content").setDescription("Content for the action")),
 		)
@@ -4060,8 +4081,12 @@ const slashCommands = [
 			sub
 				.setName("handoff")
 				.setDescription("Create a session handoff for future continuity")
-				.addStringOption((opt) => opt.setName("context").setDescription("Context summary for the handoff").setRequired(true))
-				.addStringOption((opt) => opt.setName("next_steps").setDescription("Recommended next steps (comma-separated)")),
+				.addStringOption((opt) =>
+					opt.setName("context").setDescription("Context summary for the handoff").setRequired(true),
+				)
+				.addStringOption((opt) =>
+					opt.setName("next_steps").setDescription("Recommended next steps (comma-separated)"),
+				),
 		)
 		.addSubcommand((sub) =>
 			sub
@@ -4074,11 +4099,14 @@ const slashCommands = [
 				.setName("trace")
 				.setDescription("View session trace for debugging")
 				.addStringOption((opt) =>
-					opt.setName("action").setDescription("Trace action").addChoices(
-						{ name: "Start", value: "start" },
-						{ name: "View", value: "view" },
-						{ name: "End", value: "end" },
-					),
+					opt
+						.setName("action")
+						.setDescription("Trace action")
+						.addChoices(
+							{ name: "Start", value: "start" },
+							{ name: "View", value: "view" },
+							{ name: "End", value: "end" },
+						),
 				),
 		),
 
@@ -4096,13 +4124,17 @@ const slashCommands = [
 			sub
 				.setName("click")
 				.setDescription("Click an element on the current page")
-				.addStringOption((opt) => opt.setName("selector").setDescription("CSS selector to click").setRequired(true)),
+				.addStringOption((opt) =>
+					opt.setName("selector").setDescription("CSS selector to click").setRequired(true),
+				),
 		)
 		.addSubcommand((sub) =>
 			sub
 				.setName("fill")
 				.setDescription("Fill a form field on the current page")
-				.addStringOption((opt) => opt.setName("selector").setDescription("CSS selector for input").setRequired(true))
+				.addStringOption((opt) =>
+					opt.setName("selector").setDescription("CSS selector for input").setRequired(true),
+				)
 				.addStringOption((opt) => opt.setName("value").setDescription("Value to fill").setRequired(true)),
 		)
 		.addSubcommand((sub) =>
@@ -4111,19 +4143,24 @@ const slashCommands = [
 				.setDescription("Extract structured data from a URL")
 				.addStringOption((opt) => opt.setName("url").setDescription("URL to extract from").setRequired(true))
 				.addStringOption((opt) =>
-					opt.setName("type").setDescription("Extraction type").addChoices(
-						{ name: "Text", value: "text" },
-						{ name: "Tables", value: "table" },
-						{ name: "Links", value: "links" },
-						{ name: "Forms", value: "form" },
-					),
+					opt
+						.setName("type")
+						.setDescription("Extraction type")
+						.addChoices(
+							{ name: "Text", value: "text" },
+							{ name: "Tables", value: "table" },
+							{ name: "Links", value: "links" },
+							{ name: "Forms", value: "form" },
+						),
 				),
 		)
 		.addSubcommand((sub) =>
 			sub
 				.setName("agent")
 				.setDescription("Run AI browser agent with natural language task")
-				.addStringOption((opt) => opt.setName("task").setDescription("Natural language task description").setRequired(true)),
+				.addStringOption((opt) =>
+					opt.setName("task").setDescription("Natural language task description").setRequired(true),
+				),
 		)
 		.addSubcommand((sub) =>
 			sub
@@ -4145,14 +4182,18 @@ const slashCommands = [
 				.setName("install")
 				.setDescription("Install a platform integration")
 				.addStringOption((opt) =>
-					opt.setName("platform").setDescription("Platform to install").setRequired(true).addChoices(
-						{ name: "OpenAI", value: "openai" },
-						{ name: "Anthropic", value: "anthropic" },
-						{ name: "Stripe", value: "stripe" },
-						{ name: "AWS", value: "aws" },
-						{ name: "GitHub", value: "github" },
-						{ name: "Supabase", value: "supabase" },
-					),
+					opt
+						.setName("platform")
+						.setDescription("Platform to install")
+						.setRequired(true)
+						.addChoices(
+							{ name: "OpenAI", value: "openai" },
+							{ name: "Anthropic", value: "anthropic" },
+							{ name: "Stripe", value: "stripe" },
+							{ name: "AWS", value: "aws" },
+							{ name: "GitHub", value: "github" },
+							{ name: "Supabase", value: "supabase" },
+						),
 				),
 		)
 		.addSubcommand((sub) =>
@@ -4161,15 +4202,18 @@ const slashCommands = [
 				.setDescription("Search for templates and components")
 				.addStringOption((opt) => opt.setName("query").setDescription("Search query").setRequired(true))
 				.addStringOption((opt) =>
-					opt.setName("type").setDescription("Component type").addChoices(
-						{ name: "All", value: "all" },
-						{ name: "Agent", value: "agent" },
-						{ name: "Command", value: "command" },
-						{ name: "Setting", value: "setting" },
-						{ name: "Hook", value: "hook" },
-						{ name: "MCP", value: "mcp" },
-						{ name: "Skill", value: "skill" },
-					),
+					opt
+						.setName("type")
+						.setDescription("Component type")
+						.addChoices(
+							{ name: "All", value: "all" },
+							{ name: "Agent", value: "agent" },
+							{ name: "Command", value: "command" },
+							{ name: "Setting", value: "setting" },
+							{ name: "Hook", value: "hook" },
+							{ name: "MCP", value: "mcp" },
+							{ name: "Skill", value: "skill" },
+						),
 				),
 		)
 		.addSubcommand((sub) => sub.setName("platforms").setDescription("List available platform integrations"))
@@ -4179,12 +4223,15 @@ const slashCommands = [
 				.setName("analytics")
 				.setDescription("View performance analytics")
 				.addStringOption((opt) =>
-					opt.setName("period").setDescription("Time period").addChoices(
-						{ name: "Hour", value: "hour" },
-						{ name: "Day", value: "day" },
-						{ name: "Week", value: "week" },
-						{ name: "Month", value: "month" },
-					),
+					opt
+						.setName("period")
+						.setDescription("Time period")
+						.addChoices(
+							{ name: "Hour", value: "hour" },
+							{ name: "Day", value: "day" },
+							{ name: "Week", value: "week" },
+							{ name: "Month", value: "month" },
+						),
 				),
 		)
 		.addSubcommand((sub) =>
@@ -4192,13 +4239,103 @@ const slashCommands = [
 				.setName("plugin")
 				.setDescription("Manage plugins")
 				.addStringOption((opt) =>
-					opt.setName("action").setDescription("Plugin action").setRequired(true).addChoices(
-						{ name: "List", value: "list" },
-						{ name: "Enable", value: "enable" },
-						{ name: "Disable", value: "disable" },
-					),
+					opt
+						.setName("action")
+						.setDescription("Plugin action")
+						.setRequired(true)
+						.addChoices(
+							{ name: "List", value: "list" },
+							{ name: "Enable", value: "enable" },
+							{ name: "Disable", value: "disable" },
+						),
 				)
 				.addStringOption((opt) => opt.setName("plugin_id").setDescription("Plugin ID (for enable/disable)")),
+		),
+
+	// Interactive AI Coding Agent (Rhys Sullivan DUI style)
+	new SlashCommandBuilder()
+		.setName("coder")
+		.setDescription("Interactive AI coding agent with buttons and model selection")
+		.addSubcommand((sub) =>
+			sub
+				.setName("start")
+				.setDescription("Start a new coding session")
+				.addStringOption((opt) =>
+					opt
+						.setName("model")
+						.setDescription("AI model to use")
+						.addChoices(
+							{ name: "GPT-4o (Best Overall)", value: "gpt-4o" },
+							{ name: "GPT-4o Mini (Fast)", value: "gpt-4o-mini" },
+							{ name: "Claude Sonnet 4 (Best Coding)", value: "claude-sonnet-4-20250514" },
+							{ name: "Claude Haiku (Fast)", value: "claude-3-5-haiku-20241022" },
+							{ name: "DeepSeek V3 (Best Value)", value: "deepseek-chat" },
+							{ name: "Gemini 2.0 Flash", value: "gemini-2.0-flash" },
+							{ name: "Llama 3.3 70B (Open)", value: "llama-3.3-70b" },
+						),
+				),
+		)
+		.addSubcommand((sub) => sub.setName("session").setDescription("Show current coding session status"))
+		.addSubcommand((sub) => sub.setName("end").setDescription("End the current coding session"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("suggest")
+				.setDescription("Get AI code suggestion with interactive buttons")
+				.addStringOption((opt) => opt.setName("prompt").setDescription("What code do you need?").setRequired(true))
+				.addStringOption((opt) =>
+					opt
+						.setName("language")
+						.setDescription("Target language")
+						.addChoices(
+							{ name: "TypeScript", value: "typescript" },
+							{ name: "JavaScript", value: "javascript" },
+							{ name: "Python", value: "python" },
+							{ name: "Rust", value: "rust" },
+							{ name: "Go", value: "go" },
+							{ name: "SQL", value: "sql" },
+							{ name: "Bash", value: "bash" },
+						),
+				)
+				.addStringOption((opt) => opt.setName("file").setDescription("Target file path")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("model")
+				.setDescription("Change the AI model for current session")
+				.addStringOption((opt) =>
+					opt
+						.setName("model")
+						.setDescription("New model")
+						.setRequired(true)
+						.addChoices(
+							{ name: "GPT-4o", value: "gpt-4o" },
+							{ name: "GPT-4o Mini", value: "gpt-4o-mini" },
+							{ name: "Claude Sonnet 4", value: "claude-sonnet-4-20250514" },
+							{ name: "Claude Haiku", value: "claude-3-5-haiku-20241022" },
+							{ name: "DeepSeek V3", value: "deepseek-chat" },
+							{ name: "Gemini 2.0 Flash", value: "gemini-2.0-flash" },
+							{ name: "Llama 3.3 70B", value: "llama-3.3-70b" },
+						),
+				),
+		)
+		.addSubcommand((sub) => sub.setName("context").setDescription("Show session context"))
+		.addSubcommand((sub) => sub.setName("clear").setDescription("Clear session context"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("settings")
+				.setDescription("Update coding preferences")
+				.addStringOption((opt) =>
+					opt
+						.setName("default_model")
+						.setDescription("Default model for new sessions")
+						.addChoices(
+							{ name: "GPT-4o", value: "gpt-4o" },
+							{ name: "Claude Sonnet 4", value: "claude-sonnet-4-20250514" },
+							{ name: "DeepSeek V3", value: "deepseek-chat" },
+						),
+				)
+				.addBooleanOption((opt) => opt.setName("auto_commit").setDescription("Auto-commit accepted suggestions"))
+				.addBooleanOption((opt) => opt.setName("show_diffs").setDescription("Show diffs for changes")),
 		),
 ];
 
@@ -4681,7 +4818,7 @@ function truncateTail(content: string): {
 // Message Splitting for Discord's 2000 char limit
 // ============================================================================
 
-const DISCORD_MAX_LENGTH = 2000;
+const _DISCORD_MAX_LENGTH = 2000;
 const DISCORD_SAFE_LENGTH = 1950; // Leave room for formatting
 
 /**
@@ -17540,11 +17677,22 @@ async function main() {
 									.setColor(mode === "minimalist" ? 0x00ff88 : mode === "justBash" ? 0xff8800 : 0x3498db)
 									.addFields(
 										{ name: "Mode", value: mode, inline: true },
-										{ name: "Tools", value: `${toolCount} (${toolNames.slice(0, 4).join(", ")}${toolCount > 4 ? "..." : ""})`, inline: true },
+										{
+											name: "Tools",
+											value: `${toolCount} (${toolNames.slice(0, 4).join(", ")}${toolCount > 4 ? "..." : ""})`,
+											inline: true,
+										},
 										{ name: "Agent ID", value: agentId, inline: true },
 									)
 									.addFields({ name: "Task", value: task })
-									.setFooter({ text: mode === "minimalist" ? "Mario Zechner's 4-tool philosophy" : mode === "justBash" ? "Vercel's 'Bash is all you need'" : "Full agent mode" })
+									.setFooter({
+										text:
+											mode === "minimalist"
+												? "Mario Zechner's 4-tool philosophy"
+												: mode === "justBash"
+													? "Vercel's 'Bash is all you need'"
+													: "Full agent mode",
+									})
 									.setTimestamp();
 
 								await interaction.editReply({ embeds: [embed] });
@@ -17557,11 +17705,12 @@ async function main() {
 								};
 
 								// Build minimalist prompt
-								const minimalistPrompt = mode === "minimalist"
-									? `[MINIMALIST MODE - 4 TOOLS ONLY: bash, read, write, edit]\n${task}`
-									: mode === "justBash"
-										? `[JUST-BASH MODE - BASH ONLY]\n${task}`
-										: task;
+								const minimalistPrompt =
+									mode === "minimalist"
+										? `[MINIMALIST MODE - 4 TOOLS ONLY: bash, read, write, edit]\n${task}`
+										: mode === "justBash"
+											? `[JUST-BASH MODE - BASH ONLY]\n${task}`
+											: task;
 
 								// Run async - don't await
 								(async () => {
@@ -17571,7 +17720,9 @@ async function main() {
 										// Learn from execution
 										agent.learn(`Completed ${mode} task: ${task}`, "success", 0.8);
 
-										await sendToChannel(`✅ **${mode} agent completed**\n${result.output.substring(0, 1800)}`);
+										await sendToChannel(
+											`✅ **${mode} agent completed**\n${result.output.substring(0, 1800)}`,
+										);
 									} catch (err) {
 										const errMsg = err instanceof Error ? err.message : String(err);
 										agent.learn(`Failed ${mode} task: ${task} - ${errMsg}`, "failure", 0.3);
@@ -18059,7 +18210,7 @@ async function main() {
 
 						// Initialize TAC-12 client
 						const baseUrl = process.env.TAC12_BASE_URL || "http://localhost:8000";
-						let client;
+						let client: ReturnType<typeof getTAC12Client> | Awaited<ReturnType<typeof initTAC12FromEnv>>;
 						try {
 							client = getTAC12Client({ baseUrl, apiKey: process.env.TAC12_API_KEY });
 						} catch {
@@ -18090,7 +18241,12 @@ async function main() {
 											{ name: "Available SDKs", value: `${availableSDKs.length}`, inline: true },
 										)
 										.setDescription(
-											`**Available SDKs:**\n${availableSDKs.map((s) => `• ${s.sdk}: ${s.description}`).join("\n").slice(0, 1000) || "None"}`,
+											`**Available SDKs:**\n${
+												availableSDKs
+													.map((s) => `• ${s.sdk}: ${s.description}`)
+													.join("\n")
+													.slice(0, 1000) || "None"
+											}`,
 										)
 										.setTimestamp();
 
@@ -18103,7 +18259,9 @@ async function main() {
 											{ name: "Server", value: baseUrl, inline: true },
 											{ name: "Connected", value: "❌", inline: true },
 										)
-										.setDescription(`Cannot connect to TAC-12 server.\n\nError: ${connError instanceof Error ? connError.message : String(connError)}`)
+										.setDescription(
+											`Cannot connect to TAC-12 server.\n\nError: ${connError instanceof Error ? connError.message : String(connError)}`,
+										)
 										.setTimestamp();
 
 									await interaction.editReply({ embeds: [embed] });
@@ -18135,15 +18293,25 @@ async function main() {
 										.setColor(0x00ff00)
 										.addFields(
 											{ name: "SDK", value: sdk, inline: true },
-											{ name: "Duration", value: result.duration ? `${result.duration}ms` : "N/A", inline: true },
-											{ name: "Cost", value: result.totalCost ? `$${result.totalCost.toFixed(4)}` : "N/A", inline: true },
+											{
+												name: "Duration",
+												value: result.duration ? `${result.duration}ms` : "N/A",
+												inline: true,
+											},
+											{
+												name: "Cost",
+												value: result.totalCost ? `$${result.totalCost.toFixed(4)}` : "N/A",
+												inline: true,
+											},
 										)
 										.setDescription(`\`\`\`\n${output}\n\`\`\``)
 										.setTimestamp();
 
 									await interaction.editReply({ embeds: [embed] });
 								} else {
-									await interaction.editReply(`❌ **Execution Failed**\n\`\`\`\n${result.error || "Unknown error"}\n\`\`\``);
+									await interaction.editReply(
+										`❌ **Execution Failed**\n\`\`\`\n${result.error || "Unknown error"}\n\`\`\``,
+									);
 								}
 								break;
 							}
@@ -18151,7 +18319,9 @@ async function main() {
 							case "scout": {
 								const prompt = interaction.options.getString("prompt", true);
 
-								await interaction.editReply("⏳ Running **Scout-Builder** pattern...\n🔍 Scout exploring → 🔨 Builder implementing");
+								await interaction.editReply(
+									"⏳ Running **Scout-Builder** pattern...\n🔍 Scout exploring → 🔨 Builder implementing",
+								);
 
 								const result = await client.scoutBuilder(prompt);
 
@@ -18168,25 +18338,36 @@ async function main() {
 										.addFields(
 											{ name: "Pattern", value: "Scout → Builder", inline: true },
 											{ name: "Agents Used", value: `${result.agents?.length || 2}`, inline: true },
-											{ name: "Cost", value: result.totalCost ? `$${result.totalCost.toFixed(4)}` : "N/A", inline: true },
+											{
+												name: "Cost",
+												value: result.totalCost ? `$${result.totalCost.toFixed(4)}` : "N/A",
+												inline: true,
+											},
 										)
 										.setDescription(`\`\`\`\n${output}\n\`\`\``)
 										.setTimestamp();
 
 									await interaction.editReply({ embeds: [embed] });
 								} else {
-									await interaction.editReply(`❌ **Scout-Builder Failed**\n\`\`\`\n${result.error || "Unknown error"}\n\`\`\``);
+									await interaction.editReply(
+										`❌ **Scout-Builder Failed**\n\`\`\`\n${result.error || "Unknown error"}\n\`\`\``,
+									);
 								}
 								break;
 							}
 
 							case "parallel": {
 								const prompt = interaction.options.getString("prompt", true);
-								const aggregation = (interaction.options.getString("aggregation") || "best") as "first" | "best" | "all";
+								const aggregation = (interaction.options.getString("aggregation") || "best") as
+									| "first"
+									| "best"
+									| "all";
 
 								await interaction.editReply("⏳ Running **Parallel** execution across multiple SDKs...");
 
-								const result = await client.parallel(prompt, ["claudeco", "vercel-ai", "cloudflare-ai"], { aggregation });
+								const result = await client.parallel(prompt, ["claudeco", "vercel-ai", "cloudflare-ai"], {
+									aggregation,
+								});
 
 								if (result.success) {
 									const output = result.output
@@ -18201,14 +18382,20 @@ async function main() {
 										.addFields(
 											{ name: "SDKs Used", value: "claudeco, vercel-ai, cloudflare-ai", inline: false },
 											{ name: "Aggregation", value: aggregation, inline: true },
-											{ name: "Cost", value: result.totalCost ? `$${result.totalCost.toFixed(4)}` : "N/A", inline: true },
+											{
+												name: "Cost",
+												value: result.totalCost ? `$${result.totalCost.toFixed(4)}` : "N/A",
+												inline: true,
+											},
 										)
 										.setDescription(`\`\`\`\n${output}\n\`\`\``)
 										.setTimestamp();
 
 									await interaction.editReply({ embeds: [embed] });
 								} else {
-									await interaction.editReply(`❌ **Parallel Execution Failed**\n\`\`\`\n${result.error || "Unknown error"}\n\`\`\``);
+									await interaction.editReply(
+										`❌ **Parallel Execution Failed**\n\`\`\`\n${result.error || "Unknown error"}\n\`\`\``,
+									);
 								}
 								break;
 							}
@@ -18229,7 +18416,9 @@ async function main() {
 
 									await interaction.editReply(`🎵 **Vibe Results**\n\n${output}`);
 								} else {
-									await interaction.editReply(`❌ **Vibe Failed**\n\`\`\`\n${result.error || "Unknown error"}\n\`\`\``);
+									await interaction.editReply(
+										`❌ **Vibe Failed**\n\`\`\`\n${result.error || "Unknown error"}\n\`\`\``,
+									);
 								}
 								break;
 							}
@@ -18253,14 +18442,20 @@ async function main() {
 										.setColor(0x00ff00)
 										.addFields(
 											{ name: "Mode", value: "Full-Stack Development", inline: true },
-											{ name: "Cost", value: result.totalCost ? `$${result.totalCost.toFixed(4)}` : "N/A", inline: true },
+											{
+												name: "Cost",
+												value: result.totalCost ? `$${result.totalCost.toFixed(4)}` : "N/A",
+												inline: true,
+											},
 										)
 										.setDescription(`\`\`\`\n${output}\n\`\`\``)
 										.setTimestamp();
 
 									await interaction.editReply({ embeds: [embed] });
 								} else {
-									await interaction.editReply(`❌ **FDSA Failed**\n\`\`\`\n${result.error || "Unknown error"}\n\`\`\``);
+									await interaction.editReply(
+										`❌ **FDSA Failed**\n\`\`\`\n${result.error || "Unknown error"}\n\`\`\``,
+									);
 								}
 								break;
 							}
@@ -18333,6 +18528,257 @@ async function main() {
 					break;
 				}
 
+				// Interactive AI Coding Agent with buttons and model selection
+				case "coder": {
+					await interaction.deferReply();
+					const coderSubcommand = interaction.options.getSubcommand();
+
+					try {
+						// Import UI module dynamically
+						const uiModule = await import("./ui/index.js");
+						const { getCodingAgentUI, getCodingSessionDB, AVAILABLE_MODELS, createCodeReviewButtons, createSessionEmbed, createModelSelector, createCodeSuggestionEmbed } = uiModule;
+
+						const db = getCodingSessionDB();
+						const userId = interaction.user.id;
+						const channelId = interaction.channelId;
+
+						switch (coderSubcommand) {
+							case "start": {
+								const modelId = interaction.options.getString("model") || "claude-sonnet-4-20250514";
+								const contextStr = interaction.options.getString("context") || "";
+
+								// Check for existing active session
+								const existingSession = db.getActiveSession(userId, channelId);
+								if (existingSession) {
+									const embed = createSessionEmbed(existingSession);
+									await interaction.editReply({
+										content: "⚠️ You already have an active session. Use `/coder end` to close it first.",
+										embeds: [embed],
+									});
+									break;
+								}
+
+								// Create new session
+								const initialContext = contextStr ? contextStr.split(",").map((c) => c.trim()) : [];
+								const session = db.createSession({
+									userId,
+									channelId,
+									model: modelId,
+									initialContext,
+								});
+
+								const embed = createSessionEmbed(session);
+								const modelSelector = createModelSelector(session.id, modelId);
+
+								await interaction.editReply({
+									content: `✅ **Coding session started!**\n\nUse \`/coder suggest\` to get AI code suggestions with interactive buttons.`,
+									embeds: [embed],
+									components: [modelSelector],
+								});
+								break;
+							}
+
+							case "session": {
+								const session = db.getActiveSession(userId, channelId);
+
+								if (!session) {
+									await interaction.editReply(
+										"❌ No active coding session. Use `/coder start` to begin.",
+									);
+									break;
+								}
+
+								const embed = createSessionEmbed(session);
+								const modelSelector = createModelSelector(session.id, session.model);
+
+								await interaction.editReply({
+									embeds: [embed],
+									components: [modelSelector],
+								});
+								break;
+							}
+
+							case "end": {
+								const session = db.getActiveSession(userId, channelId);
+
+								if (!session) {
+									await interaction.editReply("❌ No active coding session to end.");
+									break;
+								}
+
+								db.updateSession(session.id, { status: "completed" });
+
+								await interaction.editReply(
+									`✅ **Session ended**\n\nSession ID: \`${session.id}\`\nSuggestions reviewed: ${session.suggestions.length}`,
+								);
+								break;
+							}
+
+							case "suggest": {
+								const prompt = interaction.options.getString("prompt", true);
+								const session = db.getActiveSession(userId, channelId);
+
+								if (!session) {
+									await interaction.editReply(
+										"❌ No active coding session. Use `/coder start` to begin.",
+									);
+									break;
+								}
+
+								await interaction.editReply("⏳ Generating code suggestion...");
+
+								// Use lightweight agent for AI generation
+								const { runAgent } = await import("./agents/lightweight-agent.js");
+								const systemPrompt = `You are an expert coding assistant. Provide clean, well-documented code suggestions. Always wrap code in appropriate markdown code blocks with language identifiers. Explain your suggestions briefly.`;
+
+								const fullPrompt = session.context.length > 0
+									? `Context: ${session.context.join(", ")}\n\nRequest: ${prompt}`
+									: prompt;
+
+								const response = await runAgent({
+									prompt: `${systemPrompt}\n\n${fullPrompt}`,
+									timeout: 60000,
+								});
+
+								// Extract code blocks from response
+								const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/g;
+								let codeMatch: RegExpExecArray | null;
+								const codeBlocks: Array<{ language: string; code: string }> = [];
+
+								while ((codeMatch = codeBlockRegex.exec(response.output)) !== null) {
+									codeBlocks.push({
+										language: codeMatch[1] || "text",
+										code: codeMatch[2].trim(),
+									});
+								}
+
+								if (codeBlocks.length === 0) {
+									// No code blocks found, show raw response
+									await interaction.editReply({
+										content: `**AI Response:**\n\n${response.output.slice(0, 1900)}`,
+									});
+									break;
+								}
+
+								// Create suggestion for first code block
+								const suggestion = db.createSuggestion({
+									sessionId: session.id,
+									language: codeBlocks[0].language,
+									code: codeBlocks[0].code,
+									explanation: response.output.replace(/```[\s\S]*?```/g, "").trim().slice(0, 500),
+								});
+
+								const codeEmbed = createCodeSuggestionEmbed(suggestion);
+								const buttons = createCodeReviewButtons(suggestion.id);
+
+								await interaction.editReply({
+									embeds: [codeEmbed],
+									components: [buttons],
+								});
+								break;
+							}
+
+							case "model": {
+								const modelId = interaction.options.getString("model", true);
+								const session = db.getActiveSession(userId, channelId);
+
+								if (!session) {
+									await interaction.editReply(
+										"❌ No active coding session. Use `/coder start` to begin.",
+									);
+									break;
+								}
+
+								const model = AVAILABLE_MODELS.find((m) => m.id === modelId);
+								if (!model) {
+									await interaction.editReply(
+										`❌ Unknown model: ${modelId}\n\nAvailable models:\n${AVAILABLE_MODELS.map((m) => `• \`${m.id}\` - ${m.name}`).join("\n")}`,
+									);
+									break;
+								}
+
+								db.updateSession(session.id, { model: modelId });
+
+								await interaction.editReply(
+									`✅ Model changed to **${model.name}** (${model.provider})\n\n${model.description || ""}`,
+								);
+								break;
+							}
+
+							case "context": {
+								const session = db.getActiveSession(userId, channelId);
+
+								if (!session) {
+									await interaction.editReply(
+										"❌ No active coding session. Use `/coder start` to begin.",
+									);
+									break;
+								}
+
+								if (session.context.length === 0) {
+									await interaction.editReply("📋 **Session Context:** (empty)\n\nUse `/coder settings` to add context.");
+								} else {
+									await interaction.editReply(
+										`📋 **Session Context:**\n${session.context.map((c, i) => `${i + 1}. ${c}`).join("\n")}`,
+									);
+								}
+								break;
+							}
+
+							case "clear": {
+								const session = db.getActiveSession(userId, channelId);
+
+								if (!session) {
+									await interaction.editReply(
+										"❌ No active coding session. Use `/coder start` to begin.",
+									);
+									break;
+								}
+
+								db.updateSession(session.id, { context: [] });
+
+								await interaction.editReply("✅ Session context cleared.");
+								break;
+							}
+
+							case "settings": {
+								const contextStr = interaction.options.getString("add_context");
+								const session = db.getActiveSession(userId, channelId);
+
+								if (!session) {
+									await interaction.editReply(
+										"❌ No active coding session. Use `/coder start` to begin.",
+									);
+									break;
+								}
+
+								if (contextStr) {
+									const newContext = [...session.context, ...contextStr.split(",").map((c) => c.trim())];
+									db.updateSession(session.id, { context: newContext });
+
+									await interaction.editReply(
+										`✅ Context updated!\n\n**Current context:**\n${newContext.map((c, i) => `${i + 1}. ${c}`).join("\n")}`,
+									);
+								} else {
+									const embed = createSessionEmbed(session);
+									await interaction.editReply({
+										content: "⚙️ **Session Settings**\n\nUse options to modify settings.",
+										embeds: [embed],
+									});
+								}
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown coder subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`❌ Coder error: ${errMsg}`);
+					}
+					break;
+				}
+
 				// Claude-Flow - Enterprise AI orchestration (ruvnet/claude-flow)
 				case "claude-flow": {
 					await interaction.deferReply();
@@ -18355,7 +18801,11 @@ async function main() {
 									.addFields(
 										{ name: "AgentDB Memories", value: String(stats.total), inline: true },
 										{ name: "Embeddings", value: String(stats.embeddingsCount), inline: true },
-										{ name: "Namespaces", value: String(Object.keys(stats.byNamespace).length), inline: true },
+										{
+											name: "Namespaces",
+											value: String(Object.keys(stats.byNamespace).length),
+											inline: true,
+										},
 										{ name: "Queen Active", value: hiveStatus.queen ? "✅" : "❌", inline: true },
 										{ name: "Workers", value: String(hiveStatus.workers.length), inline: true },
 										{ name: "Pending Tasks", value: String(hiveStatus.pendingTasks), inline: true },
@@ -18395,7 +18845,10 @@ async function main() {
 									.setColor(0x00ff00)
 									.setDescription(
 										results
-											.map((r: { score: number; content: string }, i: number) => `**${i + 1}.** (${(r.score * 100).toFixed(1)}%) ${r.content.slice(0, 150)}${r.content.length > 150 ? "..." : ""}`)
+											.map(
+												(r: { score: number; content: string }, i: number) =>
+													`**${i + 1}.** (${(r.score * 100).toFixed(1)}%) ${r.content.slice(0, 150)}${r.content.length > 150 ? "..." : ""}`,
+											)
 											.join("\n\n")
 											.slice(0, 2000),
 									)
@@ -18466,7 +18919,10 @@ async function main() {
 									.setColor(0x00ff00)
 									.setDescription(
 										skills
-											.map((s: { name: string; triggers: string[]; description: string }) => `**${s.name}** (\`${s.triggers[0] || "N/A"}\`)\n${s.description}`)
+											.map(
+												(s: { name: string; triggers: string[]; description: string }) =>
+													`**${s.name}** (\`${s.triggers[0] || "N/A"}\`)\n${s.description}`,
+											)
 											.join("\n\n")
 											.slice(0, 2000),
 									)
@@ -18524,7 +18980,13 @@ async function main() {
 
 							case "observe": {
 								const content = interaction.options.getString("content", true);
-								const type = (interaction.options.getString("type") || "discovery") as "decision" | "bugfix" | "feature" | "refactor" | "discovery" | "change";
+								const type = (interaction.options.getString("type") || "discovery") as
+									| "decision"
+									| "bugfix"
+									| "feature"
+									| "refactor"
+									| "discovery"
+									| "change";
 
 								const observation = client.observe(content, { type });
 
@@ -18538,7 +19000,15 @@ async function main() {
 								const query = interaction.options.getString("query", true);
 								const searchType = interaction.options.getString("type") || "all";
 
-								type MemQueryType = "observations" | "sessions" | "prompts" | "concepts" | "files" | "types" | "recent" | "timeline";
+								type MemQueryType =
+									| "observations"
+									| "sessions"
+									| "prompts"
+									| "concepts"
+									| "files"
+									| "types"
+									| "recent"
+									| "timeline";
 								let memType: MemQueryType = "observations";
 								if (searchType === "concept") {
 									memType = "concepts";
@@ -18559,7 +19029,10 @@ async function main() {
 									.setDescription(
 										results
 											.slice(0, 10)
-											.map((r: { type: string; content: string }, i: number) => `**${i + 1}.** [${r.type}] ${r.content.slice(0, 150)}${r.content.length > 150 ? "..." : ""}`)
+											.map(
+												(r: { type: string; content: string }, i: number) =>
+													`**${i + 1}.** [${r.type}] ${r.content.slice(0, 150)}${r.content.length > 150 ? "..." : ""}`,
+											)
 											.join("\n\n")
 											.slice(0, 2000),
 									)
@@ -18650,7 +19123,11 @@ async function main() {
 									.setColor(0x00ff00)
 									.addFields(
 										{ name: "Ledger Active", value: currentLedger ? "✅" : "❌", inline: true },
-										{ name: "Last Handoff", value: latestHandoff ? new Date(latestHandoff.createdAt).toLocaleDateString() : "None", inline: true },
+										{
+											name: "Last Handoff",
+											value: latestHandoff ? new Date(latestHandoff.createdAt).toLocaleDateString() : "None",
+											inline: true,
+										},
 										{ name: "Tracing Active", value: currentTrace ? "✅" : "❌", inline: true },
 									)
 									.setDescription("Session continuity with ledger, handoffs, and Braintrust tracing")
@@ -18715,7 +19192,9 @@ async function main() {
 										{ name: "Handoff ID", value: `\`${handoff.id}\``, inline: true },
 										{ name: "Session", value: channelSessionId.slice(0, 20), inline: true },
 									)
-									.setDescription(`**Context:**\n${context.slice(0, 500)}\n\n**Next Steps:**\n${nextSteps.map((s: string) => `• ${s}`).join("\n") || "None specified"}`)
+									.setDescription(
+										`**Context:**\n${context.slice(0, 500)}\n\n**Next Steps:**\n${nextSteps.map((s: string) => `• ${s}`).join("\n") || "None specified"}`,
+									)
 									.setTimestamp();
 
 								await interaction.editReply({ embeds: [embed] });
@@ -18725,7 +19204,7 @@ async function main() {
 							case "resume": {
 								const handoffId = interaction.options.getString("handoff_id");
 
-								let handoff;
+								let handoff: ReturnType<typeof client.handoffManager.getLatest> | undefined;
 								if (handoffId) {
 									const handoffs = client.handoffManager.query({ search: handoffId });
 									handoff = handoffs[0];
@@ -18746,7 +19225,9 @@ async function main() {
 										{ name: "Handoff ID", value: `\`${handoff.id}\``, inline: true },
 										{ name: "Created", value: new Date(handoff.createdAt).toLocaleString(), inline: true },
 									)
-									.setDescription(`**Context:**\n${handoff.context.slice(0, 800)}\n\n**Next Steps:**\n${handoff.nextSteps?.map((s: string) => `• ${s}`).join("\n") || "None"}`)
+									.setDescription(
+										`**Context:**\n${handoff.context.slice(0, 800)}\n\n**Next Steps:**\n${handoff.nextSteps?.map((s: string) => `• ${s}`).join("\n") || "None"}`,
+									)
 									.setTimestamp();
 
 								await interaction.editReply({ embeds: [embed] });
@@ -18758,11 +19239,15 @@ async function main() {
 
 								if (action === "start") {
 									client.sessionTracer.startSession(workingDir);
-									await interaction.editReply("✅ **Tracing Started**\n\nSession tracing is now active for debugging.");
+									await interaction.editReply(
+										"✅ **Tracing Started**\n\nSession tracing is now active for debugging.",
+									);
 								} else if (action === "view") {
 									const trace = client.sessionTracer.getCurrentTrace();
 									if (!trace) {
-										await interaction.editReply("No active trace. Use `/continuity trace action:start` to begin.");
+										await interaction.editReply(
+											"No active trace. Use `/continuity trace action:start` to begin.",
+										);
 										break;
 									}
 
@@ -18778,7 +19263,10 @@ async function main() {
 											trace.spans.length > 0
 												? trace.spans
 														.slice(-5)
-														.map((s, i) => `**${i + 1}.** [${s.type}] ${String(s.input || "").slice(0, 80)}...`)
+														.map(
+															(s, i) =>
+																`**${i + 1}.** [${s.type}] ${String(s.input || "").slice(0, 80)}...`,
+														)
 														.join("\n\n")
 														.slice(0, 1800)
 												: "No spans recorded yet",
@@ -18834,7 +19322,9 @@ async function main() {
 										{ name: "URL", value: url.slice(0, 100), inline: true },
 										{ name: "Page ID", value: result.page.id.slice(0, 20), inline: true },
 									)
-									.setDescription(`**LLM-Friendly DOM Snapshot:**\n\`\`\`\n${result.snapshot.slice(0, 1600)}\n\`\`\``)
+									.setDescription(
+										`**LLM-Friendly DOM Snapshot:**\n\`\`\`\n${result.snapshot.slice(0, 1600)}\n\`\`\``,
+									)
 									.setTimestamp();
 
 								await interaction.editReply({ embeds: [embed] });
@@ -18870,7 +19360,11 @@ async function main() {
 
 							case "extract": {
 								const url = interaction.options.getString("url", true);
-								const type = (interaction.options.getString("type") || "text") as "text" | "table" | "links" | "form";
+								const type = (interaction.options.getString("type") || "text") as
+									| "text"
+									| "table"
+									| "links"
+									| "form";
 
 								await interaction.editReply(`⏳ Extracting ${type} from ${url}...`);
 
@@ -18950,7 +19444,10 @@ async function main() {
 									.setColor(0x00ff00)
 									.setDescription(
 										pages
-											.map((p: { id: string; url: string }, i: number) => `**${i + 1}.** \`${p.id.slice(0, 15)}\`\n   ${p.url.slice(0, 60)}${p.url.length > 60 ? "..." : ""}`)
+											.map(
+												(p: { id: string; url: string }, i: number) =>
+													`**${i + 1}.** \`${p.id.slice(0, 15)}\`\n   ${p.url.slice(0, 60)}${p.url.length > 60 ? "..." : ""}`,
+											)
 											.join("\n\n")
 											.slice(0, 2000),
 									)
@@ -19131,13 +19628,23 @@ async function main() {
 									.setColor(0x9b59b6)
 									.addFields(
 										{ name: "Tool Calls", value: String(report.toolCalls), inline: true },
-										{ name: "Success Rate", value: `${(report.successRate * 100).toFixed(1)}%`, inline: true },
+										{
+											name: "Success Rate",
+											value: `${(report.successRate * 100).toFixed(1)}%`,
+											inline: true,
+										},
 										{ name: "Avg Response", value: `${report.avgResponseTime.toFixed(0)}ms`, inline: true },
 									)
 									.setDescription(
 										report.topTools.length === 0
 											? "No tool calls recorded yet"
-											: `**Top Tools:**\n${report.topTools.slice(0, 5).map((t: { toolName: string; callCount: number }) => `• ${t.toolName}: ${t.callCount} calls`).join("\n")}`,
+											: `**Top Tools:**\n${report.topTools
+													.slice(0, 5)
+													.map(
+														(t: { toolName: string; callCount: number }) =>
+															`• ${t.toolName}: ${t.callCount} calls`,
+													)
+													.join("\n")}`,
 									)
 									.setTimestamp();
 
@@ -19317,6 +19824,7 @@ async function main() {
 
 		const { customId, user } = interaction;
 
+		// Feedback buttons
 		if (customId === "feedback_helpful") {
 			await interaction.reply({ content: "Thanks for the feedback! 👍", ephemeral: true });
 			logInfo(`[Feedback] ${user.username} found response helpful`);
@@ -19325,6 +19833,171 @@ async function main() {
 			logInfo(`[Feedback] ${user.username} found response not helpful`);
 		} else if (customId === "feedback_more") {
 			await interaction.reply({ content: "Just ask me a follow-up question!", ephemeral: true });
+		}
+
+		// Coding agent buttons
+		else if (customId.startsWith("coding_")) {
+			try {
+				const uiModule = await import("./ui/index.js");
+				const { getCodingSessionDB, parseCustomId, disableAllButtons, createEditCodeModal, CUSTOM_IDS } = uiModule;
+				const db = getCodingSessionDB();
+
+				const parsed = parseCustomId(customId);
+				if (!parsed) {
+					await interaction.reply({ content: "Invalid button action", ephemeral: true });
+					return;
+				}
+
+				const { action, id: suggestionId } = parsed;
+				const suggestion = db.getSuggestion(suggestionId);
+
+				if (!suggestion) {
+					await interaction.reply({ content: "Code suggestion not found", ephemeral: true });
+					return;
+				}
+
+				switch (action) {
+					case CUSTOM_IDS.ACCEPT_CODE: {
+						db.updateSuggestion(suggestionId, { status: "accepted" });
+						await disableAllButtons(interaction.message);
+						await interaction.reply({
+							content: `✅ **Code accepted!**\n\nYou can now copy and use this code:\n\`\`\`${suggestion.language}\n${suggestion.code.slice(0, 1500)}\n\`\`\``,
+							ephemeral: true,
+						});
+						break;
+					}
+
+					case CUSTOM_IDS.EDIT_CODE: {
+						const modal = createEditCodeModal(suggestionId, suggestion.code);
+						await interaction.showModal(modal);
+						break;
+					}
+
+					case CUSTOM_IDS.REJECT_CODE: {
+						db.updateSuggestion(suggestionId, { status: "rejected" });
+						await disableAllButtons(interaction.message);
+						await interaction.reply({
+							content: "❌ Code rejected. Use `/coder suggest` to get a new suggestion.",
+							ephemeral: true,
+						});
+						break;
+					}
+
+					case CUSTOM_IDS.RUN_CODE: {
+						await interaction.deferReply({ ephemeral: true });
+						try {
+							const e2bModule = await import("./agents/e2b-sandbox.js");
+							const { runInSandbox } = e2bModule;
+
+							// Map language to supported sandbox language
+							const langMap: Record<string, "python" | "node" | "bash"> = {
+								python: "python",
+								javascript: "node",
+								typescript: "node",
+								js: "node",
+								ts: "node",
+								py: "python",
+								bash: "bash",
+								sh: "bash",
+							};
+							const sandboxLang = langMap[suggestion.language.toLowerCase()] || "node";
+
+							const result = await runInSandbox(suggestion.code, { language: sandboxLang });
+
+							if (result.success) {
+								await interaction.editReply(
+									`▶️ **Execution Result:**\n\`\`\`\n${(result.output || "No output").slice(0, 1800)}\n\`\`\``,
+								);
+							} else {
+								await interaction.editReply(`❌ **Execution Failed:**\n\`\`\`\n${result.error}\n\`\`\``);
+							}
+						} catch (err) {
+							await interaction.editReply(
+								`❌ Sandbox not available: ${err instanceof Error ? err.message : String(err)}`,
+							);
+						}
+						break;
+					}
+
+					default:
+						await interaction.reply({ content: "Unknown action", ephemeral: true });
+				}
+			} catch (error) {
+				logError(`[CodingAgent] Button error: ${error instanceof Error ? error.message : String(error)}`);
+				if (!interaction.replied && !interaction.deferred) {
+					await interaction.reply({ content: "An error occurred", ephemeral: true });
+				}
+			}
+		}
+	});
+
+	// Handle select menu interactions for coding agent
+	client.on("interactionCreate", async (interaction) => {
+		if (!interaction.isStringSelectMenu()) return;
+
+		const { customId, user, values } = interaction;
+
+		if (customId.startsWith("model_select:")) {
+			try {
+				const uiModule = await import("./ui/index.js");
+				const { getCodingSessionDB, AVAILABLE_MODELS } = uiModule;
+				const db = getCodingSessionDB();
+
+				const sessionId = customId.split(":")[1];
+				const selectedModel = values[0];
+				const model = AVAILABLE_MODELS.find((m) => m.id === selectedModel);
+
+				if (!model) {
+					await interaction.reply({ content: "Invalid model selection", ephemeral: true });
+					return;
+				}
+
+				db.updateSession(sessionId, { model: selectedModel });
+				await interaction.reply({
+					content: `✅ Model changed to **${model.name}** (${model.provider})`,
+					ephemeral: true,
+				});
+			} catch (error) {
+				logError(`[CodingAgent] Model select error: ${error instanceof Error ? error.message : String(error)}`);
+				await interaction.reply({ content: "Failed to change model", ephemeral: true });
+			}
+		}
+	});
+
+	// Handle modal submissions for coding agent
+	client.on("interactionCreate", async (interaction) => {
+		if (!interaction.isModalSubmit()) return;
+
+		const { customId } = interaction;
+
+		if (customId.startsWith("edit_code:")) {
+			try {
+				const uiModule = await import("./ui/index.js");
+				const { getCodingSessionDB, createCodeSuggestionEmbed, createCodeReviewButtons } = uiModule;
+				const db = getCodingSessionDB();
+
+				const suggestionId = customId.split(":")[1];
+				const editedCode = interaction.fields.getTextInputValue("edited_code");
+
+				db.updateSuggestion(suggestionId, { code: editedCode });
+				const updated = db.getSuggestion(suggestionId);
+
+				if (updated) {
+					const embed = createCodeSuggestionEmbed(updated, "edited");
+					const buttons = createCodeReviewButtons(updated.id);
+
+					await interaction.reply({
+						content: "✏️ **Code updated!**",
+						embeds: [embed],
+						components: [buttons],
+					});
+				} else {
+					await interaction.reply({ content: "Failed to update code", ephemeral: true });
+				}
+			} catch (error) {
+				logError(`[CodingAgent] Modal submit error: ${error instanceof Error ? error.message : String(error)}`);
+				await interaction.reply({ content: "Failed to save edits", ephemeral: true });
+			}
 		}
 	});
 
