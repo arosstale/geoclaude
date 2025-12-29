@@ -4767,6 +4767,51 @@ const slashCommands = [
 				.setDescription("Enable or disable safety guards")
 				.addBooleanOption((opt) => opt.setName("enabled").setDescription("Enable guards").setRequired(true)),
 		),
+
+	// Class 3.9 Agent Feedback Loop (TAC Pattern: Self-improvement)
+	new SlashCommandBuilder()
+		.setName("feedback")
+		.setDescription("Agent Feedback - collect ratings to improve agents (TAC pattern)")
+		.addSubcommand((sub) => sub.setName("stats").setDescription("Show global feedback statistics"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("rate")
+				.setDescription("Rate an agent's response")
+				.addStringOption((opt) => opt.setName("agent").setDescription("Agent ID").setRequired(true))
+				.addIntegerOption((opt) =>
+					opt
+						.setName("rating")
+						.setDescription("Rating (1-5 stars)")
+						.setRequired(true)
+						.addChoices(
+							{ name: "⭐ (1)", value: 1 },
+							{ name: "⭐⭐ (2)", value: 2 },
+							{ name: "⭐⭐⭐ (3)", value: 3 },
+							{ name: "⭐⭐⭐⭐ (4)", value: 4 },
+							{ name: "⭐⭐⭐⭐⭐ (5)", value: 5 },
+						),
+				)
+				.addStringOption((opt) => opt.setName("comment").setDescription("Optional feedback comment")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("summary")
+				.setDescription("Get feedback summary for an agent")
+				.addStringOption((opt) => opt.setName("agent").setDescription("Agent ID").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("recent")
+				.setDescription("Show recent feedback")
+				.addStringOption((opt) => opt.setName("agent").setDescription("Agent ID (optional)")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("suggestions")
+				.setDescription("Get improvement suggestions for an agent")
+				.addStringOption((opt) => opt.setName("agent").setDescription("Agent ID").setRequired(true)),
+		)
+		.addSubcommand((sub) => sub.setName("leaderboard").setDescription("Show top-rated agents")),
 ];
 
 // ============================================================================
@@ -21641,6 +21686,209 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 					} catch (error) {
 						const errMsg = error instanceof Error ? error.message : String(error);
 						await interaction.editReply(`Safety guards error: ${errMsg}`);
+					}
+					break;
+				}
+
+				case "feedback": {
+					await interaction.deferReply();
+					const feedbackSubcommand = interaction.options.getSubcommand();
+
+					try {
+						const { getFeedbackSystem } = await import("./agents/agent-feedback.js");
+						const feedbackSystem = getFeedbackSystem(workingDir);
+
+						switch (feedbackSubcommand) {
+							case "stats": {
+								const stats = feedbackSystem.getGlobalStats();
+
+								const embed = new EmbedBuilder()
+									.setTitle("📊 Agent Feedback Statistics")
+									.setColor(0x3498db)
+									.addFields(
+										{ name: "Total Feedback", value: String(stats.totalFeedback), inline: true },
+										{ name: "Total Agents", value: String(stats.totalAgents), inline: true },
+										{ name: "Today", value: String(stats.feedbackToday), inline: true },
+										{
+											name: "Global Average",
+											value: `${"⭐".repeat(Math.round(stats.globalAverageScore * 5))} (${(stats.globalAverageScore * 5).toFixed(1)}/5)`,
+											inline: false,
+										},
+									)
+									.setTimestamp();
+
+								if (stats.topAgents.length > 0) {
+									const topList = stats.topAgents
+										.slice(0, 5)
+										.map((a, i) => `${i + 1}. **${a.agentId}** - ${(a.score * 5).toFixed(1)}/5 (${a.count} ratings)`)
+										.join("\n");
+									embed.addFields({ name: "🏆 Top Agents", value: topList });
+								}
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "rate": {
+								const agentId = interaction.options.getString("agent", true);
+								const rating = interaction.options.getInteger("rating", true) as 1 | 2 | 3 | 4 | 5;
+								const comment = interaction.options.getString("comment");
+
+								feedbackSystem.recordFeedback({
+									agentId,
+									userId: user.id,
+									channelId,
+									prompt: "Manual rating via /feedback rate",
+									response: "N/A",
+									rating,
+									comment: comment || undefined,
+								});
+
+								const embed = new EmbedBuilder()
+									.setTitle("✅ Feedback Recorded")
+									.setColor(0x2ecc71)
+									.addFields(
+										{ name: "Agent", value: agentId, inline: true },
+										{ name: "Rating", value: "⭐".repeat(rating), inline: true },
+									)
+									.setTimestamp();
+
+								if (comment) {
+									embed.addFields({ name: "Comment", value: comment });
+								}
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "summary": {
+								const agentId = interaction.options.getString("agent", true);
+								const summary = feedbackSystem.getAgentSummary(agentId);
+
+								const embed = new EmbedBuilder()
+									.setTitle(`📈 Feedback Summary: ${agentId}`)
+									.setColor(summary.averageScore >= 0.6 ? 0x2ecc71 : summary.averageScore >= 0.4 ? 0xf1c40f : 0xe74c3c)
+									.addFields(
+										{ name: "Total Ratings", value: String(summary.ratedResponses), inline: true },
+										{
+											name: "Average",
+											value: `${"⭐".repeat(Math.round(summary.averageScore * 5))} (${(summary.averageScore * 5).toFixed(1)}/5)`,
+											inline: true,
+										},
+										{ name: "👍 Positive", value: String(summary.positiveCount), inline: true },
+										{ name: "👎 Negative", value: String(summary.negativeCount), inline: true },
+									)
+									.setTimestamp();
+
+								if (summary.commonPraises.length > 0) {
+									embed.addFields({
+										name: "Common Praises",
+										value: summary.commonPraises.slice(0, 3).map((p) => `• ${p.slice(0, 100)}`).join("\n"),
+									});
+								}
+
+								if (summary.commonComplaints.length > 0) {
+									embed.addFields({
+										name: "Common Complaints",
+										value: summary.commonComplaints.slice(0, 3).map((c) => `• ${c.slice(0, 100)}`).join("\n"),
+									});
+								}
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "recent": {
+								const agentId = interaction.options.getString("agent");
+								const stats = feedbackSystem.getGlobalStats();
+
+								if (stats.totalFeedback === 0) {
+									await interaction.editReply("No feedback recorded yet.");
+									break;
+								}
+
+								let feedback;
+								if (agentId) {
+									feedback = feedbackSystem.getRecentFeedback(agentId, 10);
+								} else {
+									// Get from all agents
+									feedback = stats.topAgents.length > 0
+										? feedbackSystem.getRecentFeedback(stats.topAgents[0].agentId, 10)
+										: [];
+								}
+
+								if (feedback.length === 0) {
+									await interaction.editReply("No recent feedback found.");
+									break;
+								}
+
+								const feedbackList = feedback.map((f) =>
+									`**${f.agentId}** - ${"⭐".repeat(Math.round(f.normalizedScore * 5))}\n${f.comment ? f.comment.slice(0, 50) : "_No comment_"}`
+								).join("\n\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle("📝 Recent Feedback")
+									.setColor(0x3498db)
+									.setDescription(feedbackList.slice(0, 4000))
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "suggestions": {
+								const agentId = interaction.options.getString("agent", true);
+								const suggestions = feedbackSystem.getSuggestions(agentId);
+
+								if (suggestions.length === 0) {
+									await interaction.editReply(`No improvement suggestions for ${agentId} yet. Need more feedback data.`);
+									break;
+								}
+
+								const suggestionList = suggestions.map((s) =>
+									`**[${s.type}]** (${(s.confidence * 100).toFixed(0)}% confidence)\n${s.suggestion}`
+								).join("\n\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle(`💡 Improvement Suggestions: ${agentId}`)
+									.setColor(0x9b59b6)
+									.setDescription(suggestionList.slice(0, 4000))
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "leaderboard": {
+								const stats = feedbackSystem.getGlobalStats();
+
+								if (stats.topAgents.length === 0) {
+									await interaction.editReply("No agents with enough ratings for leaderboard.");
+									break;
+								}
+
+								const leaderboard = stats.topAgents.map((a, i) => {
+									const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`;
+									return `${medal} **${a.agentId}** - ${(a.score * 5).toFixed(2)}/5 (${a.count} ratings)`;
+								}).join("\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle("🏆 Agent Leaderboard")
+									.setColor(0xf1c40f)
+									.setDescription(leaderboard)
+									.setFooter({ text: "Minimum 5 ratings to qualify" })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown feedback subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`Feedback error: ${errMsg}`);
 					}
 					break;
 				}

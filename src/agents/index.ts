@@ -1283,3 +1283,17 @@ export {
 	type SafetyGuardsConfig,
 	withSafetyGuard,
 } from "./safety-guards.js";
+
+// Class 3.9 Agent Feedback Loop (TAC Pattern: Self-improvement through feedback)
+export {
+	AgentFeedbackSystem,
+	type AgentFeedbackSummary,
+	DEFAULT_FEEDBACK_CONFIG,
+	type FeedbackConfig,
+	type FeedbackEntry,
+	type FeedbackRating,
+	getFeedbackSystem,
+	type ImprovementSuggestion,
+	type PromptVariant,
+	resetFeedbackSystem,
+} from "./agent-feedback.js";
