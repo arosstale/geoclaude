@@ -4559,6 +4559,46 @@ const slashCommands = [
 				),
 		)
 		.addSubcommand((sub) => sub.setName("status").setDescription("Show active coordinations")),
+
+	// Class 3.3 Agent Memory System
+	new SlashCommandBuilder()
+		.setName("memory")
+		.setDescription("Agent Memory System - performance tracking, insights, and smart routing")
+		.addSubcommand((sub) =>
+			sub
+				.setName("stats")
+				.setDescription("Show agent performance statistics")
+				.addStringOption((opt) => opt.setName("agent_id").setDescription("Specific agent ID (optional)")),
+		)
+		.addSubcommand((sub) => sub.setName("insights").setDescription("View learned patterns and insights"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("recommend")
+				.setDescription("Get routing recommendation for a task")
+				.addStringOption((opt) => opt.setName("task_type").setDescription("Type of task").setRequired(true))
+				.addStringOption((opt) => opt.setName("prompt").setDescription("Task prompt").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("rate")
+				.setDescription("Rate a completed task")
+				.addStringOption((opt) => opt.setName("task_id").setDescription("Task ID to rate").setRequired(true))
+				.addIntegerOption((opt) =>
+					opt
+						.setName("quality")
+						.setDescription("Quality rating 1-10")
+						.setRequired(true)
+						.setMinValue(1)
+						.setMaxValue(10),
+				),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("best-agent")
+				.setDescription("Find the best agent for a task type")
+				.addStringOption((opt) => opt.setName("task_type").setDescription("Type of task").setRequired(true)),
+		)
+		.addSubcommand((sub) => sub.setName("summary").setDescription("Show memory system summary")),
 ];
 
 // ============================================================================
@@ -20675,6 +20715,184 @@ async function main() {
 					} catch (error) {
 						const errMsg = error instanceof Error ? error.message : String(error);
 						await interaction.editReply(`Coordination error: ${errMsg}`);
+					}
+					break;
+				}
+
+				case "memory": {
+					await interaction.deferReply();
+					const memorySubcommand = interaction.options.getSubcommand();
+
+					try {
+						const { AgentMemorySystem } = await import("./agents/agent-memory-system.js");
+						const memorySystem = new AgentMemorySystem({
+							dbPath: join(workingDir, "agent-memory.db"),
+							enableLearning: true,
+						});
+
+						switch (memorySubcommand) {
+							case "stats": {
+								const agentId = interaction.options.getString("agent_id");
+
+								if (agentId) {
+									// Specific agent stats
+									const stats = memorySystem.getAgentStats(agentId);
+									if (!stats) {
+										await interaction.editReply(`No stats found for agent: \`${agentId}\``);
+										break;
+									}
+
+									const embed = new EmbedBuilder()
+										.setTitle(`📊 Agent Stats: ${agentId}`)
+										.setColor(0x3498db)
+										.addFields(
+											{ name: "Total Tasks", value: String(stats.totalTasks), inline: true },
+											{ name: "Success Rate", value: `${(stats.successRate * 100).toFixed(1)}%`, inline: true },
+											{ name: "Avg Latency", value: `${stats.avgLatencyMs.toFixed(0)}ms`, inline: true },
+											{ name: "Avg Quality", value: stats.avgQuality.toFixed(2), inline: true },
+											{ name: "Best Task Types", value: stats.bestTaskTypes.join(", ") || "N/A", inline: false },
+											{ name: "Worst Task Types", value: stats.worstTaskTypes.join(", ") || "N/A", inline: false },
+										)
+										.setTimestamp();
+
+									await interaction.editReply({ embeds: [embed] });
+								} else {
+									// All agents summary
+									const summary = memorySystem.getGlobalStats();
+									const embed = new EmbedBuilder()
+										.setTitle("📊 Agent Memory Stats")
+										.setColor(0x3498db)
+										.addFields(
+											{ name: "Total Tasks Recorded", value: String(summary.totalTasks), inline: true },
+											{ name: "Active Agents", value: String(summary.agentCount), inline: true },
+											{ name: "Active Insights", value: String(summary.insightCount), inline: true },
+											{ name: "Global Success Rate", value: `${(summary.globalSuccessRate * 100).toFixed(1)}%`, inline: true },
+										)
+										.setTimestamp();
+
+									await interaction.editReply({ embeds: [embed] });
+								}
+								break;
+							}
+
+							case "insights": {
+								const insights = memorySystem.getActiveInsights();
+
+								if (insights.length === 0) {
+									await interaction.editReply("No active insights yet. Insights are generated as agents complete more tasks.");
+									break;
+								}
+
+								const insightList = insights.slice(0, 10).map((i, idx) => {
+									return `**${idx + 1}. ${i.title}**\n${i.description}\n*Confidence: ${(i.confidence * 100).toFixed(0)}% | Type: ${i.type}*`;
+								});
+
+								const embed = new EmbedBuilder()
+									.setTitle("💡 Learned Insights")
+									.setColor(0xf39c12)
+									.setDescription(insightList.join("\n\n").slice(0, 4000))
+									.addFields({ name: "Total Insights", value: String(insights.length), inline: true })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "recommend": {
+								const taskType = interaction.options.getString("task_type", true);
+								const prompt = interaction.options.getString("prompt", true);
+
+								const recommendation = memorySystem.getRoutingRecommendation(taskType, prompt);
+
+								const agentList =
+									recommendation.recommendedAgents.length > 0
+										? recommendation.recommendedAgents
+												.map((a, i) => `${i + 1}. **${a.agentId}** (score: ${a.score.toFixed(2)})\n   ${a.reasoning}`)
+												.join("\n")
+										: "No specific recommendation - insufficient data";
+
+								const embed = new EmbedBuilder()
+									.setTitle("🎯 Routing Recommendation")
+									.setColor(0x9b59b6)
+									.addFields(
+										{ name: "Task Type", value: taskType, inline: true },
+										{ name: "Confidence", value: `${(recommendation.confidence * 100).toFixed(0)}%`, inline: true },
+									)
+									.addFields({ name: "Recommended Agents", value: agentList.slice(0, 1000) })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "rate": {
+								const taskId = interaction.options.getString("task_id", true);
+								const quality = interaction.options.getInteger("quality", true);
+
+								memorySystem.rateTask(taskId, quality / 10); // Convert 1-10 to 0-1
+
+								await interaction.editReply(`✅ Rated task \`${taskId.slice(0, 8)}\` with quality **${quality}/10**`);
+								break;
+							}
+
+							case "best-agent": {
+								const taskType = interaction.options.getString("task_type", true);
+								const bestAgent = memorySystem.getBestAgentForTask(taskType);
+
+								if (bestAgent) {
+									const stats = memorySystem.getAgentStats(bestAgent);
+									const embed = new EmbedBuilder()
+										.setTitle(`🏆 Best Agent for "${taskType}"`)
+										.setColor(0x2ecc71)
+										.addFields(
+											{ name: "Agent ID", value: bestAgent, inline: true },
+											{ name: "Success Rate", value: stats ? `${(stats.successRate * 100).toFixed(1)}%` : "N/A", inline: true },
+											{ name: "Avg Quality", value: stats ? stats.avgQuality.toFixed(2) : "N/A", inline: true },
+										)
+										.setTimestamp();
+
+									await interaction.editReply({ embeds: [embed] });
+								} else {
+									await interaction.editReply(`No agent found with experience in task type: \`${taskType}\``);
+								}
+								break;
+							}
+
+							case "summary": {
+								const summary = memorySystem.getGlobalStats();
+								const insights = memorySystem.getActiveInsights();
+
+								const embed = new EmbedBuilder()
+									.setTitle("🧠 Agent Memory System")
+									.setColor(0x3498db)
+									.setDescription("Persistent learning and smart routing for agents")
+									.addFields(
+										{ name: "Total Tasks", value: String(summary.totalTasks), inline: true },
+										{ name: "Agents Tracked", value: String(summary.agentCount), inline: true },
+										{ name: "Active Insights", value: String(summary.insightCount), inline: true },
+										{ name: "Global Success", value: `${(summary.globalSuccessRate * 100).toFixed(1)}%`, inline: true },
+										{
+											name: "Top Patterns",
+											value:
+												insights
+													.filter((i) => i.type === "pattern")
+													.slice(0, 3)
+													.map((i) => `• ${i.title}`)
+													.join("\n") || "None yet",
+										},
+									)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown memory subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`Memory system error: ${errMsg}`);
 					}
 					break;
 				}

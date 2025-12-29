@@ -409,6 +409,48 @@ export class AgentMemorySystem extends EventEmitter {
 		}));
 	}
 
+	/** Get global statistics across all agents */
+	getGlobalStats(): {
+		totalTasks: number;
+		agentCount: number;
+		insightCount: number;
+		globalSuccessRate: number;
+		avgLatencyMs: number;
+		avgQuality: number;
+	} {
+		const taskStats = this.db
+			.prepare(
+				`
+			SELECT
+				COUNT(*) as total,
+				SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as successes,
+				AVG(latency_ms) as avg_latency,
+				AVG(CASE WHEN output_quality IS NOT NULL THEN output_quality ELSE NULL END) as avg_quality
+			FROM task_records
+		`,
+			)
+			.get() as { total: number; successes: number; avg_latency: number; avg_quality: number };
+
+		const agentCount = (
+			this.db
+				.prepare("SELECT COUNT(DISTINCT agent_id) as count FROM agent_performance")
+				.get() as { count: number }
+		).count;
+
+		const insightCount = (
+			this.db.prepare("SELECT COUNT(*) as count FROM insights WHERE active = 1").get() as { count: number }
+		).count;
+
+		return {
+			totalTasks: taskStats.total || 0,
+			agentCount: agentCount || 0,
+			insightCount: insightCount || 0,
+			globalSuccessRate: taskStats.total > 0 ? taskStats.successes / taskStats.total : 0,
+			avgLatencyMs: taskStats.avg_latency || 0,
+			avgQuality: taskStats.avg_quality || 0,
+		};
+	}
+
 	/** Add a manual insight */
 	addInsight(insight: Omit<Insight, "id" | "createdAt" | "updatedAt">): Insight {
 		const id = crypto.randomUUID();
