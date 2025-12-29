@@ -1219,3 +1219,13 @@ export {
 	type RoutingRecommendation,
 	type TaskRecord,
 } from "./agent-memory-system.js";
+
+// Class 3.4 Orchestrator-Memory Bridge
+export {
+	type BridgeConfig,
+	getOrchestratorMemoryBridge,
+	OrchestratorMemoryBridge,
+	resetBridge,
+	type SmartDelegationRequest,
+	type SmartDelegationResult,
+} from "./orchestrator-memory-bridge.js";
