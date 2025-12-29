@@ -4880,6 +4880,84 @@ const slashCommands = [
 				.addStringOption((opt) => opt.setName("agent").setDescription("Agent ID to unmute").setRequired(true)),
 		)
 		.addSubcommand((sub) => sub.setName("templates").setDescription("List available notification templates")),
+	new SlashCommandBuilder()
+		.setName("session")
+		.setDescription("Session Isolation - per-conversation state management (TAC pattern)")
+		.addSubcommand((sub) => sub.setName("stats").setDescription("Show session statistics"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("create")
+				.setDescription("Create a new isolated session")
+				.addStringOption((opt) => opt.setName("agent").setDescription("Agent ID for session").setRequired(true))
+				.addStringOption((opt) => opt.setName("tags").setDescription("Comma-separated tags"))
+				.addIntegerOption((opt) => opt.setName("ttl").setDescription("TTL in minutes (0 = no expiry)")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("get")
+				.setDescription("Get session state value")
+				.addStringOption((opt) => opt.setName("id").setDescription("Session ID").setRequired(true))
+				.addStringOption((opt) => opt.setName("key").setDescription("State key to retrieve")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("set")
+				.setDescription("Set session state value")
+				.addStringOption((opt) => opt.setName("id").setDescription("Session ID").setRequired(true))
+				.addStringOption((opt) => opt.setName("key").setDescription("State key").setRequired(true))
+				.addStringOption((opt) => opt.setName("value").setDescription("Value (JSON)").setRequired(true)),
+		)
+		.addSubcommand((sub) => sub.setName("list").setDescription("List your sessions"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("snapshot")
+				.setDescription("Create a session snapshot")
+				.addStringOption((opt) => opt.setName("id").setDescription("Session ID").setRequired(true))
+				.addStringOption((opt) => opt.setName("name").setDescription("Snapshot name").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("snapshots")
+				.setDescription("List snapshots for a session")
+				.addStringOption((opt) => opt.setName("id").setDescription("Session ID").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("restore")
+				.setDescription("Restore session from snapshot")
+				.addStringOption((opt) => opt.setName("snapshot_id").setDescription("Snapshot ID").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("fork")
+				.setDescription("Fork a session")
+				.addStringOption((opt) => opt.setName("id").setDescription("Session ID to fork").setRequired(true))
+				.addStringOption((opt) => opt.setName("agent").setDescription("New agent ID (optional)")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("suspend")
+				.setDescription("Suspend a session")
+				.addStringOption((opt) => opt.setName("id").setDescription("Session ID").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("resume")
+				.setDescription("Resume a suspended session")
+				.addStringOption((opt) => opt.setName("id").setDescription("Session ID").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("complete")
+				.setDescription("Mark session as completed")
+				.addStringOption((opt) => opt.setName("id").setDescription("Session ID").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("destroy")
+				.setDescription("Destroy a session and all its state")
+				.addStringOption((opt) => opt.setName("id").setDescription("Session ID").setRequired(true)),
+		),
 ];
 
 // ============================================================================
@@ -22146,6 +22224,299 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 					} catch (error) {
 						const errMsg = error instanceof Error ? error.message : String(error);
 						await interaction.editReply(`Notification error: ${errMsg}`);
+					}
+					break;
+				}
+
+				case "session": {
+					await interaction.deferReply();
+					const sessionSubcommand = interaction.options.getSubcommand();
+
+					try {
+						const { getSessionIsolation } = await import("./agents/session-isolation.js");
+						const sessionSystem = getSessionIsolation(workingDir);
+
+						switch (sessionSubcommand) {
+							case "stats": {
+								const stats = sessionSystem.getStats();
+
+								const agentList = Object.entries(stats.sessionsByAgent)
+									.slice(0, 5)
+									.map(([id, count]) => `\`${id}\`: ${count}`)
+									.join(", ") || "None";
+
+								const embed = new EmbedBuilder()
+									.setTitle("Session Statistics")
+									.setColor(0x1abc9c)
+									.addFields(
+										{ name: "Total Sessions", value: stats.totalSessions.toString(), inline: true },
+										{ name: "Active", value: stats.activeSessions.toString(), inline: true },
+										{ name: "Suspended", value: stats.suspendedSessions.toString(), inline: true },
+										{ name: "Completed", value: stats.completedSessions.toString(), inline: true },
+										{ name: "Expired", value: stats.expiredSessions.toString(), inline: true },
+										{ name: "Snapshots", value: stats.totalSnapshots.toString(), inline: true },
+										{ name: "Avg State Size", value: `${Math.round(stats.avgStateSize)} bytes`, inline: true },
+										{ name: "Sessions by Agent", value: agentList, inline: false },
+									)
+									.setFooter({ text: "Session Isolation System" })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "create": {
+								const agentId = interaction.options.getString("agent", true);
+								const tagsStr = interaction.options.getString("tags");
+								const ttlMinutes = interaction.options.getInteger("ttl");
+
+								const tags = tagsStr ? tagsStr.split(",").map((t) => t.trim()) : [];
+								const ttlMs = ttlMinutes !== null ? ttlMinutes * 60 * 1000 : undefined;
+
+								const session = sessionSystem.createSession({
+									agentId,
+									userId: user.id,
+									channelId,
+									tags,
+									ttlMs,
+								});
+
+								const embed = new EmbedBuilder()
+									.setTitle("Session Created")
+									.setColor(0x2ecc71)
+									.addFields(
+										{ name: "Session ID", value: `\`${session.metadata.id}\``, inline: false },
+										{ name: "Agent", value: agentId, inline: true },
+										{ name: "Status", value: session.metadata.status, inline: true },
+										{ name: "TTL", value: ttlMinutes ? `${ttlMinutes} min` : "No expiry", inline: true },
+									)
+									.setTimestamp();
+
+								if (tags.length > 0) {
+									embed.addFields({ name: "Tags", value: tags.map((t) => `\`${t}\``).join(", "), inline: false });
+								}
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "get": {
+								const sessionId = interaction.options.getString("id", true);
+								const key = interaction.options.getString("key");
+
+								const session = sessionSystem.getSession(sessionId);
+								if (!session) {
+									await interaction.editReply(`Session not found: \`${sessionId}\``);
+									break;
+								}
+
+								if (key) {
+									const value = session.get(key);
+									await interaction.editReply(`**${key}**: \`\`\`json\n${JSON.stringify(value, null, 2)}\n\`\`\``);
+								} else {
+									const state = session.getAll();
+									const keys = Object.keys(state);
+
+									const embed = new EmbedBuilder()
+										.setTitle(`Session: ${sessionId.slice(0, 20)}...`)
+										.setColor(0x3498db)
+										.addFields(
+											{ name: "Agent", value: session.metadata.agentId, inline: true },
+											{ name: "Status", value: session.metadata.status, inline: true },
+											{ name: "Keys", value: keys.length > 0 ? keys.map((k) => `\`${k}\``).join(", ") : "None", inline: false },
+										)
+										.setTimestamp();
+
+									await interaction.editReply({ embeds: [embed] });
+								}
+								break;
+							}
+
+							case "set": {
+								const sessionId = interaction.options.getString("id", true);
+								const key = interaction.options.getString("key", true);
+								const valueStr = interaction.options.getString("value", true);
+
+								const session = sessionSystem.getSession(sessionId);
+								if (!session) {
+									await interaction.editReply(`Session not found: \`${sessionId}\``);
+									break;
+								}
+
+								let value: unknown;
+								try {
+									value = JSON.parse(valueStr);
+								} catch {
+									value = valueStr;
+								}
+
+								session.set(key, value);
+								await interaction.editReply(`Set \`${key}\` in session \`${sessionId.slice(0, 15)}...\``);
+								break;
+							}
+
+							case "list": {
+								const sessions = sessionSystem.getUserSessions(user.id);
+
+								if (sessions.length === 0) {
+									await interaction.editReply("No sessions found");
+									break;
+								}
+
+								const statusEmoji: Record<string, string> = {
+									active: "[ON]",
+									suspended: "[PAUSE]",
+									completed: "[DONE]",
+									expired: "[EXP]",
+									error: "[ERR]",
+								};
+
+								const list = sessions.slice(0, 10).map((s) => {
+									const marker = statusEmoji[s.status] ?? "[?]";
+									const ago = Math.round((Date.now() - s.lastActivityAt) / 60000);
+									return `${marker} \`${s.id.slice(0, 15)}...\` | ${s.agentId} | ${ago}m ago`;
+								}).join("\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Your Sessions (${sessions.length})`)
+									.setColor(0x3498db)
+									.setDescription(list)
+									.setFooter({ text: "Use /session get <id> for details" })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "snapshot": {
+								const sessionId = interaction.options.getString("id", true);
+								const name = interaction.options.getString("name", true);
+
+								const session = sessionSystem.getSession(sessionId);
+								if (!session) {
+									await interaction.editReply(`Session not found: \`${sessionId}\``);
+									break;
+								}
+
+								const snapshot = session.snapshot(name);
+								await interaction.editReply(`Snapshot created: \`${snapshot.id}\` (${name})`);
+								break;
+							}
+
+							case "snapshots": {
+								const sessionId = interaction.options.getString("id", true);
+								const snapshots = sessionSystem.getSnapshots(sessionId);
+
+								if (snapshots.length === 0) {
+									await interaction.editReply("No snapshots for this session");
+									break;
+								}
+
+								const list = snapshots.map((s) => {
+									const date = new Date(s.createdAt).toLocaleString();
+									const keys = Object.keys(s.state).length;
+									return `**${s.name}** | \`${s.id}\` | ${keys} keys | ${date}`;
+								}).join("\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle("Session Snapshots")
+									.setColor(0x9b59b6)
+									.setDescription(list)
+									.setFooter({ text: "Use /session restore <snapshot_id> to restore" })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "restore": {
+								const snapshotId = interaction.options.getString("snapshot_id", true);
+								const restoredSession = sessionSystem.restoreFromSnapshot(snapshotId);
+
+								if (!restoredSession) {
+									await interaction.editReply(`Snapshot not found: \`${snapshotId}\``);
+									break;
+								}
+
+								await interaction.editReply(`Restored session: \`${restoredSession.metadata.id}\``);
+								break;
+							}
+
+							case "fork": {
+								const sessionId = interaction.options.getString("id", true);
+								const newAgentId = interaction.options.getString("agent") ?? undefined;
+
+								const session = sessionSystem.getSession(sessionId);
+								if (!session) {
+									await interaction.editReply(`Session not found: \`${sessionId}\``);
+									break;
+								}
+
+								const forkedSession = session.fork(newAgentId);
+								await interaction.editReply(`Forked session: \`${forkedSession.metadata.id}\``);
+								break;
+							}
+
+							case "suspend": {
+								const sessionId = interaction.options.getString("id", true);
+
+								const session = sessionSystem.getSession(sessionId);
+								if (!session) {
+									await interaction.editReply(`Session not found: \`${sessionId}\``);
+									break;
+								}
+
+								session.suspend();
+								await interaction.editReply(`Session suspended: \`${sessionId}\``);
+								break;
+							}
+
+							case "resume": {
+								const sessionId = interaction.options.getString("id", true);
+
+								const session = sessionSystem.getSession(sessionId);
+								if (!session) {
+									await interaction.editReply(`Session not found: \`${sessionId}\``);
+									break;
+								}
+
+								session.resume();
+								await interaction.editReply(`Session resumed: \`${sessionId}\``);
+								break;
+							}
+
+							case "complete": {
+								const sessionId = interaction.options.getString("id", true);
+
+								const session = sessionSystem.getSession(sessionId);
+								if (!session) {
+									await interaction.editReply(`Session not found: \`${sessionId}\``);
+									break;
+								}
+
+								session.complete();
+								await interaction.editReply(`Session completed: \`${sessionId}\``);
+								break;
+							}
+
+							case "destroy": {
+								const sessionId = interaction.options.getString("id", true);
+								const destroyed = sessionSystem.destroySession(sessionId);
+
+								if (destroyed) {
+									await interaction.editReply(`Session destroyed: \`${sessionId}\``);
+								} else {
+									await interaction.editReply(`Session not found: \`${sessionId}\``);
+								}
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown session subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`Session error: ${errMsg}`);
 					}
 					break;
 				}

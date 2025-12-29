@@ -1313,3 +1313,17 @@ export {
 	resetNotificationSystem,
 	type UserPreferences as NotificationUserPreferences,
 } from "./agent-notifications.js";
+
+// Class 3.11 Session Isolation System (TAC Pattern: Per-conversation state isolation)
+export {
+	getSessionIsolation,
+	type IsolatedSession,
+	resetSessionIsolation,
+	type SessionConfig,
+	SessionIsolationSystem,
+	type SessionMetadata,
+	type SessionSnapshot,
+	type SessionState,
+	type SessionStats,
+	type SessionStatus,
+} from "./session-isolation.js";
