@@ -30,6 +30,11 @@ export interface CodingSession {
 	context: string[];
 	suggestions: CodeSuggestion[];
 	status: "active" | "paused" | "completed";
+	systemPrompt?: string;
+	threadId?: string;
+	lastPrompt?: string;
+	tokensUsed?: number;
+	estimatedCost?: number;
 	createdAt: Date;
 	updatedAt: Date;
 }

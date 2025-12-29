@@ -63,6 +63,8 @@ export const CUSTOM_IDS = {
 	EDIT_CODE: "coding_edit",
 	REJECT_CODE: "coding_reject",
 	RUN_CODE: "coding_run",
+	REGENERATE_CODE: "coding_regenerate",
+	COPY_CODE: "coding_copy",
 
 	// Session Controls
 	PAUSE_SESSION: "session_pause",
@@ -89,10 +91,14 @@ export const CUSTOM_IDS = {
 	COMMIT_MESSAGE_MODAL: "modal_commit_message",
 	PR_DETAILS_MODAL: "modal_pr_details",
 	BRANCH_NAME_MODAL: "modal_branch_name",
+	SYSTEM_PROMPT_MODAL: "modal_system_prompt",
 
 	// Diff Viewer
 	APPLY_DIFF: "diff_apply",
 	DISCARD_DIFF: "diff_discard",
+
+	// Thread Controls
+	CREATE_THREAD: "thread_create",
 } as const;
 
 // ============================================================================
@@ -103,7 +109,7 @@ export function createCodeReviewButtons(suggestionId: string, disabled = false):
 	return new ActionRowBuilder<ButtonBuilder>().addComponents(
 		new ButtonBuilder()
 			.setCustomId(`${CUSTOM_IDS.ACCEPT_CODE}:${suggestionId}`)
-			.setLabel("Accept & Commit")
+			.setLabel("Accept")
 			.setEmoji("✅")
 			.setStyle(ButtonStyle.Success)
 			.setDisabled(disabled),
@@ -122,10 +128,62 @@ export function createCodeReviewButtons(suggestionId: string, disabled = false):
 		new ButtonBuilder()
 			.setCustomId(`${CUSTOM_IDS.RUN_CODE}:${suggestionId}`)
 			.setLabel("Run")
-			.setEmoji("🚀")
+			.setEmoji("▶️")
 			.setStyle(ButtonStyle.Secondary)
 			.setDisabled(disabled),
 	);
+}
+
+/**
+ * Extended code review buttons with Regenerate and Copy
+ */
+export function createCodeReviewButtonsExtended(
+	suggestionId: string,
+	disabled = false,
+): [ActionRowBuilder<ButtonBuilder>, ActionRowBuilder<ButtonBuilder>] {
+	const row1 = new ActionRowBuilder<ButtonBuilder>().addComponents(
+		new ButtonBuilder()
+			.setCustomId(`${CUSTOM_IDS.ACCEPT_CODE}:${suggestionId}`)
+			.setLabel("Accept")
+			.setEmoji("✅")
+			.setStyle(ButtonStyle.Success)
+			.setDisabled(disabled),
+		new ButtonBuilder()
+			.setCustomId(`${CUSTOM_IDS.EDIT_CODE}:${suggestionId}`)
+			.setLabel("Edit")
+			.setEmoji("✏️")
+			.setStyle(ButtonStyle.Primary)
+			.setDisabled(disabled),
+		new ButtonBuilder()
+			.setCustomId(`${CUSTOM_IDS.REJECT_CODE}:${suggestionId}`)
+			.setLabel("Reject")
+			.setEmoji("❌")
+			.setStyle(ButtonStyle.Danger)
+			.setDisabled(disabled),
+		new ButtonBuilder()
+			.setCustomId(`${CUSTOM_IDS.RUN_CODE}:${suggestionId}`)
+			.setLabel("Run")
+			.setEmoji("▶️")
+			.setStyle(ButtonStyle.Secondary)
+			.setDisabled(disabled),
+	);
+
+	const row2 = new ActionRowBuilder<ButtonBuilder>().addComponents(
+		new ButtonBuilder()
+			.setCustomId(`${CUSTOM_IDS.REGENERATE_CODE}:${suggestionId}`)
+			.setLabel("Regenerate")
+			.setEmoji("🔄")
+			.setStyle(ButtonStyle.Secondary)
+			.setDisabled(disabled),
+		new ButtonBuilder()
+			.setCustomId(`${CUSTOM_IDS.COPY_CODE}:${suggestionId}`)
+			.setLabel("Copy Code")
+			.setEmoji("📋")
+			.setStyle(ButtonStyle.Secondary)
+			.setDisabled(disabled),
+	);
+
+	return [row1, row2];
 }
 
 export function createSessionControlButtons(sessionId: string, isPaused = false): ActionRowBuilder<ButtonBuilder> {
@@ -337,6 +395,29 @@ export function createBranchNameModal(sessionId: string): ModalBuilder {
 		);
 }
 
+const DEFAULT_SYSTEM_PROMPT = `You are an expert coding assistant. Provide clean, well-documented code suggestions.
+Always wrap code in appropriate markdown code blocks with language identifiers.
+Explain your suggestions briefly but clearly.`;
+
+export function createSystemPromptModal(sessionId: string, currentPrompt?: string): ModalBuilder {
+	return new ModalBuilder()
+		.setCustomId(`${CUSTOM_IDS.SYSTEM_PROMPT_MODAL}:${sessionId}`)
+		.setTitle("Customize System Prompt")
+		.addComponents(
+			new ActionRowBuilder<TextInputBuilder>().addComponents(
+				new TextInputBuilder()
+					.setCustomId("system_prompt")
+					.setLabel("System Prompt")
+					.setStyle(TextInputStyle.Paragraph)
+					.setPlaceholder("You are an expert coding assistant...")
+					.setValue(currentPrompt || DEFAULT_SYSTEM_PROMPT)
+					.setRequired(true)
+					.setMinLength(10)
+					.setMaxLength(2000),
+			),
+		);
+}
+
 // ============================================================================
 // Embed Builders
 // ============================================================================
@@ -445,6 +526,120 @@ export function createStreamingEmbed(content: string, model: string, isStreaming
 		.setDescription(content + (isStreaming ? "\n\n_Generating..._" : ""))
 		.setColor(isStreaming ? 0xffa500 : 0x00ff00)
 		.setFooter({ text: `Model: ${model}${tokensUsed ? ` | Tokens: ${tokensUsed}` : ""}` });
+}
+
+/**
+ * Enhanced streaming embed with thinking indicator and tool execution display
+ */
+export interface StreamingState {
+	content: string;
+	isStreaming: boolean;
+	model: string;
+	tokensUsed?: number;
+	estimatedCost?: number;
+	toolsExecuted?: { name: string; status: "running" | "complete" | "error"; duration?: number }[];
+	thinkingDots?: number;
+}
+
+export function createEnhancedStreamingEmbed(state: StreamingState): EmbedBuilder {
+	const { content, isStreaming, model, tokensUsed, estimatedCost, toolsExecuted, thinkingDots = 0 } = state;
+
+	// Animated thinking dots
+	const dots = ".".repeat((thinkingDots % 3) + 1);
+	const thinkingText = isStreaming && !content ? `⏳ Thinking${dots}` : "";
+
+	// Build tool execution display
+	let toolDisplay = "";
+	if (toolsExecuted && toolsExecuted.length > 0) {
+		toolDisplay =
+			"\n\n**Tool Execution:**\n" +
+			toolsExecuted
+				.map((t) => {
+					const icon = t.status === "running" ? "🔄" : t.status === "complete" ? "✅" : "❌";
+					const duration = t.duration ? ` (${t.duration}ms)` : "";
+					return `${icon} \`${t.name}\`${duration}`;
+				})
+				.join("\n");
+	}
+
+	// Determine embed color
+	let color = 0x5865f2; // Default blue
+	if (isStreaming) {
+		color = 0xffa500; // Orange when streaming
+	} else if (toolsExecuted?.some((t) => t.status === "error")) {
+		color = 0xff0000; // Red if any tool errored
+	} else if (content) {
+		color = 0x00ff00; // Green when complete
+	}
+
+	// Build description
+	let description = thinkingText || content || "_Initializing..._";
+	if (isStreaming && content) {
+		description += "\n\n_Generating..._";
+	}
+	description += toolDisplay;
+
+	// Truncate if too long
+	if (description.length > 4000) {
+		description = description.slice(0, 3990) + "\n...[truncated]";
+	}
+
+	const embed = new EmbedBuilder()
+		.setTitle("🤖 AI Coding Agent")
+		.setDescription(description)
+		.setColor(color)
+		.setTimestamp();
+
+	// Build footer with token/cost info
+	const footerParts = [`Model: ${model}`];
+	if (tokensUsed) footerParts.push(`Tokens: ${tokensUsed.toLocaleString()}`);
+	if (estimatedCost !== undefined) footerParts.push(`Cost: $${estimatedCost.toFixed(4)}`);
+
+	embed.setFooter({ text: footerParts.join(" | ") });
+
+	return embed;
+}
+
+/**
+ * Create a thinking indicator embed (before any content)
+ */
+export function createThinkingEmbed(model: string, dots = 1): EmbedBuilder {
+	const dotStr = ".".repeat(dots);
+	return new EmbedBuilder()
+		.setTitle("🤖 AI Coding Agent")
+		.setDescription(`⏳ **Thinking${dotStr}**\n\n_Analyzing your request and generating code..._`)
+		.setColor(0xffa500)
+		.setFooter({ text: `Model: ${model}` })
+		.setTimestamp();
+}
+
+/**
+ * Create tool execution status embed
+ */
+export function createToolExecutionEmbed(
+	toolName: string,
+	status: "started" | "running" | "complete" | "error",
+	details?: string,
+): EmbedBuilder {
+	const icons = {
+		started: "🔄",
+		running: "⏳",
+		complete: "✅",
+		error: "❌",
+	};
+
+	const colors = {
+		started: 0x5865f2,
+		running: 0xffa500,
+		complete: 0x00ff00,
+		error: 0xff0000,
+	};
+
+	return new EmbedBuilder()
+		.setTitle(`${icons[status]} Tool: ${toolName}`)
+		.setDescription(details || `Tool ${status}...`)
+		.setColor(colors[status])
+		.setTimestamp();
 }
 
 // ============================================================================

@@ -18,12 +18,19 @@ export interface SessionCreateInput {
 	channelId: string;
 	model?: string;
 	initialContext?: string[];
+	systemPrompt?: string;
+	threadId?: string;
 }
 
 export interface SessionUpdateInput {
 	model?: string;
 	status?: "active" | "paused" | "completed";
 	context?: string[];
+	systemPrompt?: string;
+	threadId?: string;
+	lastPrompt?: string;
+	tokensUsed?: number;
+	estimatedCost?: number;
 }
 
 export interface SuggestionCreateInput {
@@ -58,6 +65,11 @@ CREATE TABLE IF NOT EXISTS coding_sessions (
 	model TEXT NOT NULL DEFAULT 'gpt-4o',
 	context TEXT NOT NULL DEFAULT '[]',
 	status TEXT NOT NULL DEFAULT 'active',
+	system_prompt TEXT,
+	thread_id TEXT,
+	last_prompt TEXT,
+	tokens_used INTEGER DEFAULT 0,
+	estimated_cost REAL DEFAULT 0,
 	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -148,6 +160,11 @@ export class CodingSessionDB {
 					model: string;
 					context: string;
 					status: string;
+					system_prompt: string | null;
+					thread_id: string | null;
+					last_prompt: string | null;
+					tokens_used: number | null;
+					estimated_cost: number | null;
 					created_at: string;
 					updated_at: string;
 			  }
@@ -163,6 +180,11 @@ export class CodingSessionDB {
 			context: JSON.parse(row.context),
 			suggestions: this.getSuggestions(row.id),
 			status: row.status as "active" | "paused" | "completed",
+			systemPrompt: row.system_prompt || undefined,
+			threadId: row.thread_id || undefined,
+			lastPrompt: row.last_prompt || undefined,
+			tokensUsed: row.tokens_used || undefined,
+			estimatedCost: row.estimated_cost || undefined,
 			createdAt: new Date(row.created_at),
 			updatedAt: new Date(row.updated_at),
 		};
@@ -195,6 +217,26 @@ export class CodingSessionDB {
 		if (input.context !== undefined) {
 			updates.push("context = ?");
 			values.push(JSON.stringify(input.context));
+		}
+		if (input.systemPrompt !== undefined) {
+			updates.push("system_prompt = ?");
+			values.push(input.systemPrompt);
+		}
+		if (input.threadId !== undefined) {
+			updates.push("thread_id = ?");
+			values.push(input.threadId);
+		}
+		if (input.lastPrompt !== undefined) {
+			updates.push("last_prompt = ?");
+			values.push(input.lastPrompt);
+		}
+		if (input.tokensUsed !== undefined) {
+			updates.push("tokens_used = ?");
+			values.push(input.tokensUsed);
+		}
+		if (input.estimatedCost !== undefined) {
+			updates.push("estimated_cost = ?");
+			values.push(input.estimatedCost);
 		}
 
 		if (updates.length === 0) return this.getSession(id);

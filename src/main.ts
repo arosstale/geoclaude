@@ -4273,6 +4273,12 @@ const slashCommands = [
 							{ name: "Gemini 2.0 Flash", value: "gemini-2.0-flash" },
 							{ name: "Llama 3.3 70B (Open)", value: "llama-3.3-70b" },
 						),
+				)
+				.addBooleanOption((opt) =>
+					opt
+						.setName("thread")
+						.setDescription("Create a thread for this session (default: true)")
+						.setRequired(false),
 				),
 		)
 		.addSubcommand((sub) => sub.setName("session").setDescription("Show current coding session status"))
@@ -4336,7 +4342,8 @@ const slashCommands = [
 				)
 				.addBooleanOption((opt) => opt.setName("auto_commit").setDescription("Auto-commit accepted suggestions"))
 				.addBooleanOption((opt) => opt.setName("show_diffs").setDescription("Show diffs for changes")),
-		),
+		)
+		.addSubcommand((sub) => sub.setName("system-prompt").setDescription("Edit the session system prompt")),
 ];
 
 // ============================================================================
@@ -18530,22 +18537,51 @@ async function main() {
 
 				// Interactive AI Coding Agent with buttons and model selection
 				case "coder": {
-					await interaction.deferReply();
 					const coderSubcommand = interaction.options.getSubcommand();
 
+					// Import UI module dynamically
+					const uiModule = await import("./ui/index.js");
+					const {
+						getCodingAgentUI,
+						getCodingSessionDB,
+						AVAILABLE_MODELS,
+						createCodeReviewButtons,
+						createSessionEmbed,
+						createModelSelector,
+						createCodeSuggestionEmbed,
+						createSystemPromptModal,
+					} = uiModule;
+
+					const db = getCodingSessionDB();
+					const userId = interaction.user.id;
+					const channelId = interaction.channelId;
+
+					// Handle system-prompt subcommand BEFORE deferring (showModal must come first)
+					if (coderSubcommand === "system-prompt") {
+						const session = db.getActiveSession(userId, channelId);
+
+						if (!session) {
+							await interaction.reply({
+								content: "❌ No active coding session. Use `/coder start` to begin.",
+								ephemeral: true,
+							});
+							break;
+						}
+
+						const modal = createSystemPromptModal(session.id, session.systemPrompt);
+						await interaction.showModal(modal);
+						break;
+					}
+
+					// Defer reply for all other subcommands
+					await interaction.deferReply();
+
 					try {
-						// Import UI module dynamically
-						const uiModule = await import("./ui/index.js");
-						const { getCodingAgentUI, getCodingSessionDB, AVAILABLE_MODELS, createCodeReviewButtons, createSessionEmbed, createModelSelector, createCodeSuggestionEmbed } = uiModule;
-
-						const db = getCodingSessionDB();
-						const userId = interaction.user.id;
-						const channelId = interaction.channelId;
-
 						switch (coderSubcommand) {
 							case "start": {
 								const modelId = interaction.options.getString("model") || "claude-sonnet-4-20250514";
 								const contextStr = interaction.options.getString("context") || "";
+								const useThread = interaction.options.getBoolean("thread") ?? true;
 
 								// Check for existing active session
 								const existingSession = db.getActiveSession(userId, channelId);
@@ -18558,6 +18594,21 @@ async function main() {
 									break;
 								}
 
+								// Create thread for session if requested
+								let threadId: string | undefined;
+								if (useThread && interaction.channel && "threads" in interaction.channel) {
+									try {
+										const thread = await interaction.channel.threads.create({
+											name: `Coding Session - ${interaction.user.username}`,
+											autoArchiveDuration: 1440, // 1 day (was 60 min - too aggressive)
+											reason: "AI Coding Session",
+										});
+										threadId = thread.id;
+									} catch {
+										// Thread creation failed, continue without thread
+									}
+								}
+
 								// Create new session
 								const initialContext = contextStr ? contextStr.split(",").map((c) => c.trim()) : [];
 								const session = db.createSession({
@@ -18565,13 +18616,19 @@ async function main() {
 									channelId,
 									model: modelId,
 									initialContext,
+									threadId,
 								});
 
 								const embed = createSessionEmbed(session);
 								const modelSelector = createModelSelector(session.id, modelId);
 
+								let replyContent = `✅ **Coding session started!**\n\nUse \`/coder suggest\` to get AI code suggestions with interactive buttons.`;
+								if (threadId) {
+									replyContent += `\n\n📌 Session thread: <#${threadId}>`;
+								}
+
 								await interaction.editReply({
-									content: `✅ **Coding session started!**\n\nUse \`/coder suggest\` to get AI code suggestions with interactive buttons.`,
+									content: replyContent,
 									embeds: [embed],
 									components: [modelSelector],
 								});
@@ -18616,6 +18673,8 @@ async function main() {
 
 							case "suggest": {
 								const prompt = interaction.options.getString("prompt", true);
+								const filePath = interaction.options.getString("file");
+								const targetLanguage = interaction.options.getString("language");
 								const session = db.getActiveSession(userId, channelId);
 
 								if (!session) {
@@ -18625,56 +18684,116 @@ async function main() {
 									break;
 								}
 
-								await interaction.editReply("⏳ Generating code suggestion...");
+								// Import enhanced UI components
+								const { createThinkingEmbed, createEnhancedStreamingEmbed, createCodeReviewButtonsExtended } = uiModule;
 
-								// Use lightweight agent for AI generation
-								const { runAgent } = await import("./agents/lightweight-agent.js");
-								const systemPrompt = `You are an expert coding assistant. Provide clean, well-documented code suggestions. Always wrap code in appropriate markdown code blocks with language identifiers. Explain your suggestions briefly.`;
-
-								const fullPrompt = session.context.length > 0
-									? `Context: ${session.context.join(", ")}\n\nRequest: ${prompt}`
-									: prompt;
-
-								const response = await runAgent({
-									prompt: `${systemPrompt}\n\n${fullPrompt}`,
-									timeout: 60000,
-								});
-
-								// Extract code blocks from response
-								const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/g;
-								let codeMatch: RegExpExecArray | null;
-								const codeBlocks: Array<{ language: string; code: string }> = [];
-
-								while ((codeMatch = codeBlockRegex.exec(response.output)) !== null) {
-									codeBlocks.push({
-										language: codeMatch[1] || "text",
-										code: codeMatch[2].trim(),
-									});
+								// Build enhanced prompt with file context
+								let enhancedPrompt = prompt;
+								if (filePath) {
+									enhancedPrompt += `\n\nTarget file: ${filePath}`;
+								}
+								if (targetLanguage) {
+									enhancedPrompt += `\n\nUse ${targetLanguage} language`;
 								}
 
-								if (codeBlocks.length === 0) {
-									// No code blocks found, show raw response
+								// Show thinking indicator
+								const thinkingEmbed = createThinkingEmbed(session.model);
+								await interaction.editReply({ embeds: [thinkingEmbed] });
+
+								// Animate thinking dots
+								let dotCount = 1;
+								const thinkingInterval = setInterval(async () => {
+									dotCount = (dotCount % 3) + 1;
+									try {
+										const updatedThinking = createThinkingEmbed(session.model, dotCount);
+										await interaction.editReply({ embeds: [updatedThinking] });
+									} catch {
+										// Ignore errors during animation
+									}
+								}, 500);
+
+								try {
+									// Use lightweight agent for AI generation
+									const { runAgent } = await import("./agents/lightweight-agent.js");
+									const systemPrompt = session.systemPrompt || `You are an expert coding assistant. Provide clean, well-documented code suggestions. Always wrap code in appropriate markdown code blocks with language identifiers. Explain your suggestions briefly.`;
+
+									const fullPrompt = session.context.length > 0
+										? `Context: ${session.context.join(", ")}\n\nRequest: ${enhancedPrompt}`
+										: enhancedPrompt;
+
+									const startTime = Date.now();
+									const response = await runAgent({
+										prompt: `${systemPrompt}\n\n${fullPrompt}`,
+										timeout: 60000,
+									});
+									const duration = Date.now() - startTime;
+
+									clearInterval(thinkingInterval);
+
+									// Estimate tokens and cost (rough approximation)
+									const estimatedTokens = Math.ceil((fullPrompt.length + response.output.length) / 4);
+									const estimatedCost = estimatedTokens * 0.000003; // ~$3 per 1M tokens for Claude
+
+									// Update session with last prompt and token usage
+									db.updateSession(session.id, {
+										lastPrompt: prompt,
+										tokensUsed: (session.tokensUsed || 0) + estimatedTokens,
+										estimatedCost: (session.estimatedCost || 0) + estimatedCost,
+									});
+
+									// Extract code blocks from response
+									const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/g;
+									let codeMatch: RegExpExecArray | null;
+									const codeBlocks: Array<{ language: string; code: string }> = [];
+
+									while ((codeMatch = codeBlockRegex.exec(response.output)) !== null) {
+										codeBlocks.push({
+											language: codeMatch[1] || "text",
+											code: codeMatch[2].trim(),
+										});
+									}
+
+									if (codeBlocks.length === 0) {
+										// No code blocks found, show response with streaming embed
+										const streamEmbed = createEnhancedStreamingEmbed({
+											content: response.output.slice(0, 3800),
+											isStreaming: false,
+											model: session.model,
+											tokensUsed: estimatedTokens,
+											estimatedCost,
+										});
+										await interaction.editReply({
+											content: `⏱️ Generated in ${(duration / 1000).toFixed(1)}s`,
+											embeds: [streamEmbed],
+										});
+										break;
+									}
+
+									// Create suggestion for first code block
+									const suggestion = db.createSuggestion({
+										sessionId: session.id,
+										language: targetLanguage || codeBlocks[0].language,
+										code: codeBlocks[0].code,
+										explanation: response.output.replace(/```[\s\S]*?```/g, "").trim().slice(0, 500),
+										filePath: filePath || undefined,
+									});
+
+									const codeEmbed = createCodeSuggestionEmbed(suggestion);
+									const [buttonsRow1, buttonsRow2] = createCodeReviewButtonsExtended(suggestion.id);
+
+									// Add footer with generation info
+									codeEmbed.setFooter({
+										text: `Model: ${session.model} | Tokens: ~${estimatedTokens} | Cost: $${estimatedCost.toFixed(4)} | Time: ${(duration / 1000).toFixed(1)}s`,
+									});
+
 									await interaction.editReply({
-										content: `**AI Response:**\n\n${response.output.slice(0, 1900)}`,
+										embeds: [codeEmbed],
+										components: [buttonsRow1, buttonsRow2],
 									});
-									break;
+								} catch (error) {
+									clearInterval(thinkingInterval);
+									throw error;
 								}
-
-								// Create suggestion for first code block
-								const suggestion = db.createSuggestion({
-									sessionId: session.id,
-									language: codeBlocks[0].language,
-									code: codeBlocks[0].code,
-									explanation: response.output.replace(/```[\s\S]*?```/g, "").trim().slice(0, 500),
-								});
-
-								const codeEmbed = createCodeSuggestionEmbed(suggestion);
-								const buttons = createCodeReviewButtons(suggestion.id);
-
-								await interaction.editReply({
-									embeds: [codeEmbed],
-									components: [buttons],
-								});
 								break;
 							}
 
@@ -19919,6 +20038,163 @@ async function main() {
 						break;
 					}
 
+					case CUSTOM_IDS.REGENERATE_CODE: {
+						// Find the session this suggestion belongs to
+						const sessions = db.listSessions(user.id, "active");
+						const session = sessions.find((s) => s.suggestions.some((sg) => sg.id === suggestionId));
+
+						if (!session || !session.lastPrompt) {
+							await interaction.reply({
+								content: "No active session or prompt found. Use `/coder suggest` instead.",
+								ephemeral: true,
+							});
+							break;
+						}
+
+						await interaction.deferReply();
+
+						try {
+							// Show thinking indicator
+							const {
+								createThinkingEmbed,
+								createCodeSuggestionEmbed,
+								createCodeReviewButtonsExtended,
+								estimateTokens,
+								extractCodeFromResponse,
+								detectLanguage,
+								generateSimpleDiff,
+							} = uiModule;
+
+							// Keep old code for diff
+							const oldCode = suggestion.code;
+
+							const thinkingEmbed = createThinkingEmbed(session.model);
+							await interaction.editReply({ embeds: [thinkingEmbed] });
+
+							// Generate new code using lightweight agent
+							const startTime = Date.now();
+							const model = session.model || "gpt-4o";
+
+							const regeneratePrompt = `${session.lastPrompt}\n\n(Regenerated - provide a different or improved implementation)`;
+							const systemPrompt =
+								session.systemPrompt ||
+								"You are an expert coding assistant. Provide clean, well-documented code.";
+
+							const { runAgent } = await import("./agents/lightweight-agent.js");
+							const result = await runAgent({
+								prompt: `${systemPrompt}\n\n${regeneratePrompt}`,
+								timeout: 60000,
+							});
+
+							const duration = Date.now() - startTime;
+
+							// Extract code from response
+							const extracted = extractCodeFromResponse(result.output);
+
+							const codeResult = extracted[0] || {
+								code: result.output,
+								language: suggestion.language || detectLanguage(result.output),
+								explanation: "",
+							};
+
+							// Create new suggestion
+							const newSuggestion = db.createSuggestion({
+								sessionId: session.id,
+								language: codeResult.language,
+								code: codeResult.code,
+								explanation: codeResult.explanation || undefined,
+								filePath: suggestion.filePath,
+							});
+
+							// Update token tracking
+							const estTokens = estimateTokens(result.output);
+							const costPerToken = model.includes("gpt-4") ? 0.00003 : 0.000002;
+							const estCost = estTokens * costPerToken;
+							db.updateSession(session.id, {
+								tokensUsed: (session.tokensUsed || 0) + estTokens,
+								estimatedCost: (session.estimatedCost || 0) + estCost,
+							});
+
+							// Create embed and buttons
+							const codeEmbed = createCodeSuggestionEmbed(newSuggestion);
+							codeEmbed.setFooter({
+								text: `Model: ${model} | Tokens: ~${estTokens} | Cost: ~$${estCost.toFixed(4)} | Time: ${(duration / 1000).toFixed(1)}s | Regenerated`,
+							});
+							const [row1, row2] = createCodeReviewButtonsExtended(newSuggestion.id);
+
+							// Generate diff between old and new code
+							const diff = generateSimpleDiff(oldCode, codeResult.code);
+							const diffTruncated = diff.slice(0, 1000);
+							const { EmbedBuilder } = await import("discord.js");
+							const diffEmbed = new EmbedBuilder()
+								.setTitle("📊 Changes from Previous")
+								.setDescription(
+									`\`\`\`diff\n${diffTruncated}${diff.length > 1000 ? "\n... (diff truncated)" : ""}\n\`\`\``,
+								)
+								.setColor(0x5865f2)
+								.setFooter({ text: "- removed | + added" });
+
+							await interaction.editReply({
+								embeds: [codeEmbed, diffEmbed],
+								components: [row1, row2],
+							});
+
+							// Disable old buttons
+							await disableAllButtons(interaction.message);
+						} catch (err) {
+							await interaction.editReply({
+								content: `Regeneration failed: ${err instanceof Error ? err.message : String(err)}`,
+								embeds: [],
+							});
+						}
+						break;
+					}
+
+					case CUSTOM_IDS.COPY_CODE: {
+						// Map language to file extension
+						const extMap: Record<string, string> = {
+							typescript: "ts",
+							javascript: "js",
+							python: "py",
+							rust: "rs",
+							go: "go",
+							java: "java",
+							cpp: "cpp",
+							c: "c",
+							csharp: "cs",
+							ruby: "rb",
+							php: "php",
+							swift: "swift",
+							kotlin: "kt",
+							sql: "sql",
+							bash: "sh",
+							shell: "sh",
+							html: "html",
+							css: "css",
+							json: "json",
+							yaml: "yml",
+							markdown: "md",
+							text: "txt",
+						};
+						const ext = extMap[suggestion.language.toLowerCase()] || "txt";
+						const filename = suggestion.filePath
+							? suggestion.filePath.split("/").pop() || `code.${ext}`
+							: `suggestion-${Date.now()}.${ext}`;
+
+						// Attach code as downloadable file + show preview
+						const { AttachmentBuilder } = await import("discord.js");
+						const attachment = new AttachmentBuilder(Buffer.from(suggestion.code, "utf-8"), {
+							name: filename,
+						});
+
+						await interaction.reply({
+							content: `**Download & copy the code:**\n\`\`\`${suggestion.language}\n${suggestion.code.slice(0, 500)}${suggestion.code.length > 500 ? "\n// ... (full code in attached file)" : ""}\n\`\`\``,
+							files: [attachment],
+							ephemeral: true,
+						});
+						break;
+					}
+
 					default:
 						await interaction.reply({ content: "Unknown action", ephemeral: true });
 				}
@@ -19997,6 +20273,36 @@ async function main() {
 			} catch (error) {
 				logError(`[CodingAgent] Modal submit error: ${error instanceof Error ? error.message : String(error)}`);
 				await interaction.reply({ content: "Failed to save edits", ephemeral: true });
+			}
+		}
+
+		// System prompt modal handler
+		if (customId.startsWith("modal_system_prompt:")) {
+			try {
+				const uiModule = await import("./ui/index.js");
+				const { getCodingSessionDB } = uiModule;
+				const db = getCodingSessionDB();
+
+				const sessionId = customId.split(":")[1];
+				const systemPrompt = interaction.fields.getTextInputValue("system_prompt");
+
+				const session = db.getSession(sessionId);
+				if (!session) {
+					await interaction.reply({ content: "Session not found", ephemeral: true });
+					return;
+				}
+
+				db.updateSession(sessionId, { systemPrompt });
+
+				await interaction.reply({
+					content: `**System prompt updated!**\n\`\`\`\n${systemPrompt.slice(0, 500)}${systemPrompt.length > 500 ? "..." : ""}\n\`\`\``,
+					ephemeral: true,
+				});
+			} catch (error) {
+				logError(
+					`[CodingAgent] System prompt modal error: ${error instanceof Error ? error.message : String(error)}`,
+				);
+				await interaction.reply({ content: "Failed to update system prompt", ephemeral: true });
 			}
 		}
 	});

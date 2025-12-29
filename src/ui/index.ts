@@ -33,6 +33,7 @@ export {
 	setupButtonCollectors,
 	CUSTOM_IDS,
 	createCodeReviewButtons,
+	createCodeReviewButtonsExtended,
 	createSessionControlButtons,
 	createModelSelector,
 	createQuickActionButtons,
@@ -41,10 +42,14 @@ export {
 	createCodeSuggestionEmbed,
 	createSessionEmbed,
 	createStreamingEmbed,
+	createEnhancedStreamingEmbed,
+	createThinkingEmbed,
+	createToolExecutionEmbed,
 	createEditCodeModal,
 	createCommitMessageModal,
 	createPRDetailsModal,
 	createBranchNameModal,
+	createSystemPromptModal,
 	parseCustomId,
 	updateMessageWithButtons,
 	disableAllButtons,
@@ -55,11 +60,16 @@ export {
 	type ButtonHandler,
 	type SelectHandler,
 	type ModalHandler,
+	type StreamingState,
 } from "./button-collectors.js";
 
-// Types (from reacord-components, but without React dependency)
+// Types and helpers (from reacord-components, but without React dependency)
 export {
 	AVAILABLE_MODELS,
+	estimateTokens,
+	extractCodeFromResponse,
+	detectLanguage,
+	generateSimpleDiff,
 	type CodeSuggestion,
 	type CodingSession,
 	type ModelOption,
