@@ -1297,3 +1297,19 @@ export {
 	type PromptVariant,
 	resetFeedbackSystem,
 } from "./agent-feedback.js";
+
+// Class 3.10 Agent Notification System (TAC Pattern: Cross-channel alerts)
+export {
+	AgentNotificationSystem,
+	BUILTIN_TEMPLATES,
+	type DeliveryMethod,
+	DEFAULT_NOTIFICATION_CONFIG,
+	getNotificationSystem,
+	type Notification,
+	type NotificationConfig,
+	type NotificationPriority,
+	type NotificationStatus,
+	type NotificationTemplate,
+	resetNotificationSystem,
+	type UserPreferences as NotificationUserPreferences,
+} from "./agent-notifications.js";

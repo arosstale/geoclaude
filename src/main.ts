@@ -4812,6 +4812,74 @@ const slashCommands = [
 				.addStringOption((opt) => opt.setName("agent").setDescription("Agent ID").setRequired(true)),
 		)
 		.addSubcommand((sub) => sub.setName("leaderboard").setDescription("Show top-rated agents")),
+
+	// Class 3.10 Agent Notification System (TAC Pattern: Cross-channel alerts)
+	new SlashCommandBuilder()
+		.setName("notify")
+		.setDescription("Agent Notifications - cross-channel alerts system (TAC pattern)")
+		.addSubcommand((sub) => sub.setName("stats").setDescription("Show notification statistics"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("send")
+				.setDescription("Send a notification")
+				.addStringOption((opt) => opt.setName("message").setDescription("Notification message").setRequired(true))
+				.addStringOption((opt) =>
+					opt
+						.setName("priority")
+						.setDescription("Priority level")
+						.addChoices(
+							{ name: "ℹ️ Info", value: "info" },
+							{ name: "✅ Success", value: "success" },
+							{ name: "⚠️ Warning", value: "warning" },
+							{ name: "❌ Error", value: "error" },
+							{ name: "🚨 Critical", value: "critical" },
+						),
+				)
+				.addUserOption((opt) => opt.setName("user").setDescription("Target user (default: self)")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("inbox")
+				.setDescription("View your notification inbox")
+				.addBooleanOption((opt) => opt.setName("unread").setDescription("Show unread only")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("read")
+				.setDescription("Mark notifications as read")
+				.addStringOption((opt) => opt.setName("id").setDescription("Notification ID (or 'all')")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("preferences")
+				.setDescription("View or update notification preferences")
+				.addBooleanOption((opt) => opt.setName("enabled").setDescription("Enable notifications"))
+				.addStringOption((opt) =>
+					opt
+						.setName("min_priority")
+						.setDescription("Minimum priority to receive")
+						.addChoices(
+							{ name: "Info (all)", value: "info" },
+							{ name: "Success+", value: "success" },
+							{ name: "Warning+", value: "warning" },
+							{ name: "Error+", value: "error" },
+							{ name: "Critical only", value: "critical" },
+						),
+				),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("mute")
+				.setDescription("Mute notifications from an agent")
+				.addStringOption((opt) => opt.setName("agent").setDescription("Agent ID to mute").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("unmute")
+				.setDescription("Unmute notifications from an agent")
+				.addStringOption((opt) => opt.setName("agent").setDescription("Agent ID to unmute").setRequired(true)),
+		)
+		.addSubcommand((sub) => sub.setName("templates").setDescription("List available notification templates")),
 ];
 
 // ============================================================================
@@ -21889,6 +21957,195 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 					} catch (error) {
 						const errMsg = error instanceof Error ? error.message : String(error);
 						await interaction.editReply(`Feedback error: ${errMsg}`);
+					}
+					break;
+				}
+
+				case "notify": {
+					await interaction.deferReply();
+					const notifySubcommand = interaction.options.getSubcommand();
+
+					try {
+						const { getNotificationSystem, BUILTIN_TEMPLATES } = await import("./agents/agent-notifications.js");
+						const notifySystem = getNotificationSystem(workingDir);
+
+						switch (notifySubcommand) {
+							case "stats": {
+								const stats = notifySystem.getStats();
+
+								const embed = new EmbedBuilder()
+									.setTitle("🔔 Notification Statistics")
+									.setColor(0x3498db)
+									.addFields(
+										{ name: "Total", value: String(stats.total), inline: true },
+										{ name: "Today", value: String(stats.todayCount), inline: true },
+										{ name: "Pending", value: String(stats.pending), inline: true },
+										{ name: "Sent", value: String(stats.sent), inline: true },
+										{ name: "Read", value: String(stats.read), inline: true },
+										{ name: "Failed", value: String(stats.failed), inline: true },
+									)
+									.addFields({
+										name: "By Priority",
+										value: `ℹ️ Info: ${stats.byPriority.info}\n✅ Success: ${stats.byPriority.success}\n⚠️ Warning: ${stats.byPriority.warning}\n❌ Error: ${stats.byPriority.error}\n🚨 Critical: ${stats.byPriority.critical}`,
+									})
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "send": {
+								const message = interaction.options.getString("message", true);
+								const priority = (interaction.options.getString("priority") || "info") as any;
+								const targetUser = interaction.options.getUser("user") || user;
+
+								const notification = notifySystem.notify({
+									agentId: "discord-bot",
+									userId: targetUser.id,
+									channelId,
+									title: `Notification from ${user.username}`,
+									message,
+									priority,
+								});
+
+								const embed = new EmbedBuilder()
+									.setTitle("✅ Notification Sent")
+									.setColor(0x2ecc71)
+									.addFields(
+										{ name: "To", value: targetUser.username, inline: true },
+										{ name: "Priority", value: priority, inline: true },
+										{ name: "Status", value: notification.status, inline: true },
+									)
+									.addFields({ name: "Message", value: message.slice(0, 1000) })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "inbox": {
+								const unreadOnly = interaction.options.getBoolean("unread") ?? false;
+								const notifications = notifySystem.getUserNotifications(user.id, {
+									unreadOnly,
+									limit: 15,
+								});
+								const unreadCount = notifySystem.getUnreadCount(user.id);
+
+								if (notifications.length === 0) {
+									await interaction.editReply("📭 Your inbox is empty.");
+									break;
+								}
+
+								const notificationList = notifications.map((n) => {
+									const icon = n.priority === "critical" ? "🚨" : n.priority === "error" ? "❌" : n.priority === "warning" ? "⚠️" : n.priority === "success" ? "✅" : "ℹ️";
+									const read = n.readAt ? "" : "🔵 ";
+									return `${read}${icon} **${n.title}**\n${n.message.slice(0, 100)}${n.message.length > 100 ? "..." : ""}`;
+								}).join("\n\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle(`📬 Your Inbox (${unreadCount} unread)`)
+									.setColor(unreadCount > 0 ? 0x3498db : 0x2ecc71)
+									.setDescription(notificationList.slice(0, 4000))
+									.setFooter({ text: `${notifications.length} notifications shown` })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "read": {
+								const notificationId = interaction.options.getString("id");
+
+								if (notificationId === "all" || !notificationId) {
+									const count = notifySystem.markAllAsRead(user.id);
+									await interaction.editReply(`✅ Marked ${count} notifications as read.`);
+								} else {
+									notifySystem.markAsRead(notificationId);
+									await interaction.editReply(`✅ Notification marked as read.`);
+								}
+								break;
+							}
+
+							case "preferences": {
+								const enabled = interaction.options.getBoolean("enabled");
+								const minPriority = interaction.options.getString("min_priority") as any;
+
+								const currentPrefs = notifySystem.getUserPreferences(user.id);
+
+								// Update if values provided
+								if (enabled !== null || minPriority) {
+									const updates: any = {};
+									if (enabled !== null) updates.enabled = enabled;
+									if (minPriority) updates.minPriority = minPriority;
+									notifySystem.setUserPreferences(user.id, updates);
+								}
+
+								const prefs = notifySystem.getUserPreferences(user.id);
+
+								const embed = new EmbedBuilder()
+									.setTitle("⚙️ Notification Preferences")
+									.setColor(0x9b59b6)
+									.addFields(
+										{ name: "Enabled", value: prefs.enabled ? "✅ Yes" : "❌ No", inline: true },
+										{ name: "Min Priority", value: prefs.minPriority, inline: true },
+										{ name: "Delivery", value: prefs.preferredDelivery, inline: true },
+										{ name: "Batching", value: prefs.batchNotifications ? "Yes" : "No", inline: true },
+										{ name: "Muted Agents", value: prefs.mutedAgents.length > 0 ? prefs.mutedAgents.join(", ") : "None", inline: false },
+									)
+									.setTimestamp();
+
+								if (prefs.quietHoursStart !== undefined) {
+									embed.addFields({
+										name: "Quiet Hours",
+										value: `${prefs.quietHoursStart}:00 - ${prefs.quietHoursEnd}:00`,
+										inline: true,
+									});
+								}
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "mute": {
+								const agentId = interaction.options.getString("agent", true);
+								notifySystem.muteAgent(user.id, agentId);
+
+								await interaction.editReply(`🔇 Muted notifications from agent: **${agentId}**`);
+								break;
+							}
+
+							case "unmute": {
+								const agentId = interaction.options.getString("agent", true);
+								notifySystem.unmuteAgent(user.id, agentId);
+
+								await interaction.editReply(`🔔 Unmuted notifications from agent: **${agentId}**`);
+								break;
+							}
+
+							case "templates": {
+								const templates = Object.values(BUILTIN_TEMPLATES);
+
+								const templateList = templates.map((t) =>
+									`**${t.name}** (\`${t.id}\`)\n${t.messageTemplate.slice(0, 80)}`
+								).join("\n\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle("📋 Notification Templates")
+									.setColor(0x3498db)
+									.setDescription(templateList)
+									.setFooter({ text: `${templates.length} templates available` })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown notify subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`Notification error: ${errMsg}`);
 					}
 					break;
 				}
