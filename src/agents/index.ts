@@ -1190,3 +1190,20 @@ export {
 	registerCustomAgent,
 	resetBootstrap,
 } from "./orchestrator-bootstrap.js";
+
+// Class 3.2 Multi-Agent Coordinator
+export {
+	type AgentMessage as CoordinatorAgentMessage,
+	type AgentVote,
+	type ConsensusResult as CoordinatorConsensusResult,
+	type CoordinationConfig,
+	type CoordinationResult,
+	type CoordinationTask,
+	getCoordinator,
+	MultiAgentCoordinator,
+	resetCoordinator,
+	runConsensusVote,
+	runDebate,
+	runParallel,
+	runWithSupervisor,
+} from "./multi-agent-coordinator.js";

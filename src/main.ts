@@ -4483,6 +4483,82 @@ const slashCommands = [
 				.addIntegerOption((opt) => opt.setName("interval").setDescription("Check interval in minutes"))
 				.addBooleanOption((opt) => opt.setName("autofix").setDescription("Enable/disable auto-fix")),
 		),
+
+	// Class 3.2 Multi-Agent Coordinator
+	new SlashCommandBuilder()
+		.setName("coordinate")
+		.setDescription("Multi-agent coordination - parallel, debate, consensus, supervisor patterns")
+		.addSubcommand((sub) =>
+			sub
+				.setName("parallel")
+				.setDescription("Run multiple agents in parallel on a task")
+				.addStringOption((opt) => opt.setName("task").setDescription("Task prompt").setRequired(true))
+				.addStringOption((opt) =>
+					opt
+						.setName("roles")
+						.setDescription("Agent roles (comma-separated)")
+						.setRequired(true),
+				),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("debate")
+				.setDescription("Run agents in debate format")
+				.addStringOption((opt) => opt.setName("topic").setDescription("Debate topic").setRequired(true))
+				.addStringOption((opt) =>
+					opt
+						.setName("roles")
+						.setDescription("Agent roles (comma-separated)")
+						.setRequired(true),
+				)
+				.addIntegerOption((opt) => opt.setName("rounds").setDescription("Number of debate rounds (default: 3)")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("consensus")
+				.setDescription("Run consensus voting among agents")
+				.addStringOption((opt) => opt.setName("question").setDescription("Question for consensus").setRequired(true))
+				.addStringOption((opt) =>
+					opt
+						.setName("roles")
+						.setDescription("Agent roles (comma-separated)")
+						.setRequired(true),
+				)
+				.addStringOption((opt) =>
+					opt
+						.setName("method")
+						.setDescription("Consensus method")
+						.addChoices(
+							{ name: "Majority", value: "majority" },
+							{ name: "Weighted", value: "weighted" },
+							{ name: "Unanimous", value: "unanimous" },
+						),
+				),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("supervisor")
+				.setDescription("Run with supervisor overseeing worker agents")
+				.addStringOption((opt) => opt.setName("task").setDescription("Task for team").setRequired(true))
+				.addStringOption((opt) =>
+					opt
+						.setName("supervisor")
+						.setDescription("Supervisor role")
+						.setRequired(true)
+						.addChoices(
+							{ name: "Architect", value: "architect" },
+							{ name: "Expert", value: "expert" },
+							{ name: "Reviewer", value: "reviewer" },
+						),
+				)
+				.addStringOption((opt) =>
+					opt
+						.setName("workers")
+						.setDescription("Worker roles (comma-separated)")
+						.setRequired(true),
+				),
+		)
+		.addSubcommand((sub) => sub.setName("status").setDescription("Show active coordinations")),
 ];
 
 // ============================================================================
@@ -20447,6 +20523,158 @@ async function main() {
 					} catch (error) {
 						const errMsg = error instanceof Error ? error.message : String(error);
 						await interaction.editReply(`Pi-Watcher error: ${errMsg}`);
+					}
+					break;
+				}
+
+				case "coordinate": {
+					await interaction.deferReply();
+					const coordinateSubcommand = interaction.options.getSubcommand();
+
+					try {
+						const { getOrchestrator } = await import("./agents/orchestrator.js");
+						const { getCoordinator, runParallel, runDebate, runConsensusVote, runWithSupervisor } = await import(
+							"./agents/multi-agent-coordinator.js"
+						);
+						const orch = getOrchestrator(join(workingDir, "orchestrator.db"));
+						const coordinator = getCoordinator(orch);
+
+						switch (coordinateSubcommand) {
+							case "parallel": {
+								const task = interaction.options.getString("task", true);
+								const rolesStr = interaction.options.getString("roles", true);
+								const roles = rolesStr.split(",").map((r) => r.trim());
+
+								await interaction.editReply(`🔄 Running parallel coordination with ${roles.length} agents...`);
+
+								const result = await runParallel(orch, task, roles);
+
+								const embed = new EmbedBuilder()
+									.setTitle("⚡ Parallel Coordination Complete")
+									.setColor(result.status === "success" ? 0x2ecc71 : 0xe74c3c)
+									.addFields(
+										{ name: "Status", value: result.status, inline: true },
+										{ name: "Agents", value: String(result.metadata.agentsUsed.length), inline: true },
+										{ name: "Duration", value: `${result.metadata.duration}ms`, inline: true },
+									)
+									.addFields({ name: "Output", value: result.finalOutput.slice(0, 1000) || "No output" })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "debate": {
+								const topic = interaction.options.getString("topic", true);
+								const rolesStr = interaction.options.getString("roles", true);
+								const roles = rolesStr.split(",").map((r) => r.trim());
+								const rounds = interaction.options.getInteger("rounds") || 3;
+
+								await interaction.editReply(`🎭 Starting ${rounds}-round debate with ${roles.length} agents...`);
+
+								const result = await runDebate(orch, topic, roles, rounds);
+
+								const embed = new EmbedBuilder()
+									.setTitle("🎭 Debate Complete")
+									.setColor(0x9b59b6)
+									.addFields(
+										{ name: "Topic", value: topic.slice(0, 100), inline: false },
+										{ name: "Rounds", value: String(rounds), inline: true },
+										{ name: "Participants", value: roles.join(", "), inline: true },
+										{ name: "Messages", value: String(result.messages.length), inline: true },
+									)
+									.addFields({ name: "Summary", value: result.finalOutput.slice(0, 1000) || "No output" })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "consensus": {
+								const question = interaction.options.getString("question", true);
+								const rolesStr = interaction.options.getString("roles", true);
+								const roles = rolesStr.split(",").map((r) => r.trim());
+								const method = (interaction.options.getString("method") || "majority") as "majority" | "weighted" | "unanimous";
+
+								await interaction.editReply(`🗳️ Running ${method} consensus with ${roles.length} agents...`);
+
+								const result = await runConsensusVote(orch, question, roles, method);
+
+								const embed = new EmbedBuilder()
+									.setTitle("🗳️ Consensus Reached")
+									.setColor(result.consensus?.unanimous ? 0x2ecc71 : 0xf39c12)
+									.addFields(
+										{ name: "Question", value: question.slice(0, 100), inline: false },
+										{ name: "Winner", value: result.consensus?.winner || "No consensus", inline: true },
+										{ name: "Confidence", value: `${((result.consensus?.confidence || 0) * 100).toFixed(0)}%`, inline: true },
+										{ name: "Unanimous", value: result.consensus?.unanimous ? "Yes" : "No", inline: true },
+									)
+									.addFields({
+										name: "Votes",
+										value:
+											result.consensus?.votes
+												.map((v) => `• ${v.agentId}: ${v.choice} (${(v.confidence * 100).toFixed(0)}%)`)
+												.join("\n")
+												.slice(0, 500) || "No votes",
+									})
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "supervisor": {
+								const task = interaction.options.getString("task", true);
+								const supervisor = interaction.options.getString("supervisor", true);
+								const workersStr = interaction.options.getString("workers", true);
+								const workers = workersStr.split(",").map((r) => r.trim());
+
+								await interaction.editReply(`👔 Running supervisor pattern: ${supervisor} overseeing ${workers.length} workers...`);
+
+								const result = await runWithSupervisor(orch, task, supervisor, workers);
+
+								const embed = new EmbedBuilder()
+									.setTitle("👔 Supervisor Task Complete")
+									.setColor(result.status === "success" ? 0x2ecc71 : 0xe74c3c)
+									.addFields(
+										{ name: "Supervisor", value: supervisor, inline: true },
+										{ name: "Workers", value: workers.join(", "), inline: true },
+										{ name: "Duration", value: `${result.metadata.duration}ms`, inline: true },
+									)
+									.addFields({ name: "Result", value: result.finalOutput.slice(0, 1000) || "No output" })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "status": {
+								const active = coordinator.getActiveCoordinations();
+								const messages = coordinator.getMessageLog().slice(-10);
+
+								const embed = new EmbedBuilder()
+									.setTitle("🤝 Coordination Status")
+									.setColor(0x3498db)
+									.addFields(
+										{ name: "Active Tasks", value: String(active.length), inline: true },
+										{ name: "Recent Messages", value: String(messages.length), inline: true },
+									)
+									.addFields({
+										name: "Active Coordinations",
+										value: active.length > 0 ? active.map((t) => `• ${t.type}: ${t.prompt.slice(0, 50)}`).join("\n") : "None",
+									})
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown coordinate subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`Coordination error: ${errMsg}`);
 					}
 					break;
 				}
