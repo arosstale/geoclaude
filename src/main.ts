@@ -4441,16 +4441,16 @@ const slashCommands = [
 		.addSubcommand((sub) =>
 			sub
 				.setName("bootstrap")
-				.setDescription("Bootstrap orchestrator with default agent handlers")
+				.setDescription("Bootstrap orchestrator with Z.ai GLM agent handlers")
 				.addStringOption((opt) =>
 					opt
 						.setName("model")
-						.setDescription("Default model for agents")
+						.setDescription("Default Z.ai GLM model for agents")
 						.addChoices(
-							{ name: "GPT-4o", value: "gpt-4o" },
-							{ name: "GPT-4o Mini", value: "gpt-4o-mini" },
-							{ name: "Claude Sonnet 4", value: "claude-sonnet-4-20250514" },
-							{ name: "DeepSeek V3", value: "deepseek-chat" },
+							{ name: "GLM-4.7 (Top Coding)", value: "GLM-4.7" },
+							{ name: "GLM-4.6 (Stable)", value: "GLM-4.6" },
+							{ name: "GLM-4.5 (General)", value: "glm-4.5" },
+							{ name: "GLM-4.5-air (Fast)", value: "glm-4.5-air" },
 						),
 				)
 				.addBooleanOption((opt) => opt.setName("learning").setDescription("Enable agent learning")),
@@ -20264,7 +20264,7 @@ async function main() {
 							}
 
 							case "bootstrap": {
-								const defaultModel = interaction.options.getString("model") || "gpt-4o";
+								const defaultModel = interaction.options.getString("model") || "GLM-4.7";
 								const enableLearning = interaction.options.getBoolean("learning") ?? true;
 
 								const { bootstrapOrchestrator } = await import("./agents/orchestrator-bootstrap.js");

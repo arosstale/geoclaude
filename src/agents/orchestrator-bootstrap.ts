@@ -50,33 +50,33 @@ interface DefaultAgent {
 // ============================================================================
 
 const DEFAULT_AGENTS: DefaultAgent[] = [
-	// Lightweight - Fast, general purpose
+	// Lightweight - Fast Z.ai GLM
 	{
 		name: "lightweight-builder",
 		type: "inline",
 		role: "builder",
-		description: "Fast lightweight agent for quick coding tasks",
+		description: "Fast GLM-4.5-air agent for quick coding tasks",
 		handler: (config) => async (prompt) => {
 			const result = await runLightweightAgent({
 				prompt,
 				workingDir: config.workingDir,
-				model: config.defaultModel || "gpt-4o-mini",
+				model: config.defaultModel || "glm-4.5-air",
 			});
 			return result.output;
 		},
 	},
 
-	// Claude - Full agent with tools
+	// GLM-4.7 - Top coding + reasoning (architect)
 	{
-		name: "claude-architect",
+		name: "glm-architect",
 		type: "subprocess",
 		role: "architect",
-		description: "Claude agent for architecture and design tasks",
+		description: "GLM-4.7 agent for architecture and design (top reasoning)",
 		handler: (config) => async (prompt) => {
 			const result = await runClaudeAgent({
 				prompt,
 				workingDir: config.workingDir,
-				model: config.defaultModel || "claude-sonnet-4-20250514",
+				model: config.defaultModel || "GLM-4.7",
 				systemPrompt:
 					"You are an expert software architect. Focus on clean design, scalability, and maintainability.",
 			});
@@ -84,12 +84,12 @@ const DEFAULT_AGENTS: DefaultAgent[] = [
 		},
 	},
 
-	// Omni - Multi-model router
+	// Omni - Multi-model router (defaults to GLM)
 	{
 		name: "omni-router",
 		type: "inline",
 		role: "builder",
-		description: "Multi-model router that selects best model for task",
+		description: "Multi-model router (prefers GLM for quality)",
 		handler: () => async (prompt) => {
 			const result = await runOmni({
 				prompt,
@@ -99,32 +99,33 @@ const DEFAULT_AGENTS: DefaultAgent[] = [
 		},
 	},
 
-	// OpenCode - Code-focused with free models
+	// GLM-4.6 - Stable coding
 	{
-		name: "opencode-coder",
+		name: "glm-coder",
 		type: "inline",
 		role: "builder",
-		description: "Code-focused agent using free Grok models",
-		handler: () => async (prompt) => {
-			const result = await runOpenCodeAgent({
+		description: "GLM-4.6 stable coding agent",
+		handler: (config) => async (prompt) => {
+			const result = await runClaudeAgent({
 				prompt,
-				model: "grok-3-mini-fast-latest",
+				workingDir: config.workingDir,
+				model: config.defaultModel || "GLM-4.6",
 			});
 			return result.output;
 		},
 	},
 
-	// Tester
+	// Tester - GLM-4.5-air (fast)
 	{
 		name: "test-agent",
 		type: "inline",
 		role: "tester",
-		description: "Testing agent for validation and QA",
+		description: "GLM-4.5-air testing agent for validation and QA",
 		handler: (config) => async (prompt) => {
 			const result = await runLightweightAgent({
 				prompt: `You are a QA engineer. ${prompt}`,
 				workingDir: config.workingDir,
-				model: config.defaultModel || "gpt-4o",
+				model: config.defaultModel || "glm-4.5-air",
 				systemPrompt:
 					"You are an expert QA engineer. Focus on test coverage, edge cases, and validation.",
 			});
@@ -132,17 +133,17 @@ const DEFAULT_AGENTS: DefaultAgent[] = [
 		},
 	},
 
-	// Reviewer
+	// Reviewer - GLM-4.7 (reasoning for code review)
 	{
 		name: "code-reviewer",
 		type: "inline",
 		role: "reviewer",
-		description: "Code review agent for quality and security",
+		description: "GLM-4.7 code review agent for quality and security",
 		handler: (config) => async (prompt) => {
 			const result = await runClaudeAgent({
 				prompt,
 				workingDir: config.workingDir,
-				model: "claude-sonnet-4-20250514",
+				model: "GLM-4.7",
 				systemPrompt:
 					"You are an expert code reviewer. Focus on code quality, security vulnerabilities, performance issues, and best practices. Be thorough but constructive.",
 			});
@@ -150,17 +151,17 @@ const DEFAULT_AGENTS: DefaultAgent[] = [
 		},
 	},
 
-	// Scout - Research
+	// Scout - GLM-4.5 (research)
 	{
 		name: "research-scout",
 		type: "inline",
 		role: "scout",
-		description: "Research and exploration agent",
+		description: "GLM-4.5 research and exploration agent",
 		handler: (config) => async (prompt) => {
 			const result = await runLightweightAgent({
 				prompt,
 				workingDir: config.workingDir,
-				model: "gpt-4o",
+				model: "glm-4.5",
 				systemPrompt:
 					"You are a research specialist. Explore codebases, gather information, and provide comprehensive analysis.",
 			});
@@ -168,17 +169,17 @@ const DEFAULT_AGENTS: DefaultAgent[] = [
 		},
 	},
 
-	// Expert - Domain-specific
+	// Expert - GLM-4.7 (domain expertise with reasoning)
 	{
 		name: "domain-expert",
 		type: "inline",
 		role: "expert",
-		description: "Domain-specific expert agent",
+		description: "GLM-4.7 domain-specific expert agent",
 		handler: (config) => async (prompt) => {
 			const result = await runClaudeAgent({
 				prompt,
 				workingDir: config.workingDir,
-				model: config.defaultModel || "claude-sonnet-4-20250514",
+				model: config.defaultModel || "GLM-4.7",
 				systemPrompt:
 					"You are a domain expert. Provide specialized knowledge and guidance based on the task context.",
 			});
@@ -186,17 +187,17 @@ const DEFAULT_AGENTS: DefaultAgent[] = [
 		},
 	},
 
-	// Executor - DevOps/Automation
+	// Executor - GLM-4.5-air (fast DevOps)
 	{
 		name: "devops-executor",
 		type: "subprocess",
 		role: "executor",
-		description: "DevOps and automation agent",
+		description: "GLM-4.5-air DevOps and automation agent",
 		handler: (config) => async (prompt) => {
 			const result = await runLightweightAgent({
 				prompt,
 				workingDir: config.workingDir,
-				model: config.defaultModel || "gpt-4o",
+				model: config.defaultModel || "glm-4.5-air",
 				systemPrompt:
 					"You are a DevOps engineer. Handle infrastructure, automation, CI/CD, and system operations.",
 			});
