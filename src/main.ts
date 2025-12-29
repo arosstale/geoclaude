@@ -5374,6 +5374,111 @@ const slashCommands = [
 				.addStringOption((opt) => opt.setName("quota_id").setDescription("Quota ID").setRequired(true)),
 		)
 		.addSubcommand((sub) => sub.setName("queue").setDescription("View request queue status")),
+	new SlashCommandBuilder()
+		.setName("audit")
+		.setDescription("Audit Logging - Comprehensive audit trail and compliance (TAC pattern)")
+		.addSubcommand((sub) => sub.setName("stats").setDescription("Show audit statistics"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("log")
+				.setDescription("Create an audit entry")
+				.addStringOption((opt) =>
+					opt.setName("action").setDescription("Action type").setRequired(true).addChoices(
+						{ name: "Create", value: "create" },
+						{ name: "Read", value: "read" },
+						{ name: "Update", value: "update" },
+						{ name: "Delete", value: "delete" },
+						{ name: "Execute", value: "execute" },
+						{ name: "Config Change", value: "config_change" },
+					),
+				)
+				.addStringOption((opt) => opt.setName("description").setDescription("Description").setRequired(true))
+				.addStringOption((opt) =>
+					opt.setName("category").setDescription("Category").addChoices(
+						{ name: "Security", value: "security" },
+						{ name: "Data Access", value: "data_access" },
+						{ name: "Configuration", value: "configuration" },
+						{ name: "Operation", value: "operation" },
+						{ name: "System", value: "system" },
+					),
+				)
+				.addStringOption((opt) =>
+					opt.setName("severity").setDescription("Severity").addChoices(
+						{ name: "Low", value: "low" },
+						{ name: "Medium", value: "medium" },
+						{ name: "High", value: "high" },
+						{ name: "Critical", value: "critical" },
+					),
+				),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("query")
+				.setDescription("Query audit logs")
+				.addStringOption((opt) =>
+					opt.setName("category").setDescription("Filter by category").addChoices(
+						{ name: "Security", value: "security" },
+						{ name: "Data Access", value: "data_access" },
+						{ name: "Configuration", value: "configuration" },
+						{ name: "Operation", value: "operation" },
+						{ name: "System", value: "system" },
+					),
+				)
+				.addStringOption((opt) =>
+					opt.setName("severity").setDescription("Filter by severity").addChoices(
+						{ name: "Low", value: "low" },
+						{ name: "Medium", value: "medium" },
+						{ name: "High", value: "high" },
+						{ name: "Critical", value: "critical" },
+					),
+				)
+				.addIntegerOption((opt) => opt.setName("limit").setDescription("Number of entries")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("search")
+				.setDescription("Search audit logs")
+				.addStringOption((opt) => opt.setName("text").setDescription("Search text").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("entry")
+				.setDescription("Get specific audit entry")
+				.addStringOption((opt) => opt.setName("entry_id").setDescription("Entry ID").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("report")
+				.setDescription("Generate audit report")
+				.addStringOption((opt) => opt.setName("name").setDescription("Report name").setRequired(true))
+				.addStringOption((opt) =>
+					opt.setName("type").setDescription("Report type").addChoices(
+						{ name: "Summary", value: "summary" },
+						{ name: "Detailed", value: "detailed" },
+						{ name: "Compliance", value: "compliance" },
+					),
+				)
+				.addIntegerOption((opt) => opt.setName("days").setDescription("Days to include (default: 30)")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("verify")
+				.setDescription("Verify entry integrity")
+				.addStringOption((opt) => opt.setName("entry_id").setDescription("Entry ID").setRequired(true)),
+		)
+		.addSubcommand((sub) => sub.setName("policies").setDescription("List retention policies"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("export")
+				.setDescription("Export audit logs")
+				.addStringOption((opt) =>
+					opt.setName("format").setDescription("Export format").addChoices(
+						{ name: "JSON", value: "json" },
+						{ name: "CSV", value: "csv" },
+					),
+				)
+				.addIntegerOption((opt) => opt.setName("limit").setDescription("Max entries")),
+		),
 ];
 
 // ============================================================================
@@ -24289,6 +24394,284 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 					} catch (error) {
 						const errMsg = error instanceof Error ? error.message : String(error);
 						await interaction.editReply(`Rate limiting error: ${errMsg}`);
+					}
+					break;
+				}
+
+				case "audit": {
+					await interaction.deferReply();
+					const auditSubcommand = interaction.options.getSubcommand();
+
+					try {
+						const { getAuditLogging } = await import("./agents/audit-logging.js");
+						const auditSystem = getAuditLogging({
+							dataDir: workingDir,
+							enableIntegrityHash: true,
+							defaultRetentionDays: 365,
+							maxEntriesPerQuery: 1000,
+							archiveEnabled: false,
+						});
+
+						switch (auditSubcommand) {
+							case "stats": {
+								const stats = auditSystem.getStats();
+
+								const embed = new EmbedBuilder()
+									.setTitle("Audit Logging Statistics")
+									.setColor(0x3498db)
+									.addFields(
+										{ name: "Total Entries", value: stats.totalEntries.toLocaleString(), inline: true },
+										{ name: "Last 24h", value: stats.entriesLast24h.toLocaleString(), inline: true },
+										{ name: "Last 7d", value: stats.entriesLast7d.toLocaleString(), inline: true },
+										{ name: "Security Events", value: stats.securityEvents.toLocaleString(), inline: true },
+										{ name: "Failed Operations", value: stats.failedOperations.toLocaleString(), inline: true },
+										{ name: "Unique Actors", value: stats.uniqueActors.toLocaleString(), inline: true },
+										{ name: "Unique Resources", value: stats.uniqueResources.toLocaleString(), inline: true },
+									)
+									.setFooter({ text: "Audit Logging System" })
+									.setTimestamp();
+
+								if (stats.oldestEntry) {
+									embed.addFields({ name: "Date Range", value: `${stats.oldestEntry.toLocaleDateString()} - ${stats.newestEntry?.toLocaleDateString() ?? 'now'}`, inline: false });
+								}
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "log": {
+								const action = interaction.options.getString("action", true) as "create" | "read" | "update" | "delete" | "execute" | "config_change";
+								const description = interaction.options.getString("description", true);
+								const category = (interaction.options.getString("category") ?? "operation") as "security" | "data_access" | "configuration" | "operation" | "system";
+								const severity = interaction.options.getString("severity") as "low" | "medium" | "high" | "critical" | undefined;
+
+								const entry = auditSystem.log({
+									action,
+									category,
+									severity,
+									actor: {
+										type: "user",
+										id: user.id,
+										name: user.username,
+									},
+									description,
+								});
+
+								const embed = new EmbedBuilder()
+									.setTitle("Audit Entry Created")
+									.setColor(0x2ecc71)
+									.addFields(
+										{ name: "ID", value: `\`${entry.id}\``, inline: false },
+										{ name: "Action", value: entry.action, inline: true },
+										{ name: "Category", value: entry.category, inline: true },
+										{ name: "Severity", value: entry.severity, inline: true },
+									)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "query": {
+								const category = interaction.options.getString("category") as "security" | "data_access" | "configuration" | "operation" | "system" | undefined;
+								const severity = interaction.options.getString("severity") as "low" | "medium" | "high" | "critical" | undefined;
+								const limit = interaction.options.getInteger("limit") ?? 20;
+
+								const entries = auditSystem.query({
+									categories: category ? [category] : undefined,
+									severities: severity ? [severity] : undefined,
+									limit,
+								});
+
+								if (entries.length === 0) {
+									await interaction.editReply("No audit entries found matching criteria");
+									break;
+								}
+
+								const list = entries.slice(0, 15).map((e) => {
+									const sev = e.severity === "critical" ? "[CRIT]" : e.severity === "high" ? "[HIGH]" : e.severity === "medium" ? "[MED]" : "[LOW]";
+									const ago = Math.round((Date.now() - e.timestamp.getTime()) / 60000);
+									return `${sev} **${e.action}** | ${e.description.slice(0, 40)} | ${ago}m ago`;
+								}).join("\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Audit Entries (${entries.length})`)
+									.setColor(0x3498db)
+									.setDescription(list)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "search": {
+								const text = interaction.options.getString("text", true);
+								const entries = auditSystem.search(text, 20);
+
+								if (entries.length === 0) {
+									await interaction.editReply(`No audit entries found matching: "${text}"`);
+									break;
+								}
+
+								const list = entries.slice(0, 10).map((e) => {
+									return `**${e.action}** | ${e.description.slice(0, 50)} | ${e.actor.name ?? e.actor.id}`;
+								}).join("\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Search Results (${entries.length})`)
+									.setColor(0x9b59b6)
+									.setDescription(list)
+									.setFooter({ text: `Query: ${text}` })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "entry": {
+								const entryId = interaction.options.getString("entry_id", true);
+								const entry = auditSystem.getEntry(entryId);
+
+								if (!entry) {
+									await interaction.editReply(`Entry not found: \`${entryId}\``);
+									break;
+								}
+
+								const sevColor = entry.severity === "critical" ? 0xe74c3c : entry.severity === "high" ? 0xf39c12 : 0x3498db;
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Audit Entry: ${entry.action}`)
+									.setColor(sevColor)
+									.addFields(
+										{ name: "ID", value: `\`${entry.id}\``, inline: false },
+										{ name: "Action", value: entry.action, inline: true },
+										{ name: "Category", value: entry.category, inline: true },
+										{ name: "Severity", value: entry.severity, inline: true },
+										{ name: "Outcome", value: entry.outcome, inline: true },
+										{ name: "Actor", value: `${entry.actor.type}: ${entry.actor.name ?? entry.actor.id}`, inline: true },
+										{ name: "Description", value: entry.description, inline: false },
+									)
+									.setTimestamp(entry.timestamp);
+
+								if (entry.resource) {
+									embed.addFields({ name: "Resource", value: `${entry.resource.type}: ${entry.resource.name ?? entry.resource.id}`, inline: false });
+								}
+								if (entry.hash) {
+									embed.addFields({ name: "Hash", value: `\`${entry.hash.slice(0, 16)}...\``, inline: true });
+								}
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "report": {
+								const name = interaction.options.getString("name", true);
+								const type = (interaction.options.getString("type") ?? "summary") as "summary" | "detailed" | "compliance";
+								const days = interaction.options.getInteger("days") ?? 30;
+
+								const endDate = new Date();
+								const startDate = new Date();
+								startDate.setDate(startDate.getDate() - days);
+
+								const report = auditSystem.generateReport({
+									name,
+									type,
+									startDate,
+									endDate,
+								});
+
+								const topActions = Object.entries(report.byAction)
+									.sort((a, b) => b[1] - a[1])
+									.slice(0, 5)
+									.map(([action, count]) => `**${action}**: ${count}`)
+									.join(", ") || "None";
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Audit Report: ${report.name}`)
+									.setColor(0x3498db)
+									.addFields(
+										{ name: "Type", value: report.type, inline: true },
+										{ name: "Total Entries", value: report.totalEntries.toLocaleString(), inline: true },
+										{ name: "Alerts", value: report.alerts.length.toString(), inline: true },
+										{ name: "Top Actions", value: topActions, inline: false },
+									)
+									.setFooter({ text: `${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}` })
+									.setTimestamp();
+
+								if (report.complianceScore !== undefined) {
+									embed.addFields({ name: "Compliance Score", value: `${report.complianceScore}/100`, inline: true });
+								}
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "verify": {
+								const entryId = interaction.options.getString("entry_id", true);
+								const result = auditSystem.verifyIntegrity(entryId);
+
+								const statusColor = result.valid ? 0x2ecc71 : 0xe74c3c;
+								const statusEmoji = result.valid ? "[OK]" : "[FAIL]";
+
+								const embed = new EmbedBuilder()
+									.setTitle(`${statusEmoji} Integrity Verification`)
+									.setColor(statusColor)
+									.addFields(
+										{ name: "Entry ID", value: `\`${entryId}\``, inline: false },
+										{ name: "Status", value: result.valid ? "Valid" : "Invalid", inline: true },
+										{ name: "Message", value: result.message, inline: false },
+									)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "policies": {
+								const policies = auditSystem.getAllPolicies();
+
+								if (policies.length === 0) {
+									await interaction.editReply("No retention policies configured");
+									break;
+								}
+
+								const list = policies.map((p) => {
+									const status = p.enabled ? "[ON]" : "[OFF]";
+									const filters = [p.category, p.severity].filter(Boolean).join(", ") || "all";
+									return `${status} **${p.name}** | ${p.retentionDays}d retention | ${filters}`;
+								}).join("\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Retention Policies (${policies.length})`)
+									.setColor(0x3498db)
+									.setDescription(list)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "export": {
+								const format = (interaction.options.getString("format") ?? "json") as "json" | "csv";
+								const limit = interaction.options.getInteger("limit") ?? 100;
+
+								const data = format === "json"
+									? auditSystem.exportToJson({ limit })
+									: auditSystem.exportToCsv({ limit });
+
+								// Truncate for Discord message
+								const preview = data.length > 1500 ? data.slice(0, 1500) + "\n...(truncated)" : data;
+
+								await interaction.editReply(`**Audit Export (${format.toUpperCase()}, ${limit} entries)**\n\`\`\`${format}\n${preview}\n\`\`\``);
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown audit subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`Audit logging error: ${errMsg}`);
 					}
 					break;
 				}

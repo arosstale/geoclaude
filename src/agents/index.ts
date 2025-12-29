@@ -1417,3 +1417,22 @@ export {
 	type RequestPriority,
 	resetRateLimiting,
 } from "./rate-limiting.js";
+
+// Class 3.17 Audit Logging System (TAC Pattern: Comprehensive audit trail)
+export {
+	type ActorType,
+	type AuditAction,
+	type AuditActor,
+	type AuditCategory,
+	type AuditConfig,
+	type AuditEntry,
+	AuditLoggingSystem,
+	type AuditQuery,
+	type AuditReport,
+	type AuditSeverity,
+	type AuditStats,
+	getAuditLogging,
+	resetAuditLogging,
+	type ResourceType as AuditResourceType,
+	type RetentionPolicy,
+} from "./audit-logging.js";
