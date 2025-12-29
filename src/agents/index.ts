@@ -1398,3 +1398,22 @@ export {
 	resetCostTracking,
 	type UsageRecord,
 } from "./cost-tracking.js";
+
+// Class 3.16 Rate Limiting System (TAC Pattern: API rate limiting and throttling)
+export {
+	getRateLimiting,
+	type Quota,
+	type QuotaPeriod,
+	type QuotaStatus,
+	type QueuedRequest,
+	type RateLimitAlgorithm,
+	type RateLimitConfig,
+	type RateLimitResult,
+	type RateLimitRule,
+	type RateLimitScope,
+	type RateLimitState,
+	type RateLimitStats,
+	RateLimitingSystem,
+	type RequestPriority,
+	resetRateLimiting,
+} from "./rate-limiting.js";

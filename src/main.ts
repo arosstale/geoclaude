@@ -5293,6 +5293,87 @@ const slashCommands = [
 		)
 		.addSubcommand((sub) => sub.setName("pricing").setDescription("View model pricing"))
 		.addSubcommand((sub) => sub.setName("optimize").setDescription("Get cost optimization suggestions")),
+	new SlashCommandBuilder()
+		.setName("ratelimit")
+		.setDescription("Rate Limiting - API rate limiting and throttling (TAC pattern)")
+		.addSubcommand((sub) => sub.setName("stats").setDescription("Show rate limiting statistics"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("rule")
+				.setDescription("Create a rate limit rule")
+				.addStringOption((opt) => opt.setName("name").setDescription("Rule name").setRequired(true))
+				.addIntegerOption((opt) => opt.setName("limit").setDescription("Max requests").setRequired(true))
+				.addIntegerOption((opt) => opt.setName("window").setDescription("Window in seconds").setRequired(true))
+				.addStringOption((opt) =>
+					opt.setName("scope").setDescription("Rule scope").addChoices(
+						{ name: "Global", value: "global" },
+						{ name: "User", value: "user" },
+						{ name: "Channel", value: "channel" },
+						{ name: "Agent", value: "agent" },
+						{ name: "Endpoint", value: "endpoint" },
+					),
+				)
+				.addStringOption((opt) =>
+					opt.setName("algorithm").setDescription("Rate limit algorithm").addChoices(
+						{ name: "Sliding Window", value: "sliding_window" },
+						{ name: "Fixed Window", value: "fixed_window" },
+						{ name: "Token Bucket", value: "token_bucket" },
+						{ name: "Leaky Bucket", value: "leaky_bucket" },
+					),
+				),
+		)
+		.addSubcommand((sub) => sub.setName("rules").setDescription("List all rate limit rules"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("check")
+				.setDescription("Check rate limit for a target")
+				.addStringOption((opt) => opt.setName("target").setDescription("Target ID").setRequired(true))
+				.addStringOption((opt) =>
+					opt.setName("scope").setDescription("Scope").addChoices(
+						{ name: "User", value: "user" },
+						{ name: "Channel", value: "channel" },
+						{ name: "Agent", value: "agent" },
+						{ name: "Endpoint", value: "endpoint" },
+					),
+				),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("disable")
+				.setDescription("Disable a rate limit rule")
+				.addStringOption((opt) => opt.setName("rule_id").setDescription("Rule ID").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("quota")
+				.setDescription("Create a quota")
+				.addStringOption((opt) => opt.setName("name").setDescription("Quota name").setRequired(true))
+				.addIntegerOption((opt) => opt.setName("limit").setDescription("Quota limit").setRequired(true))
+				.addStringOption((opt) =>
+					opt.setName("period").setDescription("Reset period").setRequired(true).addChoices(
+						{ name: "Per Minute", value: "minute" },
+						{ name: "Per Hour", value: "hour" },
+						{ name: "Per Day", value: "day" },
+						{ name: "Per Week", value: "week" },
+						{ name: "Per Month", value: "month" },
+					),
+				)
+				.addStringOption((opt) =>
+					opt.setName("scope").setDescription("Quota scope").addChoices(
+						{ name: "Global", value: "global" },
+						{ name: "User", value: "user" },
+						{ name: "Channel", value: "channel" },
+					),
+				),
+		)
+		.addSubcommand((sub) => sub.setName("quotas").setDescription("List all quotas"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("quota-status")
+				.setDescription("Check quota status")
+				.addStringOption((opt) => opt.setName("quota_id").setDescription("Quota ID").setRequired(true)),
+		)
+		.addSubcommand((sub) => sub.setName("queue").setDescription("View request queue status")),
 ];
 
 // ============================================================================
@@ -23947,6 +24028,267 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 					} catch (error) {
 						const errMsg = error instanceof Error ? error.message : String(error);
 						await interaction.editReply(`Cost tracking error: ${errMsg}`);
+					}
+					break;
+				}
+
+				case "ratelimit": {
+					await interaction.deferReply();
+					const rateLimitSubcommand = interaction.options.getSubcommand();
+
+					try {
+						const { getRateLimiting } = await import("./agents/rate-limiting.js");
+						const rateLimitSystem = getRateLimiting({
+							dataDir: workingDir,
+							defaultAlgorithm: "sliding_window",
+							defaultWindowMs: 60000,
+							defaultLimit: 60,
+							enableQueue: true,
+							maxQueueSize: 100,
+							maxQueueWaitMs: 30000,
+							cleanupIntervalMs: 60000,
+						});
+
+						switch (rateLimitSubcommand) {
+							case "stats": {
+								const stats = rateLimitSystem.getStats();
+
+								const embed = new EmbedBuilder()
+									.setTitle("Rate Limiting Statistics")
+									.setColor(0x3498db)
+									.addFields(
+										{ name: "Total Rules", value: stats.totalRules.toString(), inline: true },
+										{ name: "Active Rules", value: stats.activeRules.toString(), inline: true },
+										{ name: "Total Quotas", value: stats.totalQuotas.toString(), inline: true },
+										{ name: "Requests Allowed", value: stats.requestsAllowed.toLocaleString(), inline: true },
+										{ name: "Requests Denied", value: stats.requestsDenied.toLocaleString(), inline: true },
+										{ name: "Queued", value: stats.queuedRequests.toString(), inline: true },
+										{ name: "Avg Wait Time", value: `${stats.avgWaitTime.toFixed(0)}ms`, inline: true },
+									)
+									.setFooter({ text: "Rate Limiting System" })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "rule": {
+								const name = interaction.options.getString("name", true);
+								const limit = interaction.options.getInteger("limit", true);
+								const windowSec = interaction.options.getInteger("window", true);
+								const scope = (interaction.options.getString("scope") ?? "global") as "global" | "user" | "channel" | "agent" | "endpoint";
+								const algorithm = (interaction.options.getString("algorithm") ?? "sliding_window") as "sliding_window" | "fixed_window" | "token_bucket" | "leaky_bucket";
+
+								const rule = rateLimitSystem.createRule({
+									name,
+									scope,
+									limit,
+									windowMs: windowSec * 1000,
+									algorithm,
+								});
+
+								const embed = new EmbedBuilder()
+									.setTitle("Rate Limit Rule Created")
+									.setColor(0x2ecc71)
+									.addFields(
+										{ name: "ID", value: `\`${rule.id}\``, inline: false },
+										{ name: "Name", value: rule.name, inline: true },
+										{ name: "Limit", value: `${rule.limit} req`, inline: true },
+										{ name: "Window", value: `${windowSec}s`, inline: true },
+										{ name: "Scope", value: rule.scope, inline: true },
+										{ name: "Algorithm", value: rule.algorithm, inline: true },
+									)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "rules": {
+								const rules = rateLimitSystem.getAllRules(false);
+
+								if (rules.length === 0) {
+									await interaction.editReply("No rate limit rules configured");
+									break;
+								}
+
+								const list = rules.slice(0, 15).map((r) => {
+									const status = r.enabled ? "[ON]" : "[OFF]";
+									const windowSec = Math.round(r.windowMs / 1000);
+									return `${status} **${r.name}** | ${r.limit}/${windowSec}s | ${r.scope} | ${r.algorithm}`;
+								}).join("\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Rate Limit Rules (${rules.length})`)
+									.setColor(0x3498db)
+									.setDescription(list)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "check": {
+								const target = interaction.options.getString("target", true);
+								const scope = (interaction.options.getString("scope") ?? "user") as "user" | "channel" | "agent" | "endpoint";
+
+								const result = rateLimitSystem.check({
+									scope,
+									targetId: target,
+								});
+
+								const statusColor = result.allowed ? 0x2ecc71 : 0xe74c3c;
+								const statusText = result.allowed ? "ALLOWED" : "DENIED";
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Rate Limit Check: ${statusText}`)
+									.setColor(statusColor)
+									.addFields(
+										{ name: "Target", value: `\`${target}\``, inline: true },
+										{ name: "Scope", value: scope, inline: true },
+										{ name: "Remaining", value: result.remaining === Infinity ? "Unlimited" : result.remaining.toString(), inline: true },
+										{ name: "Limit", value: result.limit === Infinity ? "None" : result.limit.toString(), inline: true },
+										{ name: "Reset At", value: result.resetAt.toLocaleTimeString(), inline: true },
+									);
+
+								if (result.retryAfter) {
+									embed.addFields({ name: "Retry After", value: `${Math.round(result.retryAfter / 1000)}s`, inline: true });
+								}
+								if (result.rule) {
+									embed.addFields({ name: "Matched Rule", value: result.rule.name, inline: true });
+								}
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "disable": {
+								const ruleId = interaction.options.getString("rule_id", true);
+								const success = rateLimitSystem.disableRule(ruleId);
+
+								if (success) {
+									await interaction.editReply(`Rule disabled: \`${ruleId}\``);
+								} else {
+									await interaction.editReply(`Rule not found: \`${ruleId}\``);
+								}
+								break;
+							}
+
+							case "quota": {
+								const name = interaction.options.getString("name", true);
+								const limit = interaction.options.getInteger("limit", true);
+								const period = interaction.options.getString("period", true) as "minute" | "hour" | "day" | "week" | "month";
+								const scope = (interaction.options.getString("scope") ?? "global") as "global" | "user" | "channel";
+
+								const quota = rateLimitSystem.createQuota({
+									name,
+									scope,
+									scopeId: scope === "user" ? user.id : scope === "channel" ? channelId : undefined,
+									limit,
+									period,
+								});
+
+								const embed = new EmbedBuilder()
+									.setTitle("Quota Created")
+									.setColor(0x2ecc71)
+									.addFields(
+										{ name: "ID", value: `\`${quota.id}\``, inline: false },
+										{ name: "Name", value: quota.name, inline: true },
+										{ name: "Limit", value: quota.limit.toString(), inline: true },
+										{ name: "Period", value: quota.period, inline: true },
+										{ name: "Scope", value: quota.scope, inline: true },
+										{ name: "Resets At", value: quota.resetAt.toLocaleString(), inline: true },
+									)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "quotas": {
+								const quotas = rateLimitSystem.getAllQuotas(false);
+
+								if (quotas.length === 0) {
+									await interaction.editReply("No quotas configured");
+									break;
+								}
+
+								const list = quotas.slice(0, 15).map((q) => {
+									const status = q.enabled ? "[ON]" : "[OFF]";
+									const pct = Math.round((q.used / q.limit) * 100);
+									return `${status} **${q.name}** | ${q.used}/${q.limit} (${pct}%) | ${q.period}`;
+								}).join("\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Quotas (${quotas.length})`)
+									.setColor(0x3498db)
+									.setDescription(list)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "quota-status": {
+								const quotaId = interaction.options.getString("quota_id", true);
+								const status = rateLimitSystem.checkQuota(quotaId);
+
+								if (!status) {
+									await interaction.editReply(`Quota not found: \`${quotaId}\``);
+									break;
+								}
+
+								const statusColor = status.isExhausted ? 0xe74c3c :
+									status.percentUsed > 75 ? 0xf39c12 : 0x2ecc71;
+
+								const resetInMin = Math.round(status.resetIn / 60000);
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Quota: ${status.quota.name}`)
+									.setColor(statusColor)
+									.addFields(
+										{ name: "Used", value: status.quota.used.toString(), inline: true },
+										{ name: "Limit", value: status.quota.limit.toString(), inline: true },
+										{ name: "Remaining", value: status.remaining.toString(), inline: true },
+										{ name: "% Used", value: `${status.percentUsed.toFixed(1)}%`, inline: true },
+										{ name: "Exhausted", value: status.isExhausted ? "YES" : "No", inline: true },
+										{ name: "Resets In", value: `${resetInMin}m`, inline: true },
+									)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "queue": {
+								const queueStatus = rateLimitSystem.getQueueStatus();
+
+								if (queueStatus.length === 0) {
+									await interaction.editReply("Request queue is empty");
+									break;
+								}
+
+								const list = queueStatus.requests.slice(0, 10).map((r, i) => {
+									const waitTime = Math.round((Date.now() - r.queuedAt.getTime()) / 1000);
+									return `${i + 1}. \`${r.id.slice(0, 15)}\` | ${r.priority} | ${waitTime}s waiting`;
+								}).join("\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Request Queue (${queueStatus.length})`)
+									.setColor(0xf39c12)
+									.setDescription(list)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown ratelimit subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`Rate limiting error: ${errMsg}`);
 					}
 					break;
 				}
