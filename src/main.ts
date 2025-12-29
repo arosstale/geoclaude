@@ -4345,6 +4345,33 @@ const slashCommands = [
 		)
 		.addSubcommand((sub) => sub.setName("system-prompt").setDescription("Edit the session system prompt")),
 
+	// ADW - AI Developer Workflows (Deterministic + Non-Deterministic)
+	new SlashCommandBuilder()
+		.setName("adw")
+		.setDescription("AI Developer Workflows - deterministic orchestration with quality gates")
+		.addSubcommand((sub) =>
+			sub
+				.setName("feature")
+				.setDescription("Run feature implementation workflow")
+				.addStringOption((opt) => opt.setName("name").setDescription("Feature name").setRequired(true))
+				.addStringOption((opt) => opt.setName("requirements").setDescription("Feature requirements").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("bugfix")
+				.setDescription("Run bug fix workflow")
+				.addStringOption((opt) => opt.setName("description").setDescription("Bug description").setRequired(true))
+				.addStringOption((opt) => opt.setName("code").setDescription("Affected code snippet").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("refactor")
+				.setDescription("Run refactoring workflow")
+				.addStringOption((opt) => opt.setName("code").setDescription("Code to refactor").setRequired(true))
+				.addStringOption((opt) => opt.setName("goals").setDescription("Refactoring goals").setRequired(true)),
+		)
+		.addSubcommand((sub) => sub.setName("active").setDescription("List active workflow executions")),
+
 	// Class 3 Orchestrator - Codebase Singularity
 	new SlashCommandBuilder()
 		.setName("orchestrator")
@@ -19957,6 +19984,108 @@ async function main() {
 					} catch (error) {
 						const errMsg = error instanceof Error ? error.message : String(error);
 						await interaction.editReply(`Twitter error: ${errMsg}`);
+					}
+					break;
+				}
+
+				case "adw": {
+					await interaction.deferReply();
+					const adwSubcommand = interaction.options.getSubcommand();
+
+					try {
+						const { getADWRunner, createFeatureWorkflow, createBugFixWorkflow, createRefactorWorkflow } =
+							await import("./agents/adw-wrapper.js");
+						const runner = getADWRunner(join(workingDir, "orchestrator.db"));
+
+						switch (adwSubcommand) {
+							case "feature": {
+								const name = interaction.options.getString("name", true);
+								const requirements = interaction.options.getString("requirements", true);
+
+								const workflow = createFeatureWorkflow(name, requirements);
+
+								await interaction.editReply(
+									`**Starting Feature Workflow**\n• Name: ${name}\n• Steps: ${workflow.steps.length}\n• Quality Gates: Security, Code Review\n\n_Running in background..._`,
+								);
+
+								// Run async
+								const channelId = interaction.channelId;
+								runner.execute(workflow).then(async (result) => {
+									const ch = client.channels.cache.get(channelId) as TextChannel;
+									if (ch) {
+										const status = result.status === "completed" ? "Completed" : "Failed";
+										await ch.send(
+											`**ADW Feature Workflow ${status}**\n• Completed: ${result.completedSteps}/${workflow.steps.length}\n• Duration: ${result.totalLatencyMs}ms\n${result.error ? `• Error: ${result.error}` : ""}`,
+										);
+									}
+								});
+								break;
+							}
+
+							case "bugfix": {
+								const description = interaction.options.getString("description", true);
+								const code = interaction.options.getString("code", true);
+
+								const workflow = createBugFixWorkflow(description, code);
+
+								await interaction.editReply(
+									`**Starting Bug Fix Workflow**\n• Issue: ${description.slice(0, 100)}...\n• Steps: ${workflow.steps.length}\n\n_Running in background..._`,
+								);
+
+								const channelId = interaction.channelId;
+								runner.execute(workflow).then(async (result) => {
+									const ch = client.channels.cache.get(channelId) as TextChannel;
+									if (ch) {
+										const status = result.status === "completed" ? "Fixed" : "Failed";
+										await ch.send(
+											`**ADW Bug Fix ${status}**\n• Duration: ${result.totalLatencyMs}ms\n• Retries: ${result.failedSteps}\n${result.error ? `• Error: ${result.error}` : ""}`,
+										);
+									}
+								});
+								break;
+							}
+
+							case "refactor": {
+								const code = interaction.options.getString("code", true);
+								const goals = interaction.options.getString("goals", true);
+
+								const workflow = createRefactorWorkflow(code, goals);
+
+								await interaction.editReply(
+									`**Starting Refactor Workflow**\n• Goals: ${goals.slice(0, 100)}...\n• Steps: ${workflow.steps.length}\n• On Error: Rollback\n\n_Running in background..._`,
+								);
+
+								const channelId = interaction.channelId;
+								runner.execute(workflow).then(async (result) => {
+									const ch = client.channels.cache.get(channelId) as TextChannel;
+									if (ch) {
+										const status = result.status === "completed" ? "Completed" : result.status;
+										await ch.send(
+											`**ADW Refactor ${status}**\n• Duration: ${result.totalLatencyMs}ms\n${result.error ? `• Error: ${result.error}` : ""}`,
+										);
+									}
+								});
+								break;
+							}
+
+							case "active": {
+								const active = runner.listActiveExecutions();
+								if (active.length === 0) {
+									await interaction.editReply("No active ADW executions.");
+								} else {
+									await interaction.editReply(
+										`**Active ADW Executions:**\n${active.map((id) => `• \`${id}\``).join("\n")}`,
+									);
+								}
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown ADW subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`ADW error: ${errMsg}`);
 					}
 					break;
 				}

@@ -1139,3 +1139,25 @@ export {
 	type WorkflowExecution,
 	type WorkflowStep as OrchestratorWorkflowStep,
 } from "./orchestrator.js";
+// ADW - AI Developer Workflow Wrapper (Deterministic + Non-Deterministic)
+export {
+	type ADWContext,
+	type ADWEvent,
+	type ADWExecutionResult,
+	ADWRunner,
+	type ADWStep,
+	type ADWStepResult,
+	type ADWWorkflow,
+	CODE_COMPILES_GATE,
+	CODE_REVIEW_GATE,
+	createBugFixWorkflow,
+	createFeatureWorkflow,
+	createRefactorWorkflow,
+	disposeADWRunner,
+	FORMAT_VALID_GATE,
+	type GateResult,
+	getADWRunner,
+	type QualityGate,
+	SECURITY_GATE,
+	TESTS_PASS_GATE,
+} from "./adw-wrapper.js";
