@@ -1327,3 +1327,19 @@ export {
 	type SessionStats,
 	type SessionStatus,
 } from "./session-isolation.js";
+
+// Class 3.12 Agent Versioning System (TAC Pattern: Version control for agent configs)
+export {
+	type AgentConfig,
+	AgentVersioningSystem,
+	type AgentVersion,
+	DEFAULT_AGENT_CONFIG,
+	getVersioningSystem,
+	type MigrationResult,
+	resetVersioningSystem,
+	type VersionDiff,
+	type VersionHistory,
+	type VersioningConfig,
+	type VersioningStats,
+	type VersionTag,
+} from "./agent-versioning.js";

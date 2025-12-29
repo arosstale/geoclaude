@@ -4958,6 +4958,81 @@ const slashCommands = [
 				.setDescription("Destroy a session and all its state")
 				.addStringOption((opt) => opt.setName("id").setDescription("Session ID").setRequired(true)),
 		),
+	new SlashCommandBuilder()
+		.setName("version")
+		.setDescription("Agent Versioning - version control for agent configs (TAC pattern)")
+		.addSubcommand((sub) => sub.setName("stats").setDescription("Show versioning statistics"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("create")
+				.setDescription("Create a new version of an agent config")
+				.addStringOption((opt) => opt.setName("agent").setDescription("Agent ID").setRequired(true))
+				.addStringOption((opt) => opt.setName("name").setDescription("Agent name").setRequired(true))
+				.addStringOption((opt) => opt.setName("prompt").setDescription("System prompt").setRequired(true))
+				.addStringOption((opt) =>
+					opt.setName("change").setDescription("Change type").addChoices(
+						{ name: "Patch (bug fix)", value: "patch" },
+						{ name: "Minor (feature)", value: "minor" },
+						{ name: "Major (breaking)", value: "major" },
+					),
+				)
+				.addStringOption((opt) => opt.setName("changelog").setDescription("Changelog entry")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("current")
+				.setDescription("Get current version of an agent")
+				.addStringOption((opt) => opt.setName("agent").setDescription("Agent ID").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("history")
+				.setDescription("View version history for an agent")
+				.addStringOption((opt) => opt.setName("agent").setDescription("Agent ID").setRequired(true))
+				.addBooleanOption((opt) => opt.setName("archived").setDescription("Include archived versions")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("diff")
+				.setDescription("Compare two versions")
+				.addStringOption((opt) => opt.setName("version_a").setDescription("First version ID").setRequired(true))
+				.addStringOption((opt) => opt.setName("version_b").setDescription("Second version ID").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("rollback")
+				.setDescription("Rollback to a previous version")
+				.addStringOption((opt) => opt.setName("agent").setDescription("Agent ID").setRequired(true))
+				.addStringOption((opt) => opt.setName("version_id").setDescription("Target version ID").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("promote")
+				.setDescription("Promote a version to a different tag")
+				.addStringOption((opt) => opt.setName("version_id").setDescription("Version ID").setRequired(true))
+				.addStringOption((opt) =>
+					opt.setName("tag").setDescription("Target tag").setRequired(true).addChoices(
+						{ name: "Dev", value: "dev" },
+						{ name: "Staging", value: "staging" },
+						{ name: "Production", value: "production" },
+						{ name: "Archived", value: "archived" },
+					),
+				),
+		)
+		.addSubcommand((sub) => sub.setName("agents").setDescription("List all versioned agents"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("tag")
+				.setDescription("List versions by tag")
+				.addStringOption((opt) =>
+					opt.setName("tag").setDescription("Tag to filter by").setRequired(true).addChoices(
+						{ name: "Dev", value: "dev" },
+						{ name: "Staging", value: "staging" },
+						{ name: "Production", value: "production" },
+						{ name: "Archived", value: "archived" },
+					),
+				),
+		),
 ];
 
 // ============================================================================
@@ -22517,6 +22592,261 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 					} catch (error) {
 						const errMsg = error instanceof Error ? error.message : String(error);
 						await interaction.editReply(`Session error: ${errMsg}`);
+					}
+					break;
+				}
+
+				case "version": {
+					await interaction.deferReply();
+					const versionSubcommand = interaction.options.getSubcommand();
+
+					try {
+						const { getVersioningSystem, DEFAULT_AGENT_CONFIG } = await import("./agents/agent-versioning.js");
+						const versionSystem = getVersioningSystem(workingDir);
+
+						switch (versionSubcommand) {
+							case "stats": {
+								const stats = versionSystem.getStats();
+
+								const recentList = stats.recentChanges.slice(0, 5).map((c) => {
+									const ago = Math.round((Date.now() - c.createdAt) / 60000);
+									return `\`${c.agentId}\` v${c.version} (${ago}m ago)`;
+								}).join("\n") || "None";
+
+								const embed = new EmbedBuilder()
+									.setTitle("Agent Versioning Statistics")
+									.setColor(0xe74c3c)
+									.addFields(
+										{ name: "Total Agents", value: stats.totalAgents.toString(), inline: true },
+										{ name: "Total Versions", value: stats.totalVersions.toString(), inline: true },
+										{ name: "Production", value: stats.productionVersions.toString(), inline: true },
+										{ name: "Staging", value: stats.stagingVersions.toString(), inline: true },
+										{ name: "Dev", value: stats.devVersions.toString(), inline: true },
+										{ name: "Archived", value: stats.archivedVersions.toString(), inline: true },
+										{ name: "Recent Changes", value: recentList, inline: false },
+									)
+									.setFooter({ text: "Agent Versioning System" })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "create": {
+								const agentId = interaction.options.getString("agent", true);
+								const name = interaction.options.getString("name", true);
+								const prompt = interaction.options.getString("prompt", true);
+								const changeType = (interaction.options.getString("change") ?? "patch") as "major" | "minor" | "patch";
+								const changelog = interaction.options.getString("changelog") ?? "";
+
+								const config = {
+									...DEFAULT_AGENT_CONFIG,
+									name,
+									systemPrompt: prompt,
+								};
+
+								const version = versionSystem.createVersion({
+									agentId,
+									config,
+									createdBy: user.id,
+									changeType,
+									changelog,
+								});
+
+								const embed = new EmbedBuilder()
+									.setTitle("Version Created")
+									.setColor(0x2ecc71)
+									.addFields(
+										{ name: "Agent", value: agentId, inline: true },
+										{ name: "Version", value: version.version, inline: true },
+										{ name: "Tag", value: version.tag, inline: true },
+										{ name: "Version ID", value: `\`${version.id}\``, inline: false },
+									)
+									.setTimestamp();
+
+								if (changelog) {
+									embed.addFields({ name: "Changelog", value: changelog, inline: false });
+								}
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "current": {
+								const agentId = interaction.options.getString("agent", true);
+								const current = versionSystem.getCurrentVersion(agentId);
+
+								if (!current) {
+									await interaction.editReply(`No versions found for agent: \`${agentId}\``);
+									break;
+								}
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Current Version: ${agentId}`)
+									.setColor(0x3498db)
+									.addFields(
+										{ name: "Version", value: current.version, inline: true },
+										{ name: "Tag", value: current.tag, inline: true },
+										{ name: "Created By", value: `<@${current.createdBy}>`, inline: true },
+										{ name: "Config Name", value: current.config.name, inline: true },
+										{ name: "Model", value: current.config.model, inline: true },
+										{ name: "Tools", value: current.config.tools.length.toString(), inline: true },
+									)
+									.setTimestamp(current.createdAt);
+
+								if (current.changelog) {
+									embed.addFields({ name: "Changelog", value: current.changelog, inline: false });
+								}
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "history": {
+								const agentId = interaction.options.getString("agent", true);
+								const includeArchived = interaction.options.getBoolean("archived") ?? false;
+								const history = versionSystem.getHistory(agentId, includeArchived);
+
+								if (history.versions.length === 0) {
+									await interaction.editReply(`No version history for: \`${agentId}\``);
+									break;
+								}
+
+								const tagEmoji: Record<string, string> = {
+									production: "[PROD]",
+									staging: "[STAGE]",
+									dev: "[DEV]",
+									archived: "[ARCH]",
+								};
+
+								const list = history.versions.slice(0, 10).map((v) => {
+									const tag = tagEmoji[v.tag] ?? "[?]";
+									const date = new Date(v.createdAt).toLocaleDateString();
+									const current = history.currentVersion?.id === v.id ? " *" : "";
+									return `${tag} **v${v.version}**${current} | ${date} | ${v.changelog.slice(0, 40) || "No changelog"}`;
+								}).join("\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Version History: ${agentId}`)
+									.setColor(0x9b59b6)
+									.setDescription(list)
+									.setFooter({ text: `${history.totalVersions} total versions | * = current` })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "diff": {
+								const versionIdA = interaction.options.getString("version_a", true);
+								const versionIdB = interaction.options.getString("version_b", true);
+								const diffs = versionSystem.compareVersions(versionIdA, versionIdB);
+
+								if (diffs.length === 0) {
+									await interaction.editReply("No differences found between versions");
+									break;
+								}
+
+								const diffList = diffs.map((d) => {
+									const icon = d.type === "added" ? "+" : d.type === "removed" ? "-" : "~";
+									return `\`${icon}\` **${d.field}**: ${JSON.stringify(d.oldValue)?.slice(0, 30) ?? "null"} -> ${JSON.stringify(d.newValue)?.slice(0, 30) ?? "null"}`;
+								}).join("\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle("Version Diff")
+									.setColor(0xf39c12)
+									.setDescription(diffList)
+									.setFooter({ text: `${diffs.length} differences` })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "rollback": {
+								const agentId = interaction.options.getString("agent", true);
+								const targetVersionId = interaction.options.getString("version_id", true);
+
+								const result = versionSystem.rollback(agentId, targetVersionId, user.id);
+
+								const embed = new EmbedBuilder()
+									.setTitle(result.success ? "Rollback Successful" : "Rollback Failed")
+									.setColor(result.success ? 0x2ecc71 : 0xe74c3c)
+									.addFields(
+										{ name: "From", value: result.fromVersion, inline: true },
+										{ name: "To", value: result.toVersion, inline: true },
+										{ name: "Changes", value: result.changes.length.toString(), inline: true },
+									)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "promote": {
+								const versionId = interaction.options.getString("version_id", true);
+								const tag = interaction.options.getString("tag", true) as "dev" | "staging" | "production" | "archived";
+
+								const promoted = versionSystem.promoteVersion(versionId, tag, user.id);
+
+								await interaction.editReply(`Promoted \`${promoted.agentId}\` v${promoted.version} to **${tag}**`);
+								break;
+							}
+
+							case "agents": {
+								const agents = versionSystem.getAllAgents();
+
+								if (agents.length === 0) {
+									await interaction.editReply("No versioned agents found");
+									break;
+								}
+
+								const list = agents.map((a) => {
+									const ver = a.currentVersion ? `v${a.currentVersion.version} [${a.currentVersion.tag}]` : "No active version";
+									return `\`${a.agentId}\` - ${ver}`;
+								}).join("\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Versioned Agents (${agents.length})`)
+									.setColor(0x3498db)
+									.setDescription(list)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "tag": {
+								const tag = interaction.options.getString("tag", true) as "dev" | "staging" | "production" | "archived";
+								const versions = versionSystem.getVersionsByTag(tag);
+
+								if (versions.length === 0) {
+									await interaction.editReply(`No versions with tag: ${tag}`);
+									break;
+								}
+
+								const list = versions.slice(0, 10).map((v) => {
+									const date = new Date(v.createdAt).toLocaleDateString();
+									return `\`${v.agentId}\` v${v.version} | ${date}`;
+								}).join("\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Versions: ${tag.toUpperCase()}`)
+									.setColor(0x9b59b6)
+									.setDescription(list)
+									.setFooter({ text: `${versions.length} total` })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown version subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`Version error: ${errMsg}`);
 					}
 					break;
 				}
