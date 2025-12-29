@@ -20360,18 +20360,35 @@ async function main() {
 								const task = interaction.options.getString("task", true);
 								const role = interaction.options.getString("role") as "architect" | "builder" | "tester" | "reviewer" | "expert" | undefined;
 
-								const result = await orch.delegate({
+								// Use smart routing with memory bridge
+								const { AgentMemorySystem } = await import("./agents/agent-memory-system.js");
+								const { getOrchestratorMemoryBridge } = await import("./agents/orchestrator-memory-bridge.js");
+
+								const memorySystem = new AgentMemorySystem({
+									dbPath: join(workingDir, "agent-memory.db"),
+									enableLearning: true,
+								});
+
+								const bridge = getOrchestratorMemoryBridge(orch, memorySystem);
+
+								const result = await bridge.smartDelegate({
 									id: crypto.randomUUID(),
 									taskType: "user_request",
 									prompt: task,
 									requiredRole: role,
 									timeout: 30000,
 									priority: 5,
+									useSmartRouting: true,
+									rateAfterCompletion: true,
 								});
 
 								if (result.status === "success") {
+									const smartInfo = result.smartRouted
+										? `🧠 Smart routed (${((result.routingConfidence || 0) * 100).toFixed(0)}% confidence)`
+										: "📋 Standard routing";
+
 									await interaction.editReply(
-										`✅ **Task Delegated**\n• Agent: \`${result.agentId}\`\n• Latency: ${result.latencyMs}ms\n• Output:\n\`\`\`\n${String(result.output).slice(0, 1500)}\n\`\`\``,
+										`✅ **Task Delegated**\n• Agent: \`${result.agentId}\`\n• ${smartInfo}\n• Latency: ${result.latencyMs}ms\n• Task ID: \`${result.taskRecordId?.slice(0, 8) || "N/A"}\`\n• Output:\n\`\`\`\n${String(result.output).slice(0, 1400)}\n\`\`\``,
 									);
 								} else {
 									await interaction.editReply(`❌ **Delegation Failed**\n• Error: ${result.error}`);
