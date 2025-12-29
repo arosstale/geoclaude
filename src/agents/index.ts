@@ -1207,3 +1207,15 @@ export {
 	runParallel,
 	runWithSupervisor,
 } from "./multi-agent-coordinator.js";
+
+// Class 3.3 Agent Memory System
+export {
+	AgentMemorySystem,
+	type AgentStats as MemoryAgentStats,
+	getMemorySystem,
+	type Insight,
+	type MemoryConfig,
+	resetMemorySystem,
+	type RoutingRecommendation,
+	type TaskRecord,
+} from "./agent-memory-system.js";
