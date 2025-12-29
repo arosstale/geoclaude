@@ -129,20 +129,6 @@ export {
 	type TaskRequest,
 	type TaskResponse,
 } from "./agent-swarm.js";
-// Cross-Platform Swarm - Unified multi-agent coordination across Discord, Slack, Telegram, WhatsApp
-export {
-	broadcastToAllPlatforms,
-	createPlatformAgent,
-	createPlatformAgentSet,
-	CrossPlatformSwarm,
-	type CrossPlatformSwarmConfig,
-	type CrossPlatformTask,
-	getCrossPlatformSwarm,
-	type PlatformAgent,
-	submitCrossPlatformTask,
-	type SwarmExecutionResult,
-	type SwarmPlatform,
-} from "./cross-platform-swarm.js";
 // Agentic Properties - IndyDevDan's 6 Agentic Properties Framework
 export {
 	// Property Types
@@ -164,14 +150,14 @@ export {
 	createResearchAgent,
 	createSecurityAgent,
 	createTradingAgent,
-	// GOAT Tool Filters (Mario, Vercel)
-	filterToMinimalistTools,
-	filterToJustBashTools,
 	type DurabilityCheckpoint,
 	// Durability
 	DurabilityController,
 	type EvaluationResult,
 	evaluateAlignment,
+	filterToJustBashTools,
+	// GOAT Tool Filters (Mario, Vercel)
+	filterToMinimalistTools,
 	// Self-Improvement
 	type LearningRecord,
 	// Self-Organization
@@ -185,6 +171,41 @@ export {
 	SelfOrganizationController,
 	SelfReplicationController,
 } from "./agentic-properties.js";
+// AIRIS-Inspired Causal Reasoning - ASI Alliance proto-AGI concepts
+export {
+	type CausalAction,
+	type CausalEngineConfig,
+	type CausalHypothesis,
+	type CausalLink,
+	CausalReasoningEngine,
+	createCausalTools,
+	DEFAULT_CAUSAL_CONFIG,
+	getCausalEngine,
+	getTradingCausalEngine,
+	type Prediction,
+	resetCausalEngine,
+	StateGraph,
+	TradingCausalEngine,
+	type WorldState,
+} from "./airis-causal.js";
+// Aitmpl Adapter - aitmpl.com Claude Code templates platform
+export {
+	AITMPL_PLATFORMS,
+	AitmplClient,
+	type AitmplComponent,
+	type AitmplConfig,
+	AnalyticsTracker,
+	type ComponentType,
+	getAitmplClient,
+	HealthChecker,
+	type HealthCheckResult,
+	initAitmpl,
+	type PerformanceReport,
+	type PlatformIntegration,
+	type Plugin,
+	PluginManager,
+	TemplateRegistry,
+} from "./aitmpl-adapter.js";
 // Anomaly Detection Service - Market Manipulation Detection (inspired by ANG13T/DroneXtract)
 export {
 	type AnomalyConfig,
@@ -244,6 +265,23 @@ export {
 	startDaemon,
 	stopDaemon,
 } from "./autonomous-daemon.js";
+// Browser-Use Adapter - browser-use/browser-use AI browser agent
+export {
+	ActionRecognizer,
+	type AgentStep,
+	type AgentTask as BrowserAgentTask,
+	BrowserAgent,
+	BrowserUseClient,
+	type BrowserUseConfig,
+	createSandboxedRunner,
+	DataExtractor,
+	type ExtractedData,
+	getBrowserUseClient,
+	initBrowserUse,
+	type SandboxConfig as BrowserSandboxConfig,
+	SandboxManager,
+	type SandboxSession,
+} from "./browser-use-adapter.js";
 // Claude Agent SDK - Official Anthropic CLI Framework
 export {
 	CLAUDE_MODELS,
@@ -254,6 +292,44 @@ export {
 	isClaudeAgentAvailable,
 	runClaudeAgent,
 } from "./claude-agent-sdk.js";
+// Claude-Flow Adapter - ruvnet/claude-flow enterprise AI orchestration
+export {
+	AgentDB,
+	CLAUDE_FLOW_SKILLS,
+	ClaudeFlowClient,
+	type ClaudeFlowConfig,
+	type ClaudeSkill,
+	getClaudeFlowClient,
+	type HiveAgent,
+	HiveMind,
+	type HiveMindConfig,
+	type HiveResult,
+	type HiveRole,
+	type HiveTask,
+	initClaudeFlow,
+	type Memory,
+	type MemoryQuery,
+	SkillActivator,
+	type VectorSearchOptions,
+	type VectorSearchResult,
+} from "./claude-flow-adapter.js";
+// Claude-Mem Adapter - thedotmack/claude-mem persistent memory compression
+export {
+	ClaudeMemClient,
+	type ClaudeMemConfig,
+	type ContextConfig,
+	type DisclosureLevel,
+	getClaudeMemClient,
+	initClaudeMem,
+	type LayeredMemory,
+	MemoryCompressor,
+	type MemoryQuery as ClaudeMemQuery,
+	type MemoryResult,
+	MemorySearch,
+	type Observation,
+	type ProgressiveDisclosureConfig,
+	type Session,
+} from "./claude-mem-adapter.js";
 // Claude SDK Agent - Two-Agent Pattern (Initializer + Coding)
 export {
 	type ClaudeAgentOptions,
@@ -282,6 +358,27 @@ export {
 	estimateTotalTokens,
 	type SummarizationResult,
 } from "./context-compression.js";
+// Continuous-Claude Adapter - parcadei/Continuous-Claude session continuity
+export {
+	type ArtifactEntry,
+	type BraintrustSpan,
+	type ContinuityLedger,
+	ContinuousClaudeClient,
+	type ContinuousClaudeConfig,
+	getContinuousClaudeClient,
+	type Handoff,
+	HandoffManager,
+	type HandoffOutcome,
+	type HandoffQuery,
+	initContinuousClaude,
+	LedgerManager,
+	type LedgerUpdate,
+	type ReasoningEntry,
+	ReasoningHistory,
+	type SessionLearning,
+	type SessionTrace,
+	SessionTracer,
+} from "./continuous-claude-adapter.js";
 // Conversation Memory - Full-Text Search with FTS5
 export {
 	ConversationMemory,
@@ -293,6 +390,20 @@ export {
 	type SearchResult as ConversationSearchResult,
 	type TimeRange,
 } from "./conversation-memory.js";
+// Cross-Platform Swarm - Unified multi-agent coordination across Discord, Slack, Telegram, WhatsApp
+export {
+	broadcastToAllPlatforms,
+	CrossPlatformSwarm,
+	type CrossPlatformSwarmConfig,
+	type CrossPlatformTask,
+	createPlatformAgent,
+	createPlatformAgentSet,
+	getCrossPlatformSwarm,
+	type PlatformAgent,
+	type SwarmExecutionResult,
+	type SwarmPlatform,
+	submitCrossPlatformTask,
+} from "./cross-platform-swarm.js";
 // CTM - Continuous Thought Machine (Extended Reasoning)
 export {
 	type CTMDomain,
@@ -321,6 +432,21 @@ export {
 	inferTaskDependencies,
 	type TaskType as InferenceTaskType,
 } from "./dependency-inference.js";
+// Dev-Browser Adapter - SawyerHood/dev-browser browser automation
+export {
+	type BrowserAction,
+	type BrowserActionResult,
+	type BrowserPage,
+	type BrowserScript,
+	BrowserSessionManager,
+	DevBrowserClient,
+	type DevBrowserConfig,
+	type DOMSnapshot,
+	DOMSnapshotGenerator,
+	getDevBrowserClient,
+	initDevBrowser,
+	ScriptExecutor,
+} from "./dev-browser-adapter.js";
 // DGM - Darwin Gödel Machine (Self-Improving AI)
 export {
 	type DGMConstraints,
@@ -863,6 +989,22 @@ export {
 	type StatefulAgentConfig,
 	type StatefulAgentTool,
 } from "./stateful-agent.js";
+// TAC-12 SDK - Multi-SDK AI Orchestrator (12 SDK integrations)
+export {
+	createTAC12SwarmIntegration,
+	getBestSDKForTask,
+	getTAC12Client,
+	initTAC12FromEnv,
+	quickExecute,
+	type TAC12Agent,
+	TAC12Client,
+	type TAC12Config,
+	type TAC12Pattern,
+	type TAC12Result,
+	type TAC12SDKType,
+	type TAC12SwarmIntegration,
+	type TAC12Task,
+} from "./tac12-sdk.js";
 // Tool Permissions - Security-First Tool Execution Control (ADA_V2 Inspired)
 export {
 	checkToolExecution,
@@ -983,145 +1125,17 @@ export {
 	WorkflowSuspendManager,
 	type WorkflowSuspendTool,
 } from "./workflow-suspend.js";
-// TAC-12 SDK - Multi-SDK AI Orchestrator (12 SDK integrations)
+// Class 3 Orchestrator - Codebase Singularity (CRUD over agents)
 export {
-	createTAC12SwarmIntegration,
-	getBestSDKForTask,
-	getTAC12Client,
-	initTAC12FromEnv,
-	quickExecute,
-	TAC12Client,
-	type TAC12Agent,
-	type TAC12Config,
-	type TAC12Pattern,
-	type TAC12Result,
-	type TAC12SDKType,
-	type TAC12SwarmIntegration,
-	type TAC12Task,
-} from "./tac12-sdk.js";
-// AIRIS-Inspired Causal Reasoning - ASI Alliance proto-AGI concepts
-export {
-	type CausalAction,
-	type CausalEngineConfig,
-	type CausalHypothesis,
-	type CausalLink,
-	CausalReasoningEngine,
-	createCausalTools,
-	DEFAULT_CAUSAL_CONFIG,
-	getCausalEngine,
-	getTradingCausalEngine,
-	type Prediction,
-	resetCausalEngine,
-	StateGraph,
-	TradingCausalEngine,
-	type WorldState,
-} from "./airis-causal.js";
-// Claude-Flow Adapter - ruvnet/claude-flow enterprise AI orchestration
-export {
-	AgentDB,
-	CLAUDE_FLOW_SKILLS,
-	type ClaudeFlowConfig,
-	ClaudeFlowClient,
-	type ClaudeSkill,
-	getClaudeFlowClient,
-	type HiveAgent,
-	HiveMind,
-	type HiveMindConfig,
-	type HiveResult,
-	type HiveRole,
-	type HiveTask,
-	initClaudeFlow,
-	type Memory,
-	type MemoryQuery,
-	SkillActivator,
-	type VectorSearchOptions,
-	type VectorSearchResult,
-} from "./claude-flow-adapter.js";
-// Claude-Mem Adapter - thedotmack/claude-mem persistent memory compression
-export {
-	type ClaudeMemConfig,
-	ClaudeMemClient,
-	type ContextConfig,
-	type DisclosureLevel,
-	getClaudeMemClient,
-	initClaudeMem,
-	type LayeredMemory,
-	MemoryCompressor,
-	type MemoryQuery as ClaudeMemQuery,
-	type MemoryResult,
-	MemorySearch,
-	type Observation,
-	type ProgressiveDisclosureConfig,
-	type Session,
-} from "./claude-mem-adapter.js";
-// Continuous-Claude Adapter - parcadei/Continuous-Claude session continuity
-export {
-	type ArtifactEntry,
-	type BraintrustSpan,
-	type ContinuityLedger,
-	type ContinuousClaudeConfig,
-	ContinuousClaudeClient,
-	getContinuousClaudeClient,
-	type Handoff,
-	type HandoffOutcome,
-	type HandoffQuery,
-	HandoffManager,
-	initContinuousClaude,
-	type LedgerUpdate,
-	LedgerManager,
-	type ReasoningEntry,
-	ReasoningHistory,
-	type SessionLearning,
-	SessionTracer,
-	type SessionTrace,
-} from "./continuous-claude-adapter.js";
-// Dev-Browser Adapter - SawyerHood/dev-browser browser automation
-export {
-	type BrowserAction,
-	type BrowserActionResult,
-	type BrowserPage,
-	type BrowserScript,
-	BrowserSessionManager,
-	type DevBrowserConfig,
-	DevBrowserClient,
-	type DOMSnapshot,
-	DOMSnapshotGenerator,
-	getDevBrowserClient,
-	initDevBrowser,
-	ScriptExecutor,
-} from "./dev-browser-adapter.js";
-// Browser-Use Adapter - browser-use/browser-use AI browser agent
-export {
-	ActionRecognizer,
-	type AgentStep,
-	type AgentTask as BrowserAgentTask,
-	BrowserAgent,
-	type BrowserUseConfig,
-	BrowserUseClient,
-	createSandboxedRunner,
-	DataExtractor,
-	type ExtractedData,
-	getBrowserUseClient,
-	initBrowserUse,
-	type SandboxConfig as BrowserSandboxConfig,
-	SandboxManager,
-	type SandboxSession,
-} from "./browser-use-adapter.js";
-// Aitmpl Adapter - aitmpl.com Claude Code templates platform
-export {
-	type AitmplComponent,
-	type AitmplConfig,
-	AitmplClient,
-	AITMPL_PLATFORMS,
-	AnalyticsTracker,
-	type ComponentType,
-	getAitmplClient,
-	HealthChecker,
-	type HealthCheckResult,
-	initAitmpl,
-	type PerformanceReport,
-	type PlatformIntegration,
-	type Plugin,
-	PluginManager,
-	TemplateRegistry,
-} from "./aitmpl-adapter.js";
+	closeOrchestrator,
+	type AgentDefinition as OrchestratorAgentDefinition,
+	type DelegationRequest,
+	type DelegationResult,
+	getOrchestrator,
+	Orchestrator,
+	type OrchestratorEvent,
+	type StepResult as OrchestratorStepResult,
+	type WorkflowDefinition as OrchestratorWorkflowDefinition,
+	type WorkflowExecution,
+	type WorkflowStep as OrchestratorWorkflowStep,
+} from "./orchestrator.js";

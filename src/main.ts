@@ -4344,6 +4344,73 @@ const slashCommands = [
 				.addBooleanOption((opt) => opt.setName("show_diffs").setDescription("Show diffs for changes")),
 		)
 		.addSubcommand((sub) => sub.setName("system-prompt").setDescription("Edit the session system prompt")),
+
+	// Class 3 Orchestrator - Codebase Singularity
+	new SlashCommandBuilder()
+		.setName("orchestrator")
+		.setDescription("Class 3 Orchestrator - CRUD over agents, workflows, and task delegation")
+		.addSubcommand((sub) => sub.setName("stats").setDescription("Show orchestrator statistics"))
+		.addSubcommand((sub) => sub.setName("agents").setDescription("List all registered agents"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("agent-create")
+				.setDescription("Create a new agent")
+				.addStringOption((opt) => opt.setName("name").setDescription("Agent name").setRequired(true))
+				.addStringOption((opt) =>
+					opt
+						.setName("type")
+						.setDescription("Agent type")
+						.setRequired(true)
+						.addChoices(
+							{ name: "Skill", value: "skill" },
+							{ name: "MCP", value: "mcp" },
+							{ name: "Subprocess", value: "subprocess" },
+							{ name: "Webhook", value: "webhook" },
+							{ name: "Inline", value: "inline" },
+						),
+				)
+				.addStringOption((opt) =>
+					opt
+						.setName("role")
+						.setDescription("Agent role")
+						.setRequired(true)
+						.addChoices(
+							{ name: "Architect", value: "architect" },
+							{ name: "Builder", value: "builder" },
+							{ name: "Tester", value: "tester" },
+							{ name: "Reviewer", value: "reviewer" },
+							{ name: "Expert", value: "expert" },
+							{ name: "Scout", value: "scout" },
+							{ name: "Executor", value: "executor" },
+						),
+				)
+				.addStringOption((opt) => opt.setName("description").setDescription("Agent description")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("agent-delete")
+				.setDescription("Delete an agent")
+				.addStringOption((opt) => opt.setName("id").setDescription("Agent ID").setRequired(true)),
+		)
+		.addSubcommand((sub) => sub.setName("workflows").setDescription("List all workflows"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("delegate")
+				.setDescription("Delegate a task to an agent")
+				.addStringOption((opt) => opt.setName("task").setDescription("Task prompt").setRequired(true))
+				.addStringOption((opt) =>
+					opt
+						.setName("role")
+						.setDescription("Preferred agent role")
+						.addChoices(
+							{ name: "Architect", value: "architect" },
+							{ name: "Builder", value: "builder" },
+							{ name: "Tester", value: "tester" },
+							{ name: "Reviewer", value: "reviewer" },
+							{ name: "Expert", value: "expert" },
+						),
+				),
+		),
 ];
 
 // ============================================================================
@@ -19890,6 +19957,144 @@ async function main() {
 					} catch (error) {
 						const errMsg = error instanceof Error ? error.message : String(error);
 						await interaction.editReply(`Twitter error: ${errMsg}`);
+					}
+					break;
+				}
+
+				case "orchestrator": {
+					await interaction.deferReply();
+					const orchestratorSubcommand = interaction.options.getSubcommand();
+
+					try {
+						const { getOrchestrator } = await import("./agents/orchestrator.js");
+						const orch = getOrchestrator(join(workingDir, "orchestrator.db"));
+
+						switch (orchestratorSubcommand) {
+							case "stats": {
+								const stats = orch.getStats();
+								const embed = new EmbedBuilder()
+									.setTitle("🎯 Class 3 Orchestrator Stats")
+									.setColor(0x9b59b6)
+									.addFields(
+										{ name: "Total Agents", value: String(stats.agents.total), inline: true },
+										{ name: "Total Workflows", value: String(stats.workflows.total), inline: true },
+										{ name: "Executions", value: String(stats.workflows.executions), inline: true },
+									)
+									.addFields(
+										{ name: "Delegations", value: String(stats.delegations.total), inline: true },
+										{ name: "Success Rate", value: `${stats.delegations.successRate.toFixed(1)}%`, inline: true },
+										{ name: "Avg Latency", value: `${stats.delegations.avgLatency.toFixed(0)}ms`, inline: true },
+									)
+									.addFields({
+										name: "By Role",
+										value: Object.entries(stats.agents.byRole)
+											.map(([role, count]) => `${role}: ${count}`)
+											.join(", ") || "None",
+									})
+									.setFooter({ text: "Codebase Singularity - Class 3.1" })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "agents": {
+								const agents = orch.listAgents();
+								if (agents.length === 0) {
+									await interaction.editReply("No agents registered. Use `/orchestrator agent-create` to add one.");
+									break;
+								}
+
+								const list = agents.slice(0, 15).map((a) => {
+									const successRate = a.runCount > 0 ? ((a.successCount / a.runCount) * 100).toFixed(0) : "N/A";
+									return `• **${a.name}** [${a.role}] - ${a.type} | ${a.status} | ${successRate}% success`;
+								});
+
+								const embed = new EmbedBuilder()
+									.setTitle("🤖 Registered Agents")
+									.setDescription(list.join("\n"))
+									.setColor(0x3498db)
+									.setFooter({ text: `${agents.length} total agents` })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "agent-create": {
+								const name = interaction.options.getString("name", true);
+								const type = interaction.options.getString("type", true) as "skill" | "mcp" | "subprocess" | "webhook" | "inline";
+								const role = interaction.options.getString("role", true) as "architect" | "builder" | "tester" | "reviewer" | "expert" | "scout" | "executor";
+								const description = interaction.options.getString("description") || `${name} agent`;
+
+								const agent = orch.createAgent({
+									name,
+									type,
+									role,
+									description,
+									config: {},
+									status: "active",
+								});
+
+								await interaction.editReply(
+									`✅ **Agent Created**\n• ID: \`${agent.id}\`\n• Name: ${agent.name}\n• Type: ${agent.type}\n• Role: ${agent.role}`,
+								);
+								break;
+							}
+
+							case "agent-delete": {
+								const id = interaction.options.getString("id", true);
+								const deleted = orch.deleteAgent(id);
+
+								if (deleted) {
+									await interaction.editReply(`✅ Agent deleted: \`${id}\``);
+								} else {
+									await interaction.editReply(`❌ Agent not found: \`${id}\``);
+								}
+								break;
+							}
+
+							case "workflows": {
+								const workflows = orch.listWorkflows();
+								if (workflows.length === 0) {
+									await interaction.editReply("No workflows defined yet.");
+									break;
+								}
+
+								const list = workflows.map((w) => `• **${w.name}** - ${w.steps.length} steps | ${w.trigger}`);
+								await interaction.editReply(`**📋 Workflows:**\n${list.join("\n")}`);
+								break;
+							}
+
+							case "delegate": {
+								const task = interaction.options.getString("task", true);
+								const role = interaction.options.getString("role") as "architect" | "builder" | "tester" | "reviewer" | "expert" | undefined;
+
+								const result = await orch.delegate({
+									id: crypto.randomUUID(),
+									taskType: "user_request",
+									prompt: task,
+									requiredRole: role,
+									timeout: 30000,
+									priority: 5,
+								});
+
+								if (result.status === "success") {
+									await interaction.editReply(
+										`✅ **Task Delegated**\n• Agent: \`${result.agentId}\`\n• Latency: ${result.latencyMs}ms\n• Output:\n\`\`\`\n${String(result.output).slice(0, 1500)}\n\`\`\``,
+									);
+								} else {
+									await interaction.editReply(`❌ **Delegation Failed**\n• Error: ${result.error}`);
+								}
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown orchestrator subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`Orchestrator error: ${errMsg}`);
 					}
 					break;
 				}
