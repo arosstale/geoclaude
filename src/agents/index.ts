@@ -1264,3 +1264,22 @@ export {
 	type StyleConfig,
 	type StylePreset,
 } from "./output-styles.js";
+
+// Class 3.8 Safety Guards System (TAC Pattern: Dangerous command blocking)
+export {
+	assertSafe,
+	type BlockedCommand,
+	BUILTIN_RULES,
+	getRisk,
+	getSafetyGuards,
+	type GuardCategory,
+	type GuardCheckResult,
+	type GuardContext,
+	type GuardRule,
+	isSafe,
+	resetSafetyGuards,
+	type RiskLevel,
+	SafetyGuards,
+	type SafetyGuardsConfig,
+	withSafetyGuard,
+} from "./safety-guards.js";

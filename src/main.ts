@@ -4729,6 +4729,44 @@ const slashCommands = [
 				),
 		)
 		.addSubcommand((sub) => sub.setName("current").setDescription("Show current style settings")),
+
+	// Class 3.8 Safety Guards (TAC Pattern: Dangerous command blocking)
+	new SlashCommandBuilder()
+		.setName("safety")
+		.setDescription("Safety Guards - protect agents from dangerous commands (TAC pattern)")
+		.addSubcommand((sub) => sub.setName("status").setDescription("Show safety guards status and stats"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("check")
+				.setDescription("Check if a command is safe to execute")
+				.addStringOption((opt) => opt.setName("command").setDescription("Command to check").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("rules")
+				.setDescription("List safety rules by category")
+				.addStringOption((opt) =>
+					opt
+						.setName("category")
+						.setDescription("Rule category")
+						.setRequired(false)
+						.addChoices(
+							{ name: "Filesystem", value: "filesystem" },
+							{ name: "Git", value: "git" },
+							{ name: "Process", value: "process" },
+							{ name: "Network", value: "network" },
+							{ name: "Secrets", value: "secrets" },
+							{ name: "Database", value: "database" },
+						),
+				),
+		)
+		.addSubcommand((sub) => sub.setName("history").setDescription("Show blocked command history"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("toggle")
+				.setDescription("Enable or disable safety guards")
+				.addBooleanOption((opt) => opt.setName("enabled").setDescription("Enable guards").setRequired(true)),
+		),
 ];
 
 // ============================================================================
@@ -21448,6 +21486,161 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 					} catch (error) {
 						const errMsg = error instanceof Error ? error.message : String(error);
 						await interaction.editReply(`Style error: ${errMsg}`);
+					}
+					break;
+				}
+
+				case "safety": {
+					await interaction.deferReply();
+					const safetySubcommand = interaction.options.getSubcommand();
+
+					try {
+						const { getSafetyGuards } = await import("./agents/safety-guards.js");
+						const guards = getSafetyGuards();
+
+						switch (safetySubcommand) {
+							case "status": {
+								const config = guards.getConfig();
+								const stats = guards.getStats();
+								const history = guards.getBlockedHistory(5);
+
+								const totalBlocked = Object.values(stats).reduce((sum, s) => sum + s.blocked, 0);
+								const totalWarned = Object.values(stats).reduce((sum, s) => sum + s.warned, 0);
+
+								const categoryStats = Object.entries(stats)
+									.filter(([_, s]) => s.blocked > 0 || s.warned > 0)
+									.map(([cat, s]) => `${cat}: ${s.blocked} blocked, ${s.warned} warned`)
+									.join("\n") || "No incidents recorded";
+
+								const embed = new EmbedBuilder()
+									.setTitle("🛡️ Safety Guards Status")
+									.setColor(config.enabled ? 0x2ecc71 : 0xe74c3c)
+									.addFields(
+										{ name: "Status", value: config.enabled ? "✅ Enabled" : "❌ Disabled", inline: true },
+										{ name: "Block Threshold", value: config.blockThreshold, inline: true },
+										{ name: "Trusted Bypass", value: config.allowTrustedBypass ? "Yes" : "No", inline: true },
+										{ name: "Total Blocked", value: String(totalBlocked), inline: true },
+										{ name: "Total Warned", value: String(totalWarned), inline: true },
+										{ name: "Rules Active", value: String(guards.listRules().length), inline: true },
+									)
+									.addFields({ name: "Stats by Category", value: `\`\`\`\n${categoryStats}\n\`\`\`` })
+									.setTimestamp();
+
+								if (history.length > 0) {
+									const recentBlocks = history.map((b) =>
+										`• \`${b.command.slice(0, 40)}${b.command.length > 40 ? "..." : ""}\` - ${b.reason}`
+									).join("\n");
+									embed.addFields({ name: "Recent Blocks", value: recentBlocks.slice(0, 1000) });
+								}
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "check": {
+								const command = interaction.options.getString("command", true);
+								const result = guards.check(command, { userId: user.id });
+
+								const riskColors: Record<string, number> = {
+									safe: 0x2ecc71,
+									caution: 0xf1c40f,
+									warning: 0xe67e22,
+									danger: 0xe74c3c,
+									blocked: 0x9b59b6,
+								};
+
+								const embed = new EmbedBuilder()
+									.setTitle(`${result.allowed ? "✅" : "🚫"} Command Check Result`)
+									.setColor(riskColors[result.risk] || 0x3498db)
+									.addFields(
+										{ name: "Command", value: `\`${command.slice(0, 100)}\``, inline: false },
+										{ name: "Allowed", value: result.allowed ? "Yes" : "No", inline: true },
+										{ name: "Risk Level", value: result.risk.toUpperCase(), inline: true },
+										{ name: "Category", value: result.category, inline: true },
+										{ name: "Rule", value: result.rule, inline: true },
+									)
+									.addFields({ name: "Reason", value: result.reason })
+									.setTimestamp();
+
+								if (result.alternative) {
+									embed.addFields({ name: "💡 Safer Alternative", value: result.alternative });
+								}
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "rules": {
+								const category = interaction.options.getString("category");
+								const rules = guards.listRules(category as any);
+
+								if (rules.length === 0) {
+									await interaction.editReply("No rules found for this category.");
+									break;
+								}
+
+								const rulesList = rules.slice(0, 15).map((r) =>
+									`**${r.id}** (${r.risk})\n${r.description}`
+								).join("\n\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle(`📋 Safety Rules${category ? ` - ${category}` : ""}`)
+									.setColor(0x3498db)
+									.setDescription(rulesList.slice(0, 4000))
+									.setFooter({ text: `${rules.length} rules total` })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "history": {
+								const history = guards.getBlockedHistory(20);
+
+								if (history.length === 0) {
+									await interaction.editReply("No blocked commands in history.");
+									break;
+								}
+
+								const historyLines = history.map((h) =>
+									`\`${h.timestamp.toISOString().split("T")[0]}\` **${h.risk}** [${h.category}]\n\`${h.command.slice(0, 50)}\``
+								).join("\n\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle("📜 Blocked Command History")
+									.setColor(0xe74c3c)
+									.setDescription(historyLines.slice(0, 4000))
+									.setFooter({ text: `${history.length} entries shown` })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "toggle": {
+								const enabled = interaction.options.getBoolean("enabled", true);
+								guards.setEnabled(enabled);
+
+								const embed = new EmbedBuilder()
+									.setTitle(enabled ? "✅ Safety Guards Enabled" : "⚠️ Safety Guards Disabled")
+									.setColor(enabled ? 0x2ecc71 : 0xe74c3c)
+									.setDescription(
+										enabled
+											? "Commands will be checked against safety rules."
+											: "⚠️ **Warning:** All commands will be allowed without safety checks."
+									)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown safety subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`Safety guards error: ${errMsg}`);
 					}
 					break;
 				}
