@@ -4437,6 +4437,23 @@ const slashCommands = [
 							{ name: "Expert", value: "expert" },
 						),
 				),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("bootstrap")
+				.setDescription("Bootstrap orchestrator with default agent handlers")
+				.addStringOption((opt) =>
+					opt
+						.setName("model")
+						.setDescription("Default model for agents")
+						.addChoices(
+							{ name: "GPT-4o", value: "gpt-4o" },
+							{ name: "GPT-4o Mini", value: "gpt-4o-mini" },
+							{ name: "Claude Sonnet 4", value: "claude-sonnet-4-20250514" },
+							{ name: "DeepSeek V3", value: "deepseek-chat" },
+						),
+				)
+				.addBooleanOption((opt) => opt.setName("learning").setDescription("Enable agent learning")),
 		),
 
 	// Pi-Watcher - Autonomous Monitoring & Hotfix
@@ -20243,6 +20260,38 @@ async function main() {
 								} else {
 									await interaction.editReply(`❌ **Delegation Failed**\n• Error: ${result.error}`);
 								}
+								break;
+							}
+
+							case "bootstrap": {
+								const defaultModel = interaction.options.getString("model") || "gpt-4o";
+								const enableLearning = interaction.options.getBoolean("learning") ?? true;
+
+								const { bootstrapOrchestrator } = await import("./agents/orchestrator-bootstrap.js");
+
+								const result = await bootstrapOrchestrator(orch, {
+									workingDir,
+									defaultModel,
+									enableLearning,
+									maxTokens: 4096,
+									registerDefaults: true,
+								});
+
+								const agentList = result.agents.slice(0, 15).join("\n• ");
+
+								const embed = new EmbedBuilder()
+									.setTitle("🚀 Orchestrator Bootstrapped")
+									.setColor(0x2ecc71)
+									.addFields(
+										{ name: "Agents Registered", value: String(result.registered), inline: true },
+										{ name: "Default Model", value: defaultModel, inline: true },
+										{ name: "Learning", value: enableLearning ? "Enabled" : "Disabled", inline: true },
+									)
+									.addFields({ name: "Registered Agents", value: `• ${agentList}` })
+									.setFooter({ text: "Use /orchestrator delegate to run tasks" })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
 								break;
 							}
 

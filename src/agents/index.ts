@@ -1178,3 +1178,15 @@ export {
 	type WatcherEvent,
 	type WatcherState,
 } from "./pi-watcher.js";
+
+// Orchestrator Bootstrap - Wires real agent handlers
+export {
+	bootstrapOrchestrator,
+	type BootstrapConfig,
+	DEFAULT_AGENTS,
+	getAgentByRole,
+	getBootstrappedOrchestrator,
+	quickDelegate,
+	registerCustomAgent,
+	resetBootstrap,
+} from "./orchestrator-bootstrap.js";
