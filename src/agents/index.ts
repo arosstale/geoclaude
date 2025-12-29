@@ -1229,3 +1229,14 @@ export {
 	type SmartDelegationRequest,
 	type SmartDelegationResult,
 } from "./orchestrator-memory-bridge.js";
+
+// Class 3.5 Meta-Agent (TAC Pattern: Agent that creates agents)
+export {
+	type AgentGenerationRequest,
+	type AgentSuggestion,
+	type GeneratedAgentSpec,
+	getMetaAgent,
+	MetaAgent,
+	type MetaAgentConfig,
+	resetMetaAgent,
+} from "./meta-agent.js";

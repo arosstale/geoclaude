@@ -4599,6 +4599,47 @@ const slashCommands = [
 				.addStringOption((opt) => opt.setName("task_type").setDescription("Type of task").setRequired(true)),
 		)
 		.addSubcommand((sub) => sub.setName("summary").setDescription("Show memory system summary")),
+
+	// Class 3.5 Meta-Agent (TAC Pattern)
+	new SlashCommandBuilder()
+		.setName("meta-agent")
+		.setDescription("Meta-Agent - create agents from descriptions (TAC pattern)")
+		.addSubcommand((sub) =>
+			sub
+				.setName("generate")
+				.setDescription("Generate agent spec from description")
+				.addStringOption((opt) => opt.setName("description").setDescription("Natural language agent description").setRequired(true))
+				.addStringOption((opt) => opt.setName("name").setDescription("Agent name (optional)"))
+				.addStringOption((opt) =>
+					opt
+						.setName("role")
+						.setDescription("Agent role")
+						.addChoices(
+							{ name: "Architect", value: "architect" },
+							{ name: "Builder", value: "builder" },
+							{ name: "Tester", value: "tester" },
+							{ name: "Reviewer", value: "reviewer" },
+							{ name: "Expert", value: "expert" },
+							{ name: "Scout", value: "scout" },
+							{ name: "Executor", value: "executor" },
+						),
+				),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("create")
+				.setDescription("Generate and create agent in one step")
+				.addStringOption((opt) => opt.setName("description").setDescription("Agent description").setRequired(true))
+				.addStringOption((opt) => opt.setName("name").setDescription("Agent name")),
+		)
+		.addSubcommand((sub) => sub.setName("suggest").setDescription("Get agent suggestions based on patterns"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("clone")
+				.setDescription("Clone and modify an existing agent")
+				.addStringOption((opt) => opt.setName("agent_id").setDescription("Agent ID to clone").setRequired(true))
+				.addStringOption((opt) => opt.setName("modifications").setDescription("Modifications to apply").setRequired(true)),
+		),
 ];
 
 // ============================================================================
@@ -20910,6 +20951,140 @@ async function main() {
 					} catch (error) {
 						const errMsg = error instanceof Error ? error.message : String(error);
 						await interaction.editReply(`Memory system error: ${errMsg}`);
+					}
+					break;
+				}
+
+				case "meta-agent": {
+					await interaction.deferReply();
+					const metaSubcommand = interaction.options.getSubcommand();
+
+					try {
+						const { getOrchestrator } = await import("./agents/orchestrator.js");
+						const { AgentMemorySystem } = await import("./agents/agent-memory-system.js");
+						const { getMetaAgent } = await import("./agents/meta-agent.js");
+
+						const orch = getOrchestrator(join(workingDir, "orchestrator.db"));
+						const memory = new AgentMemorySystem({
+							dbPath: join(workingDir, "agent-memory.db"),
+							enableLearning: true,
+						});
+						const meta = getMetaAgent(orch, memory);
+
+						switch (metaSubcommand) {
+							case "generate": {
+								const description = interaction.options.getString("description", true);
+								const name = interaction.options.getString("name");
+								const role = interaction.options.getString("role") as "architect" | "builder" | "tester" | "reviewer" | "expert" | "scout" | "executor" | undefined;
+
+								const spec = meta.generateAgentSpec({
+									description,
+									name: name || undefined,
+									role,
+								});
+
+								const embed = new EmbedBuilder()
+									.setTitle("🧬 Generated Agent Spec")
+									.setColor(0x9b59b6)
+									.addFields(
+										{ name: "Name", value: spec.name, inline: true },
+										{ name: "Role", value: spec.role, inline: true },
+										{ name: "Type", value: spec.type, inline: true },
+										{ name: "Model", value: spec.suggestedModel, inline: true },
+										{ name: "Description", value: spec.description.slice(0, 200), inline: false },
+										{ name: "System Prompt", value: spec.systemPrompt.slice(0, 300) + "...", inline: false },
+										{ name: "Capabilities", value: spec.capabilities.join(", "), inline: false },
+									)
+									.addFields({ name: "Reasoning", value: spec.reasoning })
+									.setFooter({ text: "Use /meta-agent create to register this agent" })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "create": {
+								const description = interaction.options.getString("description", true);
+								const name = interaction.options.getString("name");
+
+								const { spec, agent } = meta.generateAndCreate({
+									description,
+									name: name || undefined,
+									autoRegister: true,
+								});
+
+								const embed = new EmbedBuilder()
+									.setTitle("✅ Agent Created")
+									.setColor(0x2ecc71)
+									.addFields(
+										{ name: "ID", value: `\`${agent.id}\``, inline: true },
+										{ name: "Name", value: agent.name, inline: true },
+										{ name: "Role", value: agent.role, inline: true },
+										{ name: "Model", value: spec.suggestedModel, inline: true },
+										{ name: "Description", value: agent.description.slice(0, 200), inline: false },
+									)
+									.setFooter({ text: "Agent is now active and can receive tasks" })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "suggest": {
+								const suggestions = meta.suggestAgents();
+
+								if (suggestions.length === 0) {
+									await interaction.editReply("No agent suggestions at this time. More task history needed for pattern analysis.");
+									break;
+								}
+
+								const suggestionList = suggestions.slice(0, 5).map((s, i) => {
+									return `**${i + 1}. ${s.suggestedSpec.name}** (${s.suggestedSpec.role})\n${s.reason}\n*Confidence: ${(s.confidence * 100).toFixed(0)}%*`;
+								});
+
+								const embed = new EmbedBuilder()
+									.setTitle("💡 Agent Suggestions")
+									.setColor(0xf39c12)
+									.setDescription(suggestionList.join("\n\n"))
+									.setFooter({ text: "Use /meta-agent create with the suggested description" })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "clone": {
+								const agentId = interaction.options.getString("agent_id", true);
+								const modifications = interaction.options.getString("modifications", true);
+
+								const spec = meta.generateAgentSpec({
+									description: modifications,
+									baseAgentId: agentId,
+								});
+
+								const agent = meta.createAgent(spec);
+
+								const embed = new EmbedBuilder()
+									.setTitle("🔄 Agent Cloned")
+									.setColor(0x3498db)
+									.addFields(
+										{ name: "Original", value: agentId.slice(0, 8), inline: true },
+										{ name: "New ID", value: `\`${agent.id.slice(0, 8)}\``, inline: true },
+										{ name: "Name", value: agent.name, inline: true },
+										{ name: "Modifications", value: modifications.slice(0, 200), inline: false },
+									)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown meta-agent subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`Meta-agent error: ${errMsg}`);
 					}
 					break;
 				}
