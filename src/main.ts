@@ -5195,6 +5195,104 @@ const slashCommands = [
 				.addStringOption((opt) => opt.setName("id").setDescription("Component ID").setRequired(true))
 				.addIntegerOption((opt) => opt.setName("limit").setDescription("Number of checks to show")),
 		),
+	new SlashCommandBuilder()
+		.setName("cost")
+		.setDescription("Cost Tracking - Token/API cost monitoring and budget management (TAC pattern)")
+		.addSubcommand((sub) => sub.setName("stats").setDescription("Show cost tracking statistics"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("record")
+				.setDescription("Record API usage")
+				.addStringOption((opt) =>
+					opt.setName("provider").setDescription("Provider").setRequired(true).addChoices(
+						{ name: "OpenRouter", value: "openrouter" },
+						{ name: "OpenAI", value: "openai" },
+						{ name: "Anthropic", value: "anthropic" },
+						{ name: "Groq", value: "groq" },
+						{ name: "Cerebras", value: "cerebras" },
+						{ name: "Z.ai", value: "zai" },
+						{ name: "Ollama", value: "ollama" },
+					),
+				)
+				.addStringOption((opt) => opt.setName("model").setDescription("Model ID").setRequired(true))
+				.addIntegerOption((opt) => opt.setName("input").setDescription("Input tokens").setRequired(true))
+				.addIntegerOption((opt) => opt.setName("output").setDescription("Output tokens").setRequired(true))
+				.addStringOption((opt) => opt.setName("operation").setDescription("Operation type")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("usage")
+				.setDescription("View usage records")
+				.addStringOption((opt) =>
+					opt.setName("provider").setDescription("Filter by provider").addChoices(
+						{ name: "OpenRouter", value: "openrouter" },
+						{ name: "OpenAI", value: "openai" },
+						{ name: "Anthropic", value: "anthropic" },
+						{ name: "Groq", value: "groq" },
+						{ name: "Cerebras", value: "cerebras" },
+						{ name: "Z.ai", value: "zai" },
+						{ name: "Ollama", value: "ollama" },
+					),
+				)
+				.addIntegerOption((opt) => opt.setName("limit").setDescription("Number of records")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("budget")
+				.setDescription("Create a budget")
+				.addStringOption((opt) => opt.setName("name").setDescription("Budget name").setRequired(true))
+				.addNumberOption((opt) => opt.setName("limit").setDescription("Budget limit in USD").setRequired(true))
+				.addStringOption((opt) =>
+					opt.setName("period").setDescription("Budget period").setRequired(true).addChoices(
+						{ name: "Hourly", value: "hourly" },
+						{ name: "Daily", value: "daily" },
+						{ name: "Weekly", value: "weekly" },
+						{ name: "Monthly", value: "monthly" },
+						{ name: "Yearly", value: "yearly" },
+					),
+				)
+				.addStringOption((opt) =>
+					opt.setName("scope").setDescription("Budget scope").addChoices(
+						{ name: "Global", value: "global" },
+						{ name: "User", value: "user" },
+						{ name: "Channel", value: "channel" },
+						{ name: "Agent", value: "agent" },
+					),
+				),
+		)
+		.addSubcommand((sub) => sub.setName("budgets").setDescription("List all budgets"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("status")
+				.setDescription("Get budget status")
+				.addStringOption((opt) => opt.setName("budget_id").setDescription("Budget ID").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("alerts")
+				.setDescription("View cost alerts")
+				.addBooleanOption((opt) => opt.setName("all").setDescription("Include acknowledged")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("ack")
+				.setDescription("Acknowledge an alert")
+				.addStringOption((opt) => opt.setName("alert_id").setDescription("Alert ID").setRequired(true)),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("report")
+				.setDescription("Generate cost report")
+				.addStringOption((opt) =>
+					opt.setName("period").setDescription("Report period").addChoices(
+						{ name: "Daily", value: "daily" },
+						{ name: "Weekly", value: "weekly" },
+						{ name: "Monthly", value: "monthly" },
+					),
+				),
+		)
+		.addSubcommand((sub) => sub.setName("pricing").setDescription("View model pricing"))
+		.addSubcommand((sub) => sub.setName("optimize").setDescription("Get cost optimization suggestions")),
 ];
 
 // ============================================================================
@@ -23531,6 +23629,324 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 					} catch (error) {
 						const errMsg = error instanceof Error ? error.message : String(error);
 						await interaction.editReply(`Health error: ${errMsg}`);
+					}
+					break;
+				}
+
+				case "cost": {
+					await interaction.deferReply();
+					const costSubcommand = interaction.options.getSubcommand();
+
+					try {
+						const { getCostTracking } = await import("./agents/cost-tracking.js");
+						const costSystem = getCostTracking({
+							dataDir: workingDir,
+							defaultCurrency: "USD",
+							retentionDays: 90,
+							enableOptimizations: true,
+						});
+
+						switch (costSubcommand) {
+							case "stats": {
+								const stats = costSystem.getStats();
+
+								const embed = new EmbedBuilder()
+									.setTitle("Cost Tracking Statistics")
+									.setColor(0x3498db)
+									.addFields(
+										{ name: "Total Records", value: stats.totalRecords.toString(), inline: true },
+										{ name: "Total Cost", value: `$${stats.totalCost.toFixed(4)}`, inline: true },
+										{ name: "Total Tokens", value: stats.totalTokens.toLocaleString(), inline: true },
+										{ name: "Active Budgets", value: stats.activeBudgets.toString(), inline: true },
+										{ name: "Pending Alerts", value: stats.unacknowledgedAlerts.toString(), inline: true },
+										{ name: "Optimizations", value: stats.pendingOptimizations.toString(), inline: true },
+										{ name: "Top Provider", value: stats.topProvider ?? "N/A", inline: true },
+										{ name: "Top Model", value: stats.topModel ?? "N/A", inline: true },
+									)
+									.setFooter({ text: "Cost Tracking System" })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "record": {
+								const provider = interaction.options.getString("provider", true) as "openrouter" | "openai" | "anthropic" | "groq" | "cerebras" | "zai" | "ollama";
+								const model = interaction.options.getString("model", true);
+								const inputTokens = interaction.options.getInteger("input", true);
+								const outputTokens = interaction.options.getInteger("output", true);
+								const operation = interaction.options.getString("operation") ?? "manual";
+
+								const record = costSystem.recordUsage({
+									provider,
+									modelId: model,
+									inputTokens,
+									outputTokens,
+									operationType: operation,
+									userId: user.id,
+									channelId,
+								});
+
+								await interaction.editReply(
+									`Usage recorded: ${provider}/${model}\n` +
+									`Tokens: ${inputTokens}in/${outputTokens}out\n` +
+									`Est. Cost: $${record.estimatedCost.toFixed(6)}`
+								);
+								break;
+							}
+
+							case "usage": {
+								const provider = interaction.options.getString("provider") as "openrouter" | "openai" | "anthropic" | "groq" | "cerebras" | "zai" | "ollama" | undefined;
+								const limit = interaction.options.getInteger("limit") ?? 20;
+
+								const records = costSystem.getUsage({ provider, limit });
+
+								if (records.length === 0) {
+									await interaction.editReply("No usage records found");
+									break;
+								}
+
+								const list = records.slice(0, 15).map((r) => {
+									const cost = r.actualCost ?? r.estimatedCost;
+									const ago = Math.round((Date.now() - r.timestamp.getTime()) / 60000);
+									return `\`${r.provider}\` | ${r.modelId.slice(0, 20)} | $${cost.toFixed(4)} | ${ago}m ago`;
+								}).join("\n");
+
+								const totalCost = records.reduce((sum, r) => sum + (r.actualCost ?? r.estimatedCost), 0);
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Usage Records (${records.length})`)
+									.setColor(0x9b59b6)
+									.setDescription(list)
+									.addFields({ name: "Total", value: `$${totalCost.toFixed(4)}`, inline: true })
+									.setFooter({ text: provider ? `Filtered: ${provider}` : "All providers" })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "budget": {
+								const name = interaction.options.getString("name", true);
+								const limitAmount = interaction.options.getNumber("limit", true);
+								const period = interaction.options.getString("period", true) as "hourly" | "daily" | "weekly" | "monthly" | "yearly";
+								const scope = (interaction.options.getString("scope") ?? "global") as "global" | "user" | "channel" | "agent";
+
+								const budget = costSystem.createBudget({
+									name,
+									scope,
+									scopeId: scope === "user" ? user.id : scope === "channel" ? channelId : undefined,
+									limit: limitAmount,
+									period,
+									createdBy: user.id,
+								});
+
+								const embed = new EmbedBuilder()
+									.setTitle("Budget Created")
+									.setColor(0x2ecc71)
+									.addFields(
+										{ name: "ID", value: `\`${budget.id}\``, inline: false },
+										{ name: "Name", value: budget.name, inline: true },
+										{ name: "Limit", value: `$${budget.limit.toFixed(2)}`, inline: true },
+										{ name: "Period", value: budget.period, inline: true },
+										{ name: "Scope", value: budget.scope, inline: true },
+									)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "budgets": {
+								const budgets = costSystem.getAllBudgets(true);
+
+								if (budgets.length === 0) {
+									await interaction.editReply("No budgets configured");
+									break;
+								}
+
+								const list = budgets.slice(0, 15).map((b) => {
+									const status = costSystem.getBudgetStatus(b.id);
+									const pct = status ? Math.round(status.percentUsed) : 0;
+									const color = pct > 90 ? "[!]" : pct > 75 ? "[W]" : "[OK]";
+									return `${color} **${b.name}** | $${b.limit}/${b.period} | ${pct}% used`;
+								}).join("\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Budgets (${budgets.length})`)
+									.setColor(0x3498db)
+									.setDescription(list)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "status": {
+								const budgetId = interaction.options.getString("budget_id", true);
+								const status = costSystem.getBudgetStatus(budgetId);
+
+								if (!status) {
+									await interaction.editReply(`Budget not found: \`${budgetId}\``);
+									break;
+								}
+
+								const statusColor = status.isOverBudget ? 0xe74c3c :
+									status.percentUsed > 75 ? 0xf39c12 : 0x2ecc71;
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Budget: ${status.budget.name}`)
+									.setColor(statusColor)
+									.addFields(
+										{ name: "Limit", value: `$${status.budget.limit.toFixed(2)}`, inline: true },
+										{ name: "Spent", value: `$${status.currentSpend.toFixed(4)}`, inline: true },
+										{ name: "Remaining", value: `$${status.remainingBudget.toFixed(4)}`, inline: true },
+										{ name: "% Used", value: `${status.percentUsed.toFixed(1)}%`, inline: true },
+										{ name: "Projected", value: `$${status.projectedSpend.toFixed(4)}`, inline: true },
+										{ name: "Over Budget", value: status.isOverBudget ? "YES" : "No", inline: true },
+										{ name: "Period", value: `${status.periodStart.toLocaleDateString()} - ${status.periodEnd.toLocaleDateString()}`, inline: false },
+									)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "alerts": {
+								const showAll = interaction.options.getBoolean("all") ?? false;
+								const alerts = costSystem.getAlerts({
+									acknowledged: showAll ? undefined : false,
+								});
+
+								if (alerts.length === 0) {
+									await interaction.editReply(showAll ? "No cost alerts" : "No active cost alerts");
+									break;
+								}
+
+								const list = alerts.slice(0, 15).map((a) => {
+									const sev = a.severity === "critical" ? "[CRIT]" : a.severity === "warning" ? "[WARN]" : "[INFO]";
+									const ack = a.acknowledged ? " (ack)" : "";
+									return `${sev}${ack} ${a.message.slice(0, 60)}`;
+								}).join("\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Cost Alerts (${alerts.length})`)
+									.setColor(alerts.some((a) => a.severity === "critical") ? 0xe74c3c : 0xf39c12)
+									.setDescription(list)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "ack": {
+								const alertId = interaction.options.getString("alert_id", true);
+								const success = costSystem.acknowledgeAlert(alertId, user.id);
+
+								if (success) {
+									await interaction.editReply(`Alert acknowledged: \`${alertId}\``);
+								} else {
+									await interaction.editReply(`Alert not found: \`${alertId}\``);
+								}
+								break;
+							}
+
+							case "report": {
+								const period = (interaction.options.getString("period") ?? "monthly") as "daily" | "weekly" | "monthly";
+								const report = costSystem.generateReport({ period });
+
+								const providerList = Object.values(report.byProvider)
+									.sort((a, b) => b.totalCost - a.totalCost)
+									.slice(0, 5)
+									.map((p) => `**${p.provider}**: $${p.totalCost.toFixed(4)} (${p.totalCalls} calls)`)
+									.join("\n") || "No data";
+
+								const modelList = Object.values(report.byModel)
+									.sort((a, b) => b.totalCost - a.totalCost)
+									.slice(0, 5)
+									.map((m) => `**${m.modelId.slice(0, 25)}**: $${m.totalCost.toFixed(4)}`)
+									.join("\n") || "No data";
+
+								const opList = report.topOperations
+									.slice(0, 5)
+									.map((o) => `**${o.operationType}**: $${o.totalCost.toFixed(4)} (${o.callCount}x)`)
+									.join("\n") || "No data";
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Cost Report (${period})`)
+									.setColor(0x3498db)
+									.addFields(
+										{ name: "Total Cost", value: `$${report.totalCost.toFixed(4)}`, inline: true },
+										{ name: "Input Tokens", value: report.totalInputTokens.toLocaleString(), inline: true },
+										{ name: "Output Tokens", value: report.totalOutputTokens.toLocaleString(), inline: true },
+										{ name: "Cached Tokens", value: report.totalCachedTokens.toLocaleString(), inline: true },
+										{ name: "By Provider", value: providerList, inline: false },
+										{ name: "Top Models", value: modelList, inline: false },
+										{ name: "Top Operations", value: opList, inline: false },
+									)
+									.setFooter({ text: `${report.startDate.toLocaleDateString()} - ${report.endDate.toLocaleDateString()}` })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "pricing": {
+								const pricing = costSystem.getAllPricing();
+
+								if (pricing.length === 0) {
+									await interaction.editReply("No pricing data");
+									break;
+								}
+
+								const list = pricing.slice(0, 15).map((p) => {
+									const input = p.inputCostPer1k === 0 ? "FREE" : `$${p.inputCostPer1k.toFixed(5)}/1k`;
+									const output = p.outputCostPer1k === 0 ? "FREE" : `$${p.outputCostPer1k.toFixed(5)}/1k`;
+									return `\`${p.provider}\` ${p.modelId.slice(0, 25)}\n  In: ${input} | Out: ${output}`;
+								}).join("\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Model Pricing (${pricing.length})`)
+									.setColor(0x9b59b6)
+									.setDescription(list)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "optimize": {
+								const optimizations = costSystem.analyzeOptimizations();
+
+								if (optimizations.length === 0) {
+									await interaction.editReply("No optimization suggestions at this time");
+									break;
+								}
+
+								const list = optimizations.map((o) => {
+									const priority = o.priority === "high" ? "[H]" : o.priority === "medium" ? "[M]" : "[L]";
+									return `${priority} **${o.type}**\n${o.recommendation}\nSavings: $${o.projectedSavings.toFixed(2)} (${o.savingsPercent.toFixed(0)}%)`;
+								}).join("\n\n");
+
+								const totalSavings = optimizations.reduce((sum, o) => sum + o.projectedSavings, 0);
+
+								const embed = new EmbedBuilder()
+									.setTitle("Cost Optimization Suggestions")
+									.setColor(0x2ecc71)
+									.setDescription(list)
+									.addFields({ name: "Total Potential Savings", value: `$${totalSavings.toFixed(2)}/month`, inline: true })
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown cost subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`Cost tracking error: ${errMsg}`);
 					}
 					break;
 				}

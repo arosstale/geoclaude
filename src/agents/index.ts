@@ -1376,3 +1376,25 @@ export {
 	resetHealthMonitoring,
 	type SystemHealth,
 } from "./health-monitoring.js";
+
+// Class 3.15 Cost Tracking System (TAC Pattern: Token/API cost monitoring)
+export {
+	type Budget,
+	type BudgetScope,
+	type BudgetStatus,
+	type CostAlert,
+	type CostOptimization,
+	type CostPeriod,
+	type CostProvider,
+	type CostReport,
+	type CostTrackingConfig,
+	CostTrackingSystem,
+	type CostTrendPoint,
+	getCostTracking,
+	type ModelCostSummary,
+	type ModelPricing,
+	type OperationCostSummary,
+	type ProviderCostSummary,
+	resetCostTracking,
+	type UsageRecord,
+} from "./cost-tracking.js";
