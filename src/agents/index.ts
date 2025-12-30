@@ -1436,3 +1436,72 @@ export {
 	type ResourceType as AuditResourceType,
 	type RetentionPolicy,
 } from "./audit-logging.js";
+
+// Class 3.18 OODA Loop Engine (AgentJo/Anthropic Pattern: Observe-Orient-Decide-Act)
+export {
+	type Action as OODAAction,
+	type Decision as OODADecision,
+	getOODALoop,
+	type Observation as OODAObservation,
+	type OODACycle,
+	type OODAConfig,
+	type OODAEvents,
+	OODALoopEngine,
+	type OODAPhase,
+	type OODAState,
+	type Orientation as OODAOrientation,
+	resetOODALoop,
+	type ToolBudget,
+} from "./ooda-loop.js";
+
+// Class 3.19 Agent Wrapper System (AgentJo Pattern: Composable agent augmentation)
+export {
+	type AgentAction,
+	type AgentInput,
+	type AgentMessage as WrapperAgentMessage,
+	type AgentOutput,
+	type AgentWrapper,
+	type BaseAgent,
+	BudgetWrapper,
+	compose,
+	conditional,
+	ConversationWrapper,
+	getWrapperManager,
+	MemoryWrapper,
+	PlannerWrapper,
+	ReflectionWrapper,
+	resetWrapperManager,
+	ThoughtsWrapper,
+	type WrapperConfig,
+	WrapperManager,
+	withConfig,
+} from "./agent-wrappers.js";
+
+// Class 3.20 Structured Output Validator (AgentJo Pattern: StrictJSON/YAML)
+export {
+	CommonSchemas,
+	type Correction as StructuredCorrection,
+	type FieldSchema,
+	type FieldType,
+	getStructuredValidator,
+	type OutputSchema,
+	type ParseOptions as StructuredParseOptions,
+	resetStructuredValidator,
+	Schema,
+	StructuredOutputValidator,
+	type ValidationError as StructuredValidationError,
+	type ValidationResult as StructuredValidationResult,
+} from "./structured-output.js";
+
+// Class 3.21 Memory on Demand (AgentJo Pattern: Query-based retrieval)
+export {
+	getMemoryOnDemand,
+	type Memory as MODMemory,
+	type MemoryConfig as MODMemoryConfig,
+	MemoryOnDemand,
+	type MemoryQuery as MODMemoryQuery,
+	type MemoryStats as MODMemoryStats,
+	type MemoryType as MODMemoryType,
+	resetMemoryOnDemand,
+	type RetrievalResult as MODRetrievalResult,
+} from "./memory-on-demand.js";
