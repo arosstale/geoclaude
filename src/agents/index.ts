@@ -1505,3 +1505,73 @@ export {
 	resetMemoryOnDemand,
 	type RetrievalResult as MODRetrievalResult,
 } from "./memory-on-demand.js";
+
+// Class 3.22 Double-Check Executor (Aider Pattern: Architect + Editor + Verify)
+export {
+	type DoubleCheckConfig,
+	type DoubleCheckEvents,
+	DoubleCheckExecutor,
+	type DoubleCheckIteration,
+	type DoubleCheckSession,
+	type ExecutionResult as DoubleCheckExecutionResult,
+	type ExecutorModel,
+	type ExecutorRole,
+	getDoubleCheckExecutor,
+	type ModelHandlers,
+	type Plan as DoubleCheckPlan,
+	type PlanStep as DoubleCheckPlanStep,
+	resetDoubleCheckExecutor,
+	type StepResult as DoubleCheckStepResult,
+	type ToolExecutor as DoubleCheckToolExecutor,
+	type VerificationIssue,
+	type VerificationResult,
+} from "./double-check-executor.js";
+
+// Class 3.23 Task Decomposition Engine (TaskGen Pattern: Graph-based decomposition)
+export {
+	type DecompositionConfig,
+	type DecompositionEvents,
+	type DecompositionResult,
+	type ExecutionProgress,
+	getTaskDecomposition,
+	resetTaskDecomposition,
+	type SubTask,
+	TaskDecompositionEngine,
+	type TaskGraph,
+	type TaskPriority as DecompositionTaskPriority,
+	type TaskStatus as DecompositionTaskStatus,
+} from "./task-decomposition.js";
+
+// Class 3.24 Hooks System (AgentJo Pattern: Pre/post processing hooks)
+export {
+	type AnyHookContext,
+	type ErrorHookContext,
+	getHooksSystem,
+	type Hook,
+	type HookContext,
+	type HookHandler,
+	type HookPriority,
+	HooksSystem,
+	type HooksConfig,
+	type HookStats,
+	type HookType,
+	type LLMHookContext,
+	resetHooksSystem,
+	type TaskHookContext,
+	type ToolHookContext,
+} from "./hooks-system.js";
+
+// Class 3.25 Parallel Tool Executor (TaskGen Pattern: Dependency-aware parallel execution)
+export {
+	type BatchResult,
+	type ExecutionPlan,
+	getParallelExecutor,
+	type ParallelExecutionResult,
+	ParallelExecutor,
+	type ParallelExecutorConfig,
+	type ParallelExecutorEvents,
+	resetParallelExecutor,
+	type ToolCall,
+	type ToolExecutor,
+	type ToolResult as ParallelToolResult,
+} from "./parallel-executor.js";
