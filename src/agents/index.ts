@@ -1757,3 +1757,83 @@ export {
 	type TraceExport,
 	type TraceSpan,
 } from "./execution-trace.js";
+
+// Class 3.38 Checkpoint Manager (State persistence)
+export {
+	type Checkpoint,
+	type CheckpointData as CheckpointPayload,
+	type CheckpointDiff,
+	type CheckpointFilter,
+	CheckpointManager,
+	type CheckpointManagerConfig,
+	type CheckpointManagerEvents,
+	type CheckpointStats,
+	type CheckpointStatus,
+	getCheckpointManager,
+	resetCheckpointManager,
+	type RestoreOptions,
+} from "./checkpoint-manager.js";
+
+// Class 3.39 Error Recovery (Retry and recovery strategies)
+export {
+	type CircuitBreaker,
+	type CircuitBreakerConfig,
+	type CircuitState,
+	type ErrorCategory,
+	type ErrorClassification,
+	type ErrorRecord,
+	type ErrorRecoveryConfig,
+	ErrorRecoverySystem,
+	type ErrorSeverity,
+	type ErrorStats,
+	type FallbackHandler,
+	getErrorRecovery,
+	type RecoveryResult,
+	type RecoveryStrategy,
+	resetErrorRecovery,
+	type RetryConfig,
+} from "./error-recovery.js";
+
+// Class 3.40 Rate Limiter (API rate limiting)
+export {
+	type EndpointStats as RateLimitEndpointStats,
+	type QueuedRequest as RateLimitQueuedRequest,
+	type RateLimiterConfig,
+	RateLimiterSystem,
+	type RateLimitResult as RateLimiterResult,
+	type RateLimitRule as RateLimiterRule,
+	type RateLimitScope as RateLimiterScope,
+	type RateLimitStats as RateLimiterStats,
+	type RateLimitStatus,
+	type RateLimitRequest,
+	type RequestPriority as RateLimitPriority,
+	getRateLimiter as getRateLimiterSystem,
+	resetRateLimiter,
+	type SlidingWindow,
+	type SlidingWindowEntry,
+	type TokenBucket,
+} from "./rate-limiter.js";
+
+// Class 3.41 Metrics Collector (Telemetry and observability)
+export {
+	type AggregatedMetric,
+	type AggregationType,
+	type CounterValue,
+	type ExportFormat,
+	type GaugeValue,
+	getMetricsCollector,
+	type HistogramValue,
+	type MetricDefinition,
+	type MetricExportOptions,
+	type MetricLabels,
+	type MetricQuery,
+	MetricsCollector,
+	type MetricsCollectorConfig,
+	type MetricSnapshot,
+	type MetricStats,
+	type MetricType,
+	type MetricValue,
+	resetMetricsCollector,
+	type TimerHandle,
+	type TimingValue,
+} from "./metrics-collector.js";
