@@ -1692,3 +1692,68 @@ export {
 	getContextFusion,
 	resetContextFusion,
 } from "./context-fusion.js";
+
+// Class 3.34 Unified Runtime (Combines all TAC patterns)
+export {
+	getUnifiedRuntime,
+	type LLMExecutor,
+	resetUnifiedRuntime,
+	type RuntimeConfig,
+	type RuntimeEvents,
+	type RuntimeOptions,
+	type RuntimePhase,
+	type RuntimeResult,
+	type RuntimeTask,
+	type ToolCallRecord,
+	type ToolExecutor as RuntimeToolExecutor,
+	UnifiedRuntime,
+} from "./unified-runtime.js";
+
+// Class 3.35 Agent Lifecycle Manager (Agent state machine)
+export {
+	type AgentFactory,
+	AgentLifecycleManager,
+	type AgentResources,
+	type AgentSpec,
+	type AgentState as LifecycleAgentState,
+	getAgentLifecycle,
+	type HealthCheckConfig,
+	type LifecycleConfig,
+	type LifecycleEvent,
+	type LifecycleEvents,
+	type ManagedAgent,
+	resetAgentLifecycle,
+	type RestartPolicy,
+} from "./agent-lifecycle.js";
+
+// Class 3.36 Tool Registry (Centralized tool management)
+export {
+	getToolRegistry,
+	type RegisteredTool,
+	resetToolRegistry,
+	type ToolCategory as RegistryToolCategory,
+	type ToolParameter,
+	type ToolPermission as RegistryToolPermission,
+	ToolRegistry,
+	type ToolRegistryConfig,
+	type ToolRegistryEvents,
+	type ToolSchema,
+	type ToolSearchQuery,
+	type ToolUsageStats,
+} from "./tool-registry.js";
+
+// Class 3.37 Execution Trace (Comprehensive tracing)
+export {
+	ExecutionTracer,
+	type ExecutionTrace,
+	type ExecutionTracerConfig,
+	type ExecutionTracerEvents,
+	getExecutionTracer,
+	resetExecutionTracer,
+	type SpanContext,
+	type SpanEvent,
+	type SpanKind,
+	type SpanStatus,
+	type TraceExport,
+	type TraceSpan,
+} from "./execution-trace.js";
