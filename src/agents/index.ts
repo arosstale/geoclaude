@@ -1837,3 +1837,87 @@ export {
 	type TimerHandle,
 	type TimingValue,
 } from "./metrics-collector.js";
+
+// Class 3.42 Message Bus (Internal pub/sub)
+export {
+	type BusMessage,
+	type BusStats,
+	type DeadLetterEntry,
+	getMessageBus,
+	MessageBus,
+	type MessageBusConfig,
+	type MessageFilter,
+	type MessagePriority as BusMessagePriority,
+	type MessageStatus,
+	type PublishOptions,
+	type ReplayOptions,
+	type RequestReplyResult,
+	resetMessageBus,
+	type Subscription as BusSubscription,
+	type SubscriptionHandler,
+	type SubscriptionOptions,
+	type SubscriptionType,
+} from "./message-bus.js";
+
+// Class 3.43 State Machine (Workflow FSM)
+export {
+	type ContextUpdater,
+	createStateMachine,
+	defineStateMachine,
+	type HistoryType,
+	isStateMachine,
+	type StateDefinition,
+	StateMachine,
+	type StateMachineConfig,
+	type StateMachineEvent,
+	StateMachinePresets,
+	type StateMachineSnapshot,
+	type StateMachineStats,
+	type StateType,
+	type StateValue,
+	type TransitionAction,
+	type TransitionGuard,
+	type TransitionRecord,
+	type TransitionTarget,
+} from "./state-machine.js";
+
+// Class 3.44 Plugin System (Extensible architecture)
+export {
+	type DependencyResolution,
+	getPluginSystem,
+	type HookContext as PluginHookContext,
+	type HookHandler as PluginHookHandler,
+	type HookPhase,
+	type HookRegistry,
+	type HookResult as PluginHookResult,
+	type Plugin as PluginDefinition,
+	type PluginCapability,
+	type PluginDependency,
+	type PluginInstance,
+	type PluginManifest,
+	type PluginSandbox,
+	type PluginStats,
+	type PluginStatus,
+	PluginSystem,
+	type PluginSystemConfig,
+	type PluginVersion,
+	resetPluginSystem,
+} from "./plugin-system.js";
+
+// Class 3.45 Configuration Manager (Dynamic config)
+export {
+	type ConfigChange,
+	type ConfigManagerConfig,
+	type ConfigProfile,
+	type ConfigSchema,
+	type ConfigSnapshot as ConfigBackup,
+	type ConfigStats,
+	type ConfigValue,
+	type ConfigValueType,
+	ConfigurationManager,
+	getConfigManager,
+	resetConfigManager,
+	type ValidationOperator,
+	type ValidationResult as ConfigValidationResult,
+	type ValidationRule,
+} from "./config-manager.js";
