@@ -1921,3 +1921,84 @@ export {
 	type ValidationResult as ConfigValidationResult,
 	type ValidationRule,
 } from "./config-manager.js";
+
+// Class 3.46 Resource Pool (Connection pooling)
+export {
+	type AcquireOptions,
+	type AcquireResult,
+	createResourcePool,
+	getDefaultPoolConfig,
+	type PoolMetrics,
+	type PoolState,
+	type PoolStats,
+	type Resource,
+	ResourcePool,
+	type ResourcePoolConfig,
+	type ResourceState,
+	type WaitingRequest,
+} from "./resource-pool.js";
+
+// Class 3.47 Task Scheduler (Cron scheduling)
+export {
+	type CronNextRun,
+	getTaskScheduler,
+	resetTaskScheduler,
+	type RetryStrategy,
+	type SchedulerConfig,
+	type SchedulerStats,
+	type TaskContext,
+	type TaskDefinition,
+	type TaskExecution,
+	type TaskGroup,
+	type TaskHandler,
+	type TaskHistory,
+	type TaskLogger,
+	type TaskPriority as SchedulerTaskPriority,
+	TaskSchedulerSystem,
+	type TaskStatus as SchedulerTaskStatus,
+	type TaskType as SchedulerTaskType,
+} from "./task-scheduler.js";
+
+// Class 3.48 Cache Layer (Multi-tier caching)
+export {
+	type CacheConfig,
+	type CacheEntry as CacheLayerEntry,
+	type CacheGetResult,
+	type CacheInvalidation,
+	CacheLayerSystem,
+	type CacheSetOptions,
+	type CacheStats as CacheLayerStats,
+	type CacheTier,
+	type CacheWarmer,
+	type EvictionPolicy,
+	getCacheLayer,
+	type InvalidationStrategy,
+	type L1Config,
+	type L2Config,
+	type NamespaceStats,
+	resetCacheLayer,
+} from "./cache-layer.js";
+
+// Class 3.49 Event Sourcing (Event store)
+export {
+	type AggregateType,
+	type AppendResult,
+	type DomainEvent,
+	type EventCategory,
+	type EventMetadata,
+	type EventQuery,
+	type EventSourcingConfig,
+	EventStore,
+	type EventStoreStats,
+	type EventStream,
+	getEventStore,
+	type Projection,
+	type ProjectionHandler,
+	type ProjectionStatus,
+	type ReplayResult,
+	resetEventStore,
+	type Snapshot as EventSnapshot,
+	type StreamQuery,
+	type Subscription as EventSubscription,
+	type SubscriptionMode,
+} from "./event-sourcing.js";
