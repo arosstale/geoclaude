@@ -1633,3 +1633,62 @@ export {
 	type SelfReflectionConfig,
 	type SelfReflectionEvents,
 } from "./self-reflection.js";
+
+// Class 3.30 Experience Replay (Pattern storage and retrieval)
+export {
+	type Experience,
+	type ExperienceMatch,
+	type ExperienceQuery,
+	ExperienceReplay,
+	type ExperienceReplayConfig,
+	type ExperienceReplayEvents,
+	type ExperienceStep,
+	getExperienceReplay,
+	type PatternCluster,
+	resetExperienceReplay,
+} from "./experience-replay.js";
+
+// Class 3.31 Agent Hub (Unified entry point)
+export {
+	type AgentCapability as HubAgentCapability,
+	AgentHub,
+	type AgentHubConfig,
+	type AgentHubEvents,
+	type AgentHandler,
+	type AgentRequest,
+	type AgentResponse,
+	type AgentStats as HubAgentStats,
+	getAgentHub,
+	type HubPlugin,
+	type RegisteredAgent as HubRegisteredAgent,
+	resetAgentHub,
+} from "./agent-hub.js";
+
+// Class 3.32 Delegation Router (Smart task routing)
+export {
+	DelegationRouter,
+	type DelegationRouterConfig,
+	type DelegationRouterEvents,
+	getDelegationRouter,
+	resetDelegationRouter,
+	type RoutingDecision,
+	type RoutingRule as DelegationRoutingRule,
+	type RoutingTarget,
+	type TaskCategory,
+	type TaskClassification,
+	type TaskComplexity,
+} from "./delegation-router.js";
+
+// Class 3.33 Context Fusion (Multi-source context merging)
+export {
+	ContextFusion,
+	type ContextFusionConfig,
+	type ContextFusionEvents,
+	type ContextItem as FusionContextItem,
+	type ContextSource,
+	type ContextSourceType,
+	type FusedContext,
+	type FusionConfig,
+	getContextFusion,
+	resetContextFusion,
+} from "./context-fusion.js";
