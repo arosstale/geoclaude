@@ -1575,3 +1575,61 @@ export {
 	type ToolExecutor,
 	type ToolResult as ParallelToolResult,
 } from "./parallel-executor.js";
+
+// Class 3.26 Smart Tool Selection (Performance-based tool routing)
+export {
+	getSmartToolSelection,
+	resetSmartToolSelection,
+	type SmartToolConfig,
+	type SmartToolEvents,
+	SmartToolSelection,
+	type ToolAlternative,
+	type ToolExecutionRecord,
+	type ToolRecommendation,
+	type ToolSelection,
+	type ToolSelectionContext,
+	type ToolStats,
+} from "./smart-tool-selection.js";
+
+// Class 3.27 Prompt Cache (Semantic caching for LLM responses)
+export {
+	type CacheEntry,
+	type CacheHit,
+	type CacheStats,
+	type EmbeddingFunction,
+	getPromptCache,
+	PromptCache,
+	type PromptCacheConfig,
+	type PromptCacheEvents,
+	resetPromptCache,
+} from "./prompt-cache.js";
+
+// Class 3.28 Token Budget Manager (Phase-based token allocation)
+export {
+	type BudgetAllocation,
+	type BudgetPhase,
+	type BudgetPrediction,
+	type BudgetStats as TokenBudgetStats,
+	getTokenBudget,
+	type PhaseBudget,
+	resetTokenBudget,
+	type TokenBudgetConfig,
+	type TokenBudgetEvents,
+	TokenBudgetManager,
+	type TokenUsage,
+} from "./token-budget.js";
+
+// Class 3.29 Self-Reflection Module (Quality assessment and retry)
+export {
+	BUILTIN_CRITERIA,
+	getSelfReflection,
+	type QualityScore,
+	type ReflectionContext,
+	type ReflectionCriteria,
+	type ReflectionHistory,
+	type ReflectionResult,
+	resetSelfReflection,
+	SelfReflection,
+	type SelfReflectionConfig,
+	type SelfReflectionEvents,
+} from "./self-reflection.js";
