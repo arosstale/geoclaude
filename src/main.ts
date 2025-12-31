@@ -7145,8 +7145,9 @@ function logMessage(channelDir: string, entry: object): void {
 // ============================================================================
 
 const SESSION_FILE = "session.jsonl";
-const MAX_SESSION_MESSAGES = 20; // Auto-compact after this many messages (aggressive for speed)
+const MAX_SESSION_MESSAGES = 15; // Auto-compact after this many messages (more aggressive to prevent context overflow)
 const MAX_CONTEXT_TOKENS = 4000; // Target max tokens to send to model (fast responses)
+const MAX_TOOL_OUTPUT_LENGTH = 8000; // Truncate tool outputs longer than this to prevent context overflow
 
 // PERF: Cache of directories we've confirmed exist (avoid repeated existsSync)
 const createdDirsCache = new Set<string>();
@@ -8538,12 +8539,28 @@ async function handleAgentRequestInternal(
 			);
 		}
 
-		// If there was an error, log it
+		// If there was an error, log it and attempt auto-recovery
 		const lastMessage = debugMessages[debugMessages.length - 1] as any;
 		if (lastMessage?.stopReason === "error") {
 			console.log(
 				`[DISCORD][ERROR] API call failed! errorMessage=${lastMessage.errorMessage} error=${JSON.stringify(lastMessage.error)}`,
 			);
+
+			// Auto-recovery for context window exceeded
+			if (lastMessage.errorMessage?.includes("context_window_exceeded")) {
+				console.log(`[DISCORD][RECOVERY] Context window exceeded - auto-compacting session`);
+				try {
+					const compactedCount = compactSessionIfNeeded(channelDir, state.agent);
+					if (compactedCount > 0) {
+						state.sessionMessageCount = compactedCount;
+						console.log(`[DISCORD][RECOVERY] Session compacted to ${compactedCount} messages`);
+						// Notify user via reply function
+						await reply("⚠️ **Context limit reached** - conversation compacted. Please resend your last message.");
+					}
+				} catch (recoveryError) {
+					console.log(`[DISCORD][RECOVERY] Failed to auto-compact:`, recoveryError);
+				}
+			}
 		}
 
 		unsubscribe();
