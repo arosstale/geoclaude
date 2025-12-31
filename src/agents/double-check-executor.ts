@@ -19,8 +19,8 @@
  * @module double-check-executor
  */
 
-import { EventEmitter } from "events";
 import Database from "better-sqlite3";
+import { EventEmitter } from "events";
 
 // =============================================================================
 // Types
@@ -217,7 +217,7 @@ export class DoubleCheckExecutor extends EventEmitter {
 		task: string,
 		handlers: ModelHandlers,
 		toolExecutor: ToolExecutor,
-		options?: { context?: string; maxIterations?: number }
+		options?: { context?: string; maxIterations?: number },
 	): Promise<{ success: boolean; result: string; session: DoubleCheckSession }> {
 		const sessionId = `dc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 		const maxIterations = options?.maxIterations || this.config.maxIterations;
@@ -249,7 +249,7 @@ export class DoubleCheckExecutor extends EventEmitter {
 				const plan = await this.withTimeout(
 					handlers.architect.plan(currentTask, options?.context),
 					this.config.timeouts.planning,
-					"Planning timeout"
+					"Planning timeout",
 				);
 
 				this.persistPlan(sessionId, i + 1, plan);
@@ -261,7 +261,7 @@ export class DoubleCheckExecutor extends EventEmitter {
 				const execution = await this.withTimeout(
 					handlers.editor.execute(plan, toolExecutor),
 					this.config.timeouts.execution,
-					"Execution timeout"
+					"Execution timeout",
 				);
 
 				// Phase 3: ARCHITECT verifies
@@ -271,7 +271,7 @@ export class DoubleCheckExecutor extends EventEmitter {
 				const verification = await this.withTimeout(
 					handlers.architect.verify(task, plan, execution),
 					this.config.timeouts.verification,
-					"Verification timeout"
+					"Verification timeout",
 				);
 
 				// Record iteration
@@ -342,7 +342,7 @@ export class DoubleCheckExecutor extends EventEmitter {
 			call: (prompt: string, model?: string) => Promise<string>;
 		},
 		toolExecutor: ToolExecutor,
-		tools: string[]
+		tools: string[],
 	): Promise<{ success: boolean; result: string; session: DoubleCheckSession }> {
 		const handlers: ModelHandlers = {
 			architect: {
@@ -456,7 +456,8 @@ Be thorough. Only approve if the task is correctly completed.`;
 			steps: this.extractSteps(yamlContent),
 			constraints: this.extractYamlList(yamlContent, "constraints"),
 			expectedOutcome: this.extractYamlField(yamlContent, "expectedOutcome") || "Task completion",
-			estimatedComplexity: this.extractYamlField(yamlContent, "complexity") as Plan["estimatedComplexity"] || "medium",
+			estimatedComplexity:
+				(this.extractYamlField(yamlContent, "complexity") as Plan["estimatedComplexity"]) || "medium",
 			createdAt: Date.now(),
 		};
 
@@ -532,8 +533,8 @@ Be thorough. Only approve if the task is correctly completed.`;
 			const stepBlocks = stepsContent.split(/\n\s*-\s+id:/);
 
 			for (let i = 1; i < stepBlocks.length; i++) {
-				const block = "id:" + stepBlocks[i];
-				const id = parseInt(this.extractYamlField(block, "id") || String(i));
+				const block = `id:${stepBlocks[i]}`;
+				const id = parseInt(this.extractYamlField(block, "id") || String(i), 10);
 				const action = this.extractYamlField(block, "action") || "";
 				const tool = this.extractYamlField(block, "tool");
 				const expectedResult = this.extractYamlField(block, "expectedResult") || "";
@@ -555,10 +556,10 @@ Be thorough. Only approve if the task is correctly completed.`;
 			const issueBlocks = issuesContent.split(/\n\s*-\s+severity:/);
 
 			for (let i = 1; i < issueBlocks.length; i++) {
-				const block = "severity:" + issueBlocks[i];
-				const severity = this.extractYamlField(block, "severity") as VerificationIssue["severity"] || "minor";
+				const block = `severity:${issueBlocks[i]}`;
+				const severity = (this.extractYamlField(block, "severity") as VerificationIssue["severity"]) || "minor";
 				const description = this.extractYamlField(block, "description") || "";
-				const affectedStep = parseInt(this.extractYamlField(block, "affectedStep") || "0") || undefined;
+				const affectedStep = parseInt(this.extractYamlField(block, "affectedStep") || "0", 10) || undefined;
 				const fix = this.extractYamlField(block, "fix");
 
 				issues.push({ severity, description, affectedStep, fix });
@@ -576,7 +577,7 @@ Be thorough. Only approve if the task is correctly completed.`;
 		const startTime = Date.now();
 		const stepResults: StepResult[] = [];
 		let finalOutput = "";
-		let tokensUsed = 0;
+		const tokensUsed = 0;
 
 		for (const step of plan.steps) {
 			const stepStart = Date.now();
@@ -632,9 +633,7 @@ Be thorough. Only approve if the task is correctly completed.`;
 	// ---------------------------------------------------------------------------
 
 	private refineTask(originalTask: string, verification: VerificationResult): string {
-		const criticalIssues = verification.issues
-			.filter((i) => i.severity === "critical")
-			.map((i) => i.description);
+		const criticalIssues = verification.issues.filter((i) => i.severity === "critical").map((i) => i.description);
 
 		const fixes = verification.issues.filter((i) => i.fix).map((i) => i.fix);
 
@@ -648,10 +647,7 @@ ${fixes.map((f) => `- ${f}`).join("\n")}`;
 	}
 
 	private async withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
-		return Promise.race([
-			promise,
-			new Promise<T>((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
-		]);
+		return Promise.race([promise, new Promise<T>((_, reject) => setTimeout(() => reject(new Error(message)), ms))]);
 	}
 
 	private persistSession(session: DoubleCheckSession): void {
@@ -670,7 +666,7 @@ ${fixes.map((f) => `- ${f}`).join("\n")}`;
 			JSON.stringify(session.iterations),
 			session.finalResult || null,
 			session.startTime,
-			session.endTime || null
+			session.endTime || null,
 		);
 	}
 

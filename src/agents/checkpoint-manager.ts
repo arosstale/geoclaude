@@ -132,7 +132,7 @@ export interface CheckpointManagerEvents {
 	"checkpoint:expired": { checkpoint: Checkpoint };
 	"checkpoint:deleted": { checkpointId: string };
 	"cleanup:completed": { removed: number; remaining: number };
-	"error": { operation: string; error: Error };
+	error: { operation: string; error: Error };
 }
 
 export interface CheckpointStats {
@@ -184,7 +184,7 @@ export class CheckpointManager extends EventEmitter {
 		agentId: string,
 		taskId: string,
 		data: CheckpointData,
-		options: { ttlMs?: number | null; parentId?: string } = {}
+		options: { ttlMs?: number | null; parentId?: string } = {},
 	): Promise<Checkpoint> {
 		const id = this.generateId();
 		const version = this.getNextVersion(taskId);
@@ -195,7 +195,7 @@ export class CheckpointManager extends EventEmitter {
 		const expiresAt = ttl !== null ? now + ttl : null;
 
 		// Prepare data for storage
-		let storedData = data;
+		const storedData = data;
 		let sizeBytes = 0;
 		let compressed = false;
 
@@ -205,7 +205,7 @@ export class CheckpointManager extends EventEmitter {
 
 		if (sizeBytes > this.config.maxCheckpointSize) {
 			throw new Error(
-				`Checkpoint size (${sizeBytes} bytes) exceeds maximum (${this.config.maxCheckpointSize} bytes)`
+				`Checkpoint size (${sizeBytes} bytes) exceeds maximum (${this.config.maxCheckpointSize} bytes)`,
 			);
 		}
 
@@ -260,7 +260,7 @@ export class CheckpointManager extends EventEmitter {
 		agentId: string,
 		taskId: string,
 		data: CheckpointData,
-		options: { ttlMs?: number | null } = {}
+		options: { ttlMs?: number | null } = {},
 	): Promise<Checkpoint> {
 		const latest = this.getLatest(taskId);
 		return this.create(agentId, taskId, data, {
@@ -416,11 +416,7 @@ export class CheckpointManager extends EventEmitter {
 		let maxVersion = -1;
 
 		for (const checkpoint of Array.from(this.checkpoints.values())) {
-			if (
-				checkpoint.taskId === taskId &&
-				checkpoint.status === "active" &&
-				checkpoint.version > maxVersion
-			) {
+			if (checkpoint.taskId === taskId && checkpoint.status === "active" && checkpoint.version > maxVersion) {
 				maxVersion = checkpoint.version;
 				latest = checkpoint;
 			}
@@ -437,11 +433,7 @@ export class CheckpointManager extends EventEmitter {
 		let maxTime = 0;
 
 		for (const checkpoint of Array.from(this.checkpoints.values())) {
-			if (
-				checkpoint.agentId === agentId &&
-				checkpoint.status === "active" &&
-				checkpoint.createdAt > maxTime
-			) {
+			if (checkpoint.agentId === agentId && checkpoint.status === "active" && checkpoint.createdAt > maxTime) {
 				maxTime = checkpoint.createdAt;
 				latest = checkpoint;
 			}
@@ -714,10 +706,7 @@ export class CheckpointManager extends EventEmitter {
 		return next;
 	}
 
-	private calculateDiff(
-		oldState: Record<string, unknown>,
-		newState: Record<string, unknown>
-	): CheckpointDiff {
+	private calculateDiff(oldState: Record<string, unknown>, newState: Record<string, unknown>): CheckpointDiff {
 		const added: string[] = [];
 		const modified: string[] = [];
 		const removed: string[] = [];

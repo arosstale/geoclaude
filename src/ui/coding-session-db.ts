@@ -7,7 +7,7 @@
 
 import Database from "better-sqlite3";
 import { randomUUID } from "crypto";
-import type { CodeSuggestion, CodingSession, ModelOption } from "./reacord-components.js";
+import type { CodeSuggestion, CodingSession } from "./reacord-components.js";
 
 // ============================================================================
 // Types

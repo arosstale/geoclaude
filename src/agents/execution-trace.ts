@@ -210,12 +210,7 @@ export class ExecutionTracer extends EventEmitter {
 	// Span Management
 	// ---------------------------------------------------------------------------
 
-	startSpan(
-		traceId: string,
-		name: string,
-		kind: SpanKind = "internal",
-		parentSpanId?: string
-	): TraceSpan | null {
+	startSpan(traceId: string, name: string, kind: SpanKind = "internal", parentSpanId?: string): TraceSpan | null {
 		const trace = this.traces.get(traceId);
 		if (!trace || trace.metadata.sampled === false) return null;
 
@@ -348,7 +343,7 @@ export class ExecutionTracer extends EventEmitter {
 		name: string,
 		kind: SpanKind,
 		fn: (span: TraceSpan | null) => Promise<T>,
-		parentSpanId?: string
+		parentSpanId?: string,
 	): Promise<T> {
 		const span = this.startSpan(traceId, name, kind, parentSpanId);
 
@@ -369,7 +364,7 @@ export class ExecutionTracer extends EventEmitter {
 	async withTrace<T>(
 		name: string,
 		fn: (trace: ExecutionTrace) => Promise<T>,
-		metadata: Record<string, unknown> = {}
+		metadata: Record<string, unknown> = {},
 	): Promise<T> {
 		const trace = this.startTrace(name, metadata);
 
@@ -420,7 +415,7 @@ export class ExecutionTracer extends EventEmitter {
 				spans: Array.from(trace.spans.values()),
 			},
 			null,
-			2
+			2,
 		);
 	}
 
@@ -430,9 +425,7 @@ export class ExecutionTracer extends EventEmitter {
 			traceID: span.traceId,
 			spanID: span.id,
 			operationName: span.name,
-			references: span.parentId
-				? [{ refType: "CHILD_OF", traceID: span.traceId, spanID: span.parentId }]
-				: [],
+			references: span.parentId ? [{ refType: "CHILD_OF", traceID: span.traceId, spanID: span.parentId }] : [],
 			startTime: span.startTime * 1000, // microseconds
 			duration: (span.duration || 0) * 1000,
 			tags: Object.entries(span.attributes).map(([key, value]) => ({
@@ -442,7 +435,10 @@ export class ExecutionTracer extends EventEmitter {
 			})),
 			logs: span.events.map((e) => ({
 				timestamp: e.timestamp * 1000,
-				fields: [{ key: "event", value: e.name }, ...(e.attributes ? Object.entries(e.attributes).map(([k, v]) => ({ key: k, value: v })) : [])],
+				fields: [
+					{ key: "event", value: e.name },
+					...(e.attributes ? Object.entries(e.attributes).map(([k, v]) => ({ key: k, value: v })) : []),
+				],
 			})),
 		}));
 
@@ -504,7 +500,7 @@ export class ExecutionTracer extends EventEmitter {
 								? Object.entries(e.attributes).map(([k, v]) => ({
 										key: k,
 										value: { stringValue: String(v) },
-								  }))
+									}))
 								: [],
 						})),
 					})),
@@ -525,7 +521,6 @@ export class ExecutionTracer extends EventEmitter {
 				return 3; // CLIENT
 			case "external":
 				return 3; // CLIENT
-			case "internal":
 			default:
 				return 1; // INTERNAL
 		}
@@ -579,7 +574,7 @@ export class ExecutionTracer extends EventEmitter {
 			const start = span.startTime - baseTime;
 			const duration = span.duration || 0;
 			const status = span.status === "error" ? "crit" : span.status === "running" ? "active" : "";
-			const safeName = span.name.replace(/[:\[\]]/g, "_");
+			const safeName = span.name.replace(/[:[\]]/g, "_");
 
 			lines.push(`    ${safeName} :${status} ${span.id}, ${start}, ${duration}ms`);
 		}
@@ -660,9 +655,7 @@ export class ExecutionTracer extends EventEmitter {
 	}
 
 	flush(): number {
-		const completedTraces = Array.from(this.traces.entries()).filter(
-			([_, t]) => t.status !== "running"
-		);
+		const completedTraces = Array.from(this.traces.entries()).filter(([_, t]) => t.status !== "running");
 
 		for (const [id] of completedTraces) {
 			this.traces.delete(id);

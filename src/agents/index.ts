@@ -11,6 +11,28 @@
  * - Expert Hook: Act-Learn-Reuse integration
  */
 
+// ADW - AI Developer Workflow Wrapper (Deterministic + Non-Deterministic)
+export {
+	type ADWContext,
+	type ADWEvent,
+	type ADWExecutionResult,
+	ADWRunner,
+	type ADWStep,
+	type ADWStepResult,
+	type ADWWorkflow,
+	CODE_COMPILES_GATE,
+	CODE_REVIEW_GATE,
+	createBugFixWorkflow,
+	createFeatureWorkflow,
+	createRefactorWorkflow,
+	disposeADWRunner,
+	FORMAT_VALID_GATE,
+	type GateResult,
+	getADWRunner,
+	type QualityGate,
+	SECURITY_GATE,
+	TESTS_PASS_GATE,
+} from "./adw-wrapper.js";
 // Agent Dialogue - Multi-Agent Discussion Before Action (AgentLaboratory Pattern)
 export {
 	createDialogueEngine,
@@ -26,6 +48,21 @@ export {
 	runTradingDialogue,
 	TRADING_DIALOGUE_AGENTS,
 } from "./agent-dialogue.js";
+// Class 3.13 Agent Discovery System (TAC Pattern: Dynamic agent registration)
+export {
+	type AgentCapability,
+	AgentDiscoverySystem,
+	type AgentEndpoint,
+	type AgentStatus as DiscoveryAgentStatus,
+	type DiscoveryConfig,
+	type DiscoveryQuery,
+	type DiscoveryResult,
+	type DiscoveryStats,
+	getDiscoverySystem,
+	type HealthCheckResult as DiscoveryHealthCheckResult,
+	type RegisteredAgent,
+	resetDiscoverySystem,
+} from "./agent-discovery.js";
 // Agent Experts - Advanced TAC Lesson 13 (Codebase Experts, Meta-Agentics)
 export {
 	CODEBASE_EXPERTS,
@@ -39,12 +76,67 @@ export {
 	META_PROMPT_TEMPLATE,
 	PRODUCT_EXPERTS,
 } from "./agent-experts.js";
+// Class 3.9 Agent Feedback Loop (TAC Pattern: Self-improvement through feedback)
+export {
+	type AgentFeedbackSummary,
+	AgentFeedbackSystem,
+	DEFAULT_FEEDBACK_CONFIG,
+	type FeedbackConfig,
+	type FeedbackEntry,
+	type FeedbackRating,
+	getFeedbackSystem,
+	type ImprovementSuggestion,
+	type PromptVariant,
+	resetFeedbackSystem,
+} from "./agent-feedback.js";
+// Class 3.31 Agent Hub (Unified entry point)
+export {
+	type AgentCapability as HubAgentCapability,
+	type AgentHandler,
+	AgentHub,
+	type AgentHubConfig,
+	type AgentHubEvents,
+	type AgentRequest,
+	type AgentResponse,
+	type AgentStats as HubAgentStats,
+	getAgentHub,
+	type HubPlugin,
+	type RegisteredAgent as HubRegisteredAgent,
+	resetAgentHub,
+} from "./agent-hub.js";
+// Class 3.35 Agent Lifecycle Manager (Agent state machine)
+export {
+	type AgentFactory,
+	AgentLifecycleManager,
+	type AgentResources,
+	type AgentSpec,
+	type AgentState as LifecycleAgentState,
+	getAgentLifecycle,
+	type HealthCheckConfig,
+	type LifecycleConfig,
+	type LifecycleEvent,
+	type LifecycleEvents,
+	type ManagedAgent,
+	type RestartPolicy,
+	resetAgentLifecycle,
+} from "./agent-lifecycle.js";
 // Agent Mail MCP Server - Expose messaging via MCP protocol
 export {
 	type AgentMailMCPOptions,
 	createAgentMailMCPServer,
 	runAgentMailMCPServer,
 } from "./agent-mail-mcp.js";
+// Class 3.3 Agent Memory System
+export {
+	AgentMemorySystem,
+	type AgentStats as MemoryAgentStats,
+	getMemorySystem,
+	type Insight,
+	type MemoryConfig,
+	type RoutingRecommendation,
+	resetMemorySystem,
+	type TaskRecord,
+} from "./agent-memory-system.js";
 // Agent-to-Agent Messaging System (Enhanced with MCP Agent Mail patterns)
 export {
 	type AgentInfo,
@@ -64,6 +156,21 @@ export {
 	type RecipientType,
 	type ThreadSummary,
 } from "./agent-messaging.js";
+// Class 3.10 Agent Notification System (TAC Pattern: Cross-channel alerts)
+export {
+	AgentNotificationSystem,
+	BUILTIN_TEMPLATES,
+	DEFAULT_NOTIFICATION_CONFIG,
+	type DeliveryMethod,
+	getNotificationSystem,
+	type Notification,
+	type NotificationConfig,
+	type NotificationPriority,
+	type NotificationStatus,
+	type NotificationTemplate,
+	resetNotificationSystem,
+	type UserPreferences as NotificationUserPreferences,
+} from "./agent-notifications.js";
 // Agent Persona - Structured Personality System (learned from Agentis Framework)
 export {
 	type AgentGoal,
@@ -129,6 +236,43 @@ export {
 	type TaskRequest,
 	type TaskResponse,
 } from "./agent-swarm.js";
+// Class 3.12 Agent Versioning System (TAC Pattern: Version control for agent configs)
+export {
+	type AgentConfig,
+	type AgentVersion,
+	AgentVersioningSystem,
+	DEFAULT_AGENT_CONFIG,
+	getVersioningSystem,
+	type MigrationResult,
+	resetVersioningSystem,
+	type VersionDiff,
+	type VersionHistory,
+	type VersioningConfig,
+	type VersioningStats,
+	type VersionTag,
+} from "./agent-versioning.js";
+// Class 3.19 Agent Wrapper System (AgentJo Pattern: Composable agent augmentation)
+export {
+	type AgentAction,
+	type AgentInput,
+	type AgentMessage as WrapperAgentMessage,
+	type AgentOutput,
+	type AgentWrapper,
+	type BaseAgent,
+	BudgetWrapper,
+	ConversationWrapper,
+	compose,
+	conditional,
+	getWrapperManager,
+	MemoryWrapper,
+	PlannerWrapper,
+	ReflectionWrapper,
+	resetWrapperManager,
+	ThoughtsWrapper,
+	type WrapperConfig,
+	WrapperManager,
+	withConfig,
+} from "./agent-wrappers.js";
 // Agentic Properties - IndyDevDan's 6 Agentic Properties Framework
 export {
 	// Property Types
@@ -252,6 +396,24 @@ export {
 	LocalTFIDFEmbedding,
 	OpenAIEmbedding,
 } from "./archival-memory.js";
+// Class 3.17 Audit Logging System (TAC Pattern: Comprehensive audit trail)
+export {
+	type ActorType,
+	type AuditAction,
+	type AuditActor,
+	type AuditCategory,
+	type AuditConfig,
+	type AuditEntry,
+	AuditLoggingSystem,
+	type AuditQuery,
+	type AuditReport,
+	type AuditSeverity,
+	type AuditStats,
+	getAuditLogging,
+	type ResourceType as AuditResourceType,
+	type RetentionPolicy,
+	resetAuditLogging,
+} from "./audit-logging.js";
 // Autonomous Daemon - Self-running agentic system (24/7 autonomy)
 export {
 	AutonomousDaemon,
@@ -282,6 +444,40 @@ export {
 	SandboxManager,
 	type SandboxSession,
 } from "./browser-use-adapter.js";
+// Class 3.48 Cache Layer (Multi-tier caching)
+export {
+	type CacheConfig,
+	type CacheEntry as CacheLayerEntry,
+	type CacheGetResult,
+	type CacheInvalidation,
+	CacheLayerSystem,
+	type CacheSetOptions,
+	type CacheStats as CacheLayerStats,
+	type CacheTier,
+	type CacheWarmer,
+	type EvictionPolicy,
+	getCacheLayer,
+	type InvalidationStrategy,
+	type L1Config,
+	type L2Config,
+	type NamespaceStats,
+	resetCacheLayer,
+} from "./cache-layer.js";
+// Class 3.38 Checkpoint Manager (State persistence)
+export {
+	type Checkpoint,
+	type CheckpointData as CheckpointPayload,
+	type CheckpointDiff,
+	type CheckpointFilter,
+	CheckpointManager,
+	type CheckpointManagerConfig,
+	type CheckpointManagerEvents,
+	type CheckpointStats,
+	type CheckpointStatus,
+	getCheckpointManager,
+	type RestoreOptions,
+	resetCheckpointManager,
+} from "./checkpoint-manager.js";
 // Claude Agent SDK - Official Anthropic CLI Framework
 export {
 	CLAUDE_MODELS,
@@ -344,6 +540,35 @@ export {
 	runTwoAgentWorkflow,
 	type TaskSpec as ClaudeTaskSpec,
 } from "./claude-sdk-agent.js";
+// Class 3.45 Configuration Manager (Dynamic config)
+export {
+	type ConfigChange,
+	type ConfigManagerConfig,
+	type ConfigProfile,
+	type ConfigSchema,
+	type ConfigSnapshot as ConfigBackup,
+	type ConfigStats,
+	ConfigurationManager,
+	type ConfigValue,
+	type ConfigValueType,
+	getConfigManager,
+	resetConfigManager,
+	type ValidationOperator,
+	type ValidationResult as ConfigValidationResult,
+	type ValidationRule,
+} from "./config-manager.js";
+// Class 3.6 Context Bundle System (TAC Pattern: Session persistence)
+export {
+	type BundleConfig,
+	type BundleSummary,
+	type ContextBundle,
+	ContextBundleSystem,
+	type ConversationEntry,
+	type FileSnapshot,
+	type GitSnapshot,
+	getBundleSystem,
+	resetBundleSystem,
+} from "./context-bundle.js";
 // Context Compression - Intelligent Context Window Management
 export {
 	type CompressedContext,
@@ -358,6 +583,19 @@ export {
 	estimateTotalTokens,
 	type SummarizationResult,
 } from "./context-compression.js";
+// Class 3.33 Context Fusion (Multi-source context merging)
+export {
+	ContextFusion,
+	type ContextFusionConfig,
+	type ContextFusionEvents,
+	type ContextItem as FusionContextItem,
+	type ContextSource,
+	type ContextSourceType,
+	type FusedContext,
+	type FusionConfig,
+	getContextFusion,
+	resetContextFusion,
+} from "./context-fusion.js";
 // Continuous-Claude Adapter - parcadei/Continuous-Claude session continuity
 export {
 	type ArtifactEntry,
@@ -390,6 +628,27 @@ export {
 	type SearchResult as ConversationSearchResult,
 	type TimeRange,
 } from "./conversation-memory.js";
+// Class 3.15 Cost Tracking System (TAC Pattern: Token/API cost monitoring)
+export {
+	type Budget,
+	type BudgetScope,
+	type BudgetStatus,
+	type CostAlert,
+	type CostOptimization,
+	type CostPeriod,
+	type CostProvider,
+	type CostReport,
+	type CostTrackingConfig,
+	CostTrackingSystem,
+	type CostTrendPoint,
+	getCostTracking,
+	type ModelCostSummary,
+	type ModelPricing,
+	type OperationCostSummary,
+	type ProviderCostSummary,
+	resetCostTracking,
+	type UsageRecord,
+} from "./cost-tracking.js";
 // Cross-Platform Swarm - Unified multi-agent coordination across Discord, Slack, Telegram, WhatsApp
 export {
 	broadcastToAllPlatforms,
@@ -421,6 +680,20 @@ export {
 	researchThink,
 	think,
 } from "./ctm-agent.js";
+// Class 3.32 Delegation Router (Smart task routing)
+export {
+	DelegationRouter,
+	type DelegationRouterConfig,
+	type DelegationRouterEvents,
+	getDelegationRouter,
+	type RoutingDecision,
+	type RoutingRule as DelegationRoutingRule,
+	type RoutingTarget,
+	resetDelegationRouter,
+	type TaskCategory,
+	type TaskClassification,
+	type TaskComplexity,
+} from "./delegation-router.js";
 // Dependency Inference - NLP-based Task Dependency Detection (learned from Agentis Framework)
 export {
 	createDependencyInference,
@@ -462,6 +735,54 @@ export {
 	isDGMAvailable,
 	quickImprove,
 } from "./dgm-agent.js";
+// Class 3.52 DI Container (Dependency injection)
+export {
+	bindTo,
+	CircularDependencyError,
+	createFactory,
+	createLazyFactory,
+	createToken,
+	DIContainer,
+	type DIContainerConfig,
+	type DIContainerEvent,
+	type DIContainerEventType,
+	type DIContainerStats,
+	DIError,
+	type FactoryFunction,
+	getDIContainer,
+	INJECT_METADATA_KEY,
+	initDIContainer,
+	type Lazy,
+	type RegistrationOptions,
+	type ResolutionContext,
+	ResolutionDepthError,
+	resetDIContainer,
+	type ServiceDescriptor,
+	type ServiceLifetime,
+	ServiceNotFoundError,
+	type ServiceToken,
+	Tokens,
+} from "./di-container.js";
+// Class 3.22 Double-Check Executor (Aider Pattern: Architect + Editor + Verify)
+export {
+	type DoubleCheckConfig,
+	type DoubleCheckEvents,
+	DoubleCheckExecutor,
+	type DoubleCheckIteration,
+	type DoubleCheckSession,
+	type ExecutionResult as DoubleCheckExecutionResult,
+	type ExecutorModel,
+	type ExecutorRole,
+	getDoubleCheckExecutor,
+	type ModelHandlers,
+	type Plan as DoubleCheckPlan,
+	type PlanStep as DoubleCheckPlanStep,
+	resetDoubleCheckExecutor,
+	type StepResult as DoubleCheckStepResult,
+	type ToolExecutor as DoubleCheckToolExecutor,
+	type VerificationIssue,
+	type VerificationResult,
+} from "./double-check-executor.js";
 // E2B Sandbox - Isolated Code Execution Environments
 export {
 	E2BSandboxService,
@@ -481,6 +802,76 @@ export {
 	generateEmbeddingsBatch,
 	getEmbedder,
 } from "./embeddings.js";
+// Class 3.39 Error Recovery (Retry and recovery strategies)
+export {
+	type CircuitBreaker,
+	type CircuitBreakerConfig,
+	type CircuitState,
+	type ErrorCategory,
+	type ErrorClassification,
+	type ErrorRecord,
+	type ErrorRecoveryConfig,
+	ErrorRecoverySystem,
+	type ErrorSeverity,
+	type ErrorStats,
+	type FallbackHandler,
+	getErrorRecovery,
+	type RecoveryResult,
+	type RecoveryStrategy,
+	type RetryConfig,
+	resetErrorRecovery,
+} from "./error-recovery.js";
+// Class 3.49 Event Sourcing (Event store)
+export {
+	type AggregateType,
+	type AppendResult,
+	type DomainEvent,
+	type EventCategory,
+	type EventMetadata,
+	type EventQuery,
+	type EventSourcingConfig,
+	EventStore,
+	type EventStoreStats,
+	type EventStream,
+	getEventStore,
+	type Projection,
+	type ProjectionHandler,
+	type ProjectionStatus,
+	type ReplayResult,
+	resetEventStore,
+	type Snapshot as EventSnapshot,
+	type StreamQuery,
+	type Subscription as EventSubscription,
+	type SubscriptionMode,
+} from "./event-sourcing.js";
+// Class 3.37 Execution Trace (Comprehensive tracing)
+export {
+	type ExecutionTrace,
+	ExecutionTracer,
+	type ExecutionTracerConfig,
+	type ExecutionTracerEvents,
+	getExecutionTracer,
+	resetExecutionTracer,
+	type SpanContext,
+	type SpanEvent,
+	type SpanKind,
+	type SpanStatus,
+	type TraceExport,
+	type TraceSpan,
+} from "./execution-trace.js";
+// Class 3.30 Experience Replay (Pattern storage and retrieval)
+export {
+	type Experience,
+	type ExperienceMatch,
+	type ExperienceQuery,
+	ExperienceReplay,
+	type ExperienceReplayConfig,
+	type ExperienceReplayEvents,
+	type ExperienceStep,
+	getExperienceReplay,
+	type PatternCluster,
+	resetExperienceReplay,
+} from "./experience-replay.js";
 // Agent Experts - Act-Learn-Reuse System (Basic)
 export {
 	actLearnReuse,
@@ -494,6 +885,26 @@ export {
 	SELF_IMPROVE_PROMPTS,
 	updateExpertise,
 } from "./expertise-manager.js";
+// Class 3.51 Feature Flags (Feature management)
+export {
+	type AuditAction as FlagAuditAction,
+	type AuditLogEntry as FlagAuditLogEntry,
+	type EvaluationContext as FlagEvaluationContext,
+	type EvaluationReason,
+	type EvaluationResult as FlagEvaluationResult,
+	type FeatureFlag,
+	type FeatureFlagsConfig,
+	FeatureFlagsSystem,
+	type FlagOverride,
+	type FlagStats,
+	type FlagStatus,
+	type FlagTarget,
+	type FlagType,
+	type FlagVariant,
+	getFeatureFlags,
+	resetFeatureFlags,
+	type TargetType as FlagTargetType,
+} from "./feature-flags.js";
 // File Reservations - Advisory Leases for Multi-Agent Coordination
 export {
 	createFileReservationTools,
@@ -570,6 +981,43 @@ export {
 	optimizePrompt,
 	runGEPA,
 } from "./gepa-agent.js";
+// Class 3.53 Health Monitor (System health)
+export {
+	type AlertSeverity as HealthAlertSeverity,
+	type AlertThreshold as HealthAlertThreshold,
+	type CheckInterval,
+	type ComponentHealth as HealthMonitorComponentHealth,
+	type ComponentType as HealthComponentType,
+	type DashboardData as HealthDashboardData,
+	type DependencyNode as HealthDependencyNode,
+	getHealthMonitor,
+	type HealthAlert as HealthMonitorAlert,
+	type HealthCheck as HealthMonitorCheck,
+	type HealthCheckResult as HealthMonitorCheckResult,
+	type HealthHistoryEntry,
+	type HealthMonitorConfig,
+	HealthMonitorSystem,
+	type HealthStatus as HealthMonitorStatus,
+	type RecoveryInfo,
+	resetHealthMonitor,
+	type SystemHealth as HealthMonitorSystemHealth,
+} from "./health-monitor.js";
+// Class 3.14 Health Monitoring System (TAC Pattern: Comprehensive health checks)
+export {
+	type AlertThreshold,
+	type ComponentHealth,
+	type ComponentType as MonitoringComponentType,
+	getHealthMonitoring,
+	type HealthAlert,
+	type HealthCheck as MonitoringHealthCheck,
+	type HealthChecker as MonitoringHealthChecker,
+	type HealthMetric,
+	HealthMonitoringSystem,
+	type HealthStatus,
+	type MonitoringConfig,
+	resetHealthMonitoring,
+	type SystemHealth,
+} from "./health-monitoring.js";
 // History Capture - Universal Output Capture System (UOCS)
 export {
 	type CaptureType,
@@ -645,6 +1093,24 @@ export {
 	type TurnStartEvent,
 	wrapToolWithHooks,
 } from "./hooks/index.js";
+// Class 3.24 Hooks System (AgentJo Pattern: Pre/post processing hooks)
+export {
+	type AnyHookContext,
+	type ErrorHookContext,
+	getHooksSystem,
+	type Hook,
+	type HookContext,
+	type HookHandler,
+	type HookPriority,
+	type HookStats,
+	type HooksConfig,
+	HooksSystem,
+	type HookType,
+	type LLMHookContext,
+	resetHooksSystem,
+	type TaskHookContext,
+	type ToolHookContext,
+} from "./hooks-system.js";
 // Integrated Preprocessor - Combines all Track enhancements
 export {
 	createIntegratedPreprocessor,
@@ -708,6 +1174,87 @@ export {
 	type MemoryToolContext,
 	TRADING_BLOCKS,
 } from "./memory-blocks.js";
+// Class 3.21 Memory on Demand (AgentJo Pattern: Query-based retrieval)
+export {
+	getMemoryOnDemand,
+	type Memory as MODMemory,
+	type MemoryConfig as MODMemoryConfig,
+	MemoryOnDemand,
+	type MemoryQuery as MODMemoryQuery,
+	type MemoryStats as MODMemoryStats,
+	type MemoryType as MODMemoryType,
+	type RetrievalResult as MODRetrievalResult,
+	resetMemoryOnDemand,
+} from "./memory-on-demand.js";
+// Class 3.42 Message Bus (Internal pub/sub)
+export {
+	type BusMessage,
+	type BusStats,
+	type DeadLetterEntry,
+	getMessageBus,
+	MessageBus,
+	type MessageBusConfig,
+	type MessageFilter,
+	type MessagePriority as BusMessagePriority,
+	type MessageStatus,
+	type PublishOptions,
+	type ReplayOptions,
+	type RequestReplyResult,
+	resetMessageBus,
+	type Subscription as BusSubscription,
+	type SubscriptionHandler,
+	type SubscriptionOptions,
+	type SubscriptionType,
+} from "./message-bus.js";
+// Class 3.5 Meta-Agent (TAC Pattern: Agent that creates agents)
+export {
+	type AgentGenerationRequest,
+	type AgentSuggestion,
+	type GeneratedAgentSpec,
+	getMetaAgent,
+	MetaAgent,
+	type MetaAgentConfig,
+	resetMetaAgent,
+} from "./meta-agent.js";
+// Class 3.41 Metrics Collector (Telemetry and observability)
+export {
+	type AggregatedMetric,
+	type AggregationType,
+	type CounterValue,
+	type ExportFormat,
+	type GaugeValue,
+	getMetricsCollector,
+	type HistogramValue,
+	type MetricDefinition,
+	type MetricExportOptions,
+	type MetricLabels,
+	type MetricQuery,
+	type MetricSnapshot,
+	type MetricStats,
+	MetricsCollector,
+	type MetricsCollectorConfig,
+	type MetricType,
+	type MetricValue,
+	resetMetricsCollector,
+	type TimerHandle,
+	type TimingValue,
+} from "./metrics-collector.js";
+// Class 3.2 Multi-Agent Coordinator
+export {
+	type AgentMessage as CoordinatorAgentMessage,
+	type AgentVote,
+	type ConsensusResult as CoordinatorConsensusResult,
+	type CoordinationConfig,
+	type CoordinationResult,
+	type CoordinationTask,
+	getCoordinator,
+	MultiAgentCoordinator,
+	resetCoordinator,
+	runConsensusVote,
+	runDebate,
+	runParallel,
+	runWithSupervisor,
+} from "./multi-agent-coordinator.js";
 // Omni Router - Unified Smart Model Selection (all providers)
 export {
 	detectTaskType,
@@ -726,6 +1273,22 @@ export {
 	runOmni,
 	type TaskType,
 } from "./omni-router.js";
+// Class 3.18 OODA Loop Engine (AgentJo/Anthropic Pattern: Observe-Orient-Decide-Act)
+export {
+	type Action as OODAAction,
+	type Decision as OODADecision,
+	getOODALoop,
+	type Observation as OODAObservation,
+	type OODAConfig,
+	type OODACycle,
+	type OODAEvents,
+	OODALoopEngine,
+	type OODAPhase,
+	type OODAState,
+	type Orientation as OODAOrientation,
+	resetOODALoop,
+	type ToolBudget,
+} from "./ooda-loop.js";
 // OpenCode Agent - Models via OpenCode CLI
 export {
 	disposeOpenCode,
@@ -783,6 +1346,64 @@ export {
 	// Trading Expert Functions (Moon Dev Inspired)
 	runTradingAnalysis,
 } from "./openhands-agent.js";
+// Class 3 Orchestrator - Codebase Singularity (CRUD over agents)
+export {
+	type AgentDefinition as OrchestratorAgentDefinition,
+	closeOrchestrator,
+	type DelegationRequest,
+	type DelegationResult,
+	getOrchestrator,
+	Orchestrator,
+	type OrchestratorEvent,
+	type StepResult as OrchestratorStepResult,
+	type WorkflowDefinition as OrchestratorWorkflowDefinition,
+	type WorkflowExecution,
+	type WorkflowStep as OrchestratorWorkflowStep,
+} from "./orchestrator.js";
+// Orchestrator Bootstrap - Wires real agent handlers
+export {
+	type BootstrapConfig,
+	bootstrapOrchestrator,
+	DEFAULT_AGENTS,
+	getAgentByRole,
+	getBootstrappedOrchestrator,
+	quickDelegate,
+	registerCustomAgent,
+	resetBootstrap,
+} from "./orchestrator-bootstrap.js";
+// Class 3.4 Orchestrator-Memory Bridge
+export {
+	type BridgeConfig,
+	getOrchestratorMemoryBridge,
+	OrchestratorMemoryBridge,
+	resetBridge,
+	type SmartDelegationRequest,
+	type SmartDelegationResult,
+} from "./orchestrator-memory-bridge.js";
+// Class 3.7 Output Style System (TAC Pattern: Configurable formats)
+export {
+	BUILTIN_STYLES,
+	getStyleManager,
+	type OutputStyle,
+	OutputStyleManager,
+	resetStyleManager,
+	type StyleConfig,
+	type StylePreset,
+} from "./output-styles.js";
+// Class 3.25 Parallel Tool Executor (TaskGen Pattern: Dependency-aware parallel execution)
+export {
+	type BatchResult,
+	type ExecutionPlan,
+	getParallelExecutor,
+	type ParallelExecutionResult,
+	ParallelExecutor,
+	type ParallelExecutorConfig,
+	type ParallelExecutorEvents,
+	resetParallelExecutor,
+	type ToolCall,
+	type ToolExecutor,
+	type ToolResult as ParallelToolResult,
+} from "./parallel-executor.js";
 // Parallel Agent Patterns - Google ADK Style (GLM-4.7 Dec 2025 Upgrade)
 export {
 	type AgentContext,
@@ -817,6 +1438,94 @@ export {
 	type PermissionOverride,
 	PermissionStore,
 } from "./permission-store.js";
+// Pi-Watcher - Autonomous Monitoring & Hotfix (Clopus-Watcher inspired)
+export {
+	type CustomCheck,
+	DEFAULT_WATCHER_CONFIG,
+	type DetectedIssue,
+	type FixAttempt,
+	getPiWatcher,
+	getPiWatcherState,
+	type HealthCheckResult as WatcherHealthCheckResult,
+	type HealthCheckType,
+	PiWatcher,
+	startPiWatcher,
+	stopPiWatcher,
+	type WatcherConfig,
+	type WatcherEvent,
+	type WatcherState,
+} from "./pi-watcher.js";
+// Class 3.44 Plugin System (Extensible architecture)
+export {
+	type DependencyResolution,
+	getPluginSystem,
+	type HookContext as PluginHookContext,
+	type HookHandler as PluginHookHandler,
+	type HookPhase,
+	type HookRegistry,
+	type HookResult as PluginHookResult,
+	type Plugin as PluginDefinition,
+	type PluginCapability,
+	type PluginDependency,
+	type PluginInstance,
+	type PluginManifest,
+	type PluginSandbox,
+	type PluginStats,
+	type PluginStatus,
+	PluginSystem,
+	type PluginSystemConfig,
+	type PluginVersion,
+	resetPluginSystem,
+} from "./plugin-system.js";
+// Class 3.27 Prompt Cache (Semantic caching for LLM responses)
+export {
+	type CacheEntry,
+	type CacheHit,
+	type CacheStats,
+	type EmbeddingFunction,
+	getPromptCache,
+	PromptCache,
+	type PromptCacheConfig,
+	type PromptCacheEvents,
+	resetPromptCache,
+} from "./prompt-cache.js";
+// Class 3.40 Rate Limiter (API rate limiting)
+export {
+	type EndpointStats as RateLimitEndpointStats,
+	getRateLimiter as getRateLimiterSystem,
+	type QueuedRequest as RateLimitQueuedRequest,
+	type RateLimiterConfig,
+	RateLimiterSystem,
+	type RateLimitRequest,
+	type RateLimitResult as RateLimiterResult,
+	type RateLimitRule as RateLimiterRule,
+	type RateLimitScope as RateLimiterScope,
+	type RateLimitStats as RateLimiterStats,
+	type RateLimitStatus,
+	type RequestPriority as RateLimitPriority,
+	resetRateLimiter,
+	type SlidingWindow,
+	type SlidingWindowEntry,
+	type TokenBucket,
+} from "./rate-limiter.js";
+// Class 3.16 Rate Limiting System (TAC Pattern: API rate limiting and throttling)
+export {
+	getRateLimiting,
+	type QueuedRequest,
+	type Quota,
+	type QuotaPeriod,
+	type QuotaStatus,
+	type RateLimitAlgorithm,
+	type RateLimitConfig,
+	RateLimitingSystem,
+	type RateLimitResult,
+	type RateLimitRule,
+	type RateLimitScope,
+	type RateLimitState,
+	type RateLimitStats,
+	type RequestPriority,
+	resetRateLimiting,
+} from "./rate-limiting.js";
 // 24/7 Research Orchestrator - Autonomous Research System
 export {
 	type DiscoveryNotification,
@@ -831,6 +1540,59 @@ export {
 	stopResearch,
 	type WebhookSubscriber,
 } from "./research-orchestrator.js";
+// Class 3.46 Resource Pool (Connection pooling)
+export {
+	type AcquireOptions,
+	type AcquireResult,
+	createResourcePool,
+	getDefaultPoolConfig,
+	type PoolMetrics,
+	type PoolState,
+	type PoolStats,
+	type Resource,
+	ResourcePool,
+	type ResourcePoolConfig,
+	type ResourceState,
+	type WaitingRequest,
+} from "./resource-pool.js";
+// Class 3.8 Safety Guards System (TAC Pattern: Dangerous command blocking)
+export {
+	assertSafe,
+	type BlockedCommand,
+	BUILTIN_RULES,
+	type GuardCategory,
+	type GuardCheckResult,
+	type GuardContext,
+	type GuardRule,
+	getRisk,
+	getSafetyGuards,
+	isSafe,
+	type RiskLevel,
+	resetSafetyGuards,
+	SafetyGuards,
+	type SafetyGuardsConfig,
+	withSafetyGuard,
+} from "./safety-guards.js";
+// Class 3.50 Saga Orchestrator (Distributed transactions)
+export {
+	getSagaOrchestrator,
+	type RetryPolicy as SagaRetryPolicy,
+	resetSagaOrchestrator,
+	SagaBuilder,
+	type SagaDefinition,
+	type SagaHistoryEntry,
+	type SagaInstance,
+	SagaOrchestrator,
+	type SagaOrchestratorConfig,
+	type SagaQuery,
+	type SagaStats,
+	type SagaStatus,
+	type StepDefinition,
+	type StepExecution,
+	type StepStatus as SagaStepStatus,
+	saga,
+	step,
+} from "./saga-orchestrator.js";
 // Self-Debug Service - Autonomous Error Detection and Repair
 export {
 	DEFAULT_SELF_DEBUG_CONFIG,
@@ -843,6 +1605,35 @@ export {
 	type SelfDebugConfig,
 	SelfDebugService,
 } from "./self-debug.js";
+// Self-Healing Manager - Autonomous Error Recovery
+export {
+	DEFAULT_SELF_HEALING_CONFIG,
+	type ErrorPattern,
+	getSelfHealingManager,
+	type HealingAction,
+	type HealingActionType,
+	type HealingSeverity,
+	type MemoryMetrics,
+	resetSelfHealingManager,
+	type SelfHealingConfig,
+	SelfHealingManager,
+	SelfHealingPresets,
+	type SelfHealingStatus,
+} from "./self-healing.js";
+// Class 3.29 Self-Reflection Module (Quality assessment and retry)
+export {
+	BUILTIN_CRITERIA,
+	getSelfReflection,
+	type QualityScore,
+	type ReflectionContext,
+	type ReflectionCriteria,
+	type ReflectionHistory,
+	type ReflectionResult,
+	resetSelfReflection,
+	SelfReflection,
+	type SelfReflectionConfig,
+	type SelfReflectionEvents,
+} from "./self-reflection.js";
 // Semantic Search - Vector-Based Memory Search
 export {
 	disposeSemanticSearchService,
@@ -866,6 +1657,19 @@ export {
 	type SessionMode,
 	streamPrompt,
 } from "./session-factory.js";
+// Class 3.11 Session Isolation System (TAC Pattern: Per-conversation state isolation)
+export {
+	getSessionIsolation,
+	type IsolatedSession,
+	resetSessionIsolation,
+	type SessionConfig,
+	SessionIsolationSystem,
+	type SessionMetadata,
+	type SessionSnapshot,
+	type SessionState,
+	type SessionStats,
+	type SessionStatus,
+} from "./session-isolation.js";
 // Shared Memory Blocks - Multi-Agent Collaborative Memory
 export {
 	createSharedBlockTools,
@@ -972,6 +1776,41 @@ export {
 	TOP_SKILLS,
 	type TopSkillName,
 } from "./skills/index.js";
+// Class 3.26 Smart Tool Selection (Performance-based tool routing)
+export {
+	getSmartToolSelection,
+	resetSmartToolSelection,
+	type SmartToolConfig,
+	type SmartToolEvents,
+	SmartToolSelection,
+	type ToolAlternative,
+	type ToolExecutionRecord,
+	type ToolRecommendation,
+	type ToolSelection,
+	type ToolSelectionContext,
+	type ToolStats,
+} from "./smart-tool-selection.js";
+// Class 3.43 State Machine (Workflow FSM)
+export {
+	type ContextUpdater,
+	createStateMachine,
+	defineStateMachine,
+	type HistoryType,
+	isStateMachine,
+	type StateDefinition,
+	StateMachine,
+	type StateMachineConfig,
+	type StateMachineEvent,
+	StateMachinePresets,
+	type StateMachineSnapshot,
+	type StateMachineStats,
+	type StateType,
+	type StateValue,
+	type TransitionAction,
+	type TransitionGuard,
+	type TransitionRecord,
+	type TransitionTarget,
+} from "./state-machine.js";
 // Stateful Agent - Persistent State with Checkpoint/Restore
 export {
 	type AgentState,
@@ -989,6 +1828,21 @@ export {
 	type StatefulAgentConfig,
 	type StatefulAgentTool,
 } from "./stateful-agent.js";
+// Class 3.20 Structured Output Validator (AgentJo Pattern: StrictJSON/YAML)
+export {
+	CommonSchemas,
+	type Correction as StructuredCorrection,
+	type FieldSchema,
+	type FieldType,
+	getStructuredValidator,
+	type OutputSchema,
+	type ParseOptions as StructuredParseOptions,
+	resetStructuredValidator,
+	Schema,
+	StructuredOutputValidator,
+	type ValidationError as StructuredValidationError,
+	type ValidationResult as StructuredValidationResult,
+} from "./structured-output.js";
 // TAC-12 SDK - Multi-SDK AI Orchestrator (12 SDK integrations)
 export {
 	createTAC12SwarmIntegration,
@@ -1005,6 +1859,54 @@ export {
 	type TAC12SwarmIntegration,
 	type TAC12Task,
 } from "./tac12-sdk.js";
+// Class 3.23 Task Decomposition Engine (TaskGen Pattern: Graph-based decomposition)
+export {
+	type DecompositionConfig,
+	type DecompositionEvents,
+	type DecompositionResult,
+	type ExecutionProgress,
+	getTaskDecomposition,
+	resetTaskDecomposition,
+	type SubTask,
+	TaskDecompositionEngine,
+	type TaskGraph,
+	type TaskPriority as DecompositionTaskPriority,
+	type TaskStatus as DecompositionTaskStatus,
+} from "./task-decomposition.js";
+// Class 3.47 Task Scheduler (Cron scheduling)
+export {
+	type CronNextRun,
+	getTaskScheduler,
+	type RetryStrategy,
+	resetTaskScheduler,
+	type SchedulerConfig,
+	type SchedulerStats,
+	type TaskContext,
+	type TaskDefinition,
+	type TaskExecution,
+	type TaskGroup,
+	type TaskHandler,
+	type TaskHistory,
+	type TaskLogger,
+	type TaskPriority as SchedulerTaskPriority,
+	TaskSchedulerSystem,
+	type TaskStatus as SchedulerTaskStatus,
+	type TaskType as SchedulerTaskType,
+} from "./task-scheduler.js";
+// Class 3.28 Token Budget Manager (Phase-based token allocation)
+export {
+	type BudgetAllocation,
+	type BudgetPhase,
+	type BudgetPrediction,
+	type BudgetStats as TokenBudgetStats,
+	getTokenBudget,
+	type PhaseBudget,
+	resetTokenBudget,
+	type TokenBudgetConfig,
+	type TokenBudgetEvents,
+	TokenBudgetManager,
+	type TokenUsage,
+} from "./token-budget.js";
 // Tool Permissions - Security-First Tool Execution Control (ADA_V2 Inspired)
 export {
 	checkToolExecution,
@@ -1017,6 +1919,21 @@ export {
 	RateLimiter,
 	type ToolPermission,
 } from "./tool-permissions.js";
+// Class 3.36 Tool Registry (Centralized tool management)
+export {
+	getToolRegistry,
+	type RegisteredTool,
+	resetToolRegistry,
+	type ToolCategory as RegistryToolCategory,
+	type ToolParameter,
+	type ToolPermission as RegistryToolPermission,
+	ToolRegistry,
+	type ToolRegistryConfig,
+	type ToolRegistryEvents,
+	type ToolSchema,
+	type ToolSearchQuery,
+	type ToolUsageStats,
+} from "./tool-registry.js";
 // Trading-Rxiv - Cumulative Trading Knowledge Repository (AgentLaboratory Pattern)
 export {
 	type EntryMetadata,
@@ -1053,6 +1970,21 @@ export {
 	type TwitterSearchResult,
 	type TwitterUser,
 } from "./twitter-connector.js";
+// Class 3.34 Unified Runtime (Combines all TAC patterns)
+export {
+	getUnifiedRuntime,
+	type LLMExecutor,
+	type RuntimeConfig,
+	type RuntimeEvents,
+	type RuntimeOptions,
+	type RuntimePhase,
+	type RuntimeResult,
+	type RuntimeTask,
+	resetUnifiedRuntime,
+	type ToolCallRecord,
+	type ToolExecutor as RuntimeToolExecutor,
+	UnifiedRuntime,
+} from "./unified-runtime.js";
 // Unified SDK Interface - All 4 SDKs in one
 export {
 	checkAllSDKs,
@@ -1125,973 +2057,3 @@ export {
 	WorkflowSuspendManager,
 	type WorkflowSuspendTool,
 } from "./workflow-suspend.js";
-// Class 3 Orchestrator - Codebase Singularity (CRUD over agents)
-export {
-	closeOrchestrator,
-	type AgentDefinition as OrchestratorAgentDefinition,
-	type DelegationRequest,
-	type DelegationResult,
-	getOrchestrator,
-	Orchestrator,
-	type OrchestratorEvent,
-	type StepResult as OrchestratorStepResult,
-	type WorkflowDefinition as OrchestratorWorkflowDefinition,
-	type WorkflowExecution,
-	type WorkflowStep as OrchestratorWorkflowStep,
-} from "./orchestrator.js";
-// ADW - AI Developer Workflow Wrapper (Deterministic + Non-Deterministic)
-export {
-	type ADWContext,
-	type ADWEvent,
-	type ADWExecutionResult,
-	ADWRunner,
-	type ADWStep,
-	type ADWStepResult,
-	type ADWWorkflow,
-	CODE_COMPILES_GATE,
-	CODE_REVIEW_GATE,
-	createBugFixWorkflow,
-	createFeatureWorkflow,
-	createRefactorWorkflow,
-	disposeADWRunner,
-	FORMAT_VALID_GATE,
-	type GateResult,
-	getADWRunner,
-	type QualityGate,
-	SECURITY_GATE,
-	TESTS_PASS_GATE,
-} from "./adw-wrapper.js";
-// Pi-Watcher - Autonomous Monitoring & Hotfix (Clopus-Watcher inspired)
-export {
-	type CustomCheck,
-	DEFAULT_WATCHER_CONFIG,
-	type DetectedIssue,
-	type FixAttempt,
-	getPiWatcher,
-	getPiWatcherState,
-	type HealthCheckResult as WatcherHealthCheckResult,
-	type HealthCheckType,
-	PiWatcher,
-	startPiWatcher,
-	stopPiWatcher,
-	type WatcherConfig,
-	type WatcherEvent,
-	type WatcherState,
-} from "./pi-watcher.js";
-
-// Orchestrator Bootstrap - Wires real agent handlers
-export {
-	bootstrapOrchestrator,
-	type BootstrapConfig,
-	DEFAULT_AGENTS,
-	getAgentByRole,
-	getBootstrappedOrchestrator,
-	quickDelegate,
-	registerCustomAgent,
-	resetBootstrap,
-} from "./orchestrator-bootstrap.js";
-
-// Class 3.2 Multi-Agent Coordinator
-export {
-	type AgentMessage as CoordinatorAgentMessage,
-	type AgentVote,
-	type ConsensusResult as CoordinatorConsensusResult,
-	type CoordinationConfig,
-	type CoordinationResult,
-	type CoordinationTask,
-	getCoordinator,
-	MultiAgentCoordinator,
-	resetCoordinator,
-	runConsensusVote,
-	runDebate,
-	runParallel,
-	runWithSupervisor,
-} from "./multi-agent-coordinator.js";
-
-// Class 3.3 Agent Memory System
-export {
-	AgentMemorySystem,
-	type AgentStats as MemoryAgentStats,
-	getMemorySystem,
-	type Insight,
-	type MemoryConfig,
-	resetMemorySystem,
-	type RoutingRecommendation,
-	type TaskRecord,
-} from "./agent-memory-system.js";
-
-// Class 3.4 Orchestrator-Memory Bridge
-export {
-	type BridgeConfig,
-	getOrchestratorMemoryBridge,
-	OrchestratorMemoryBridge,
-	resetBridge,
-	type SmartDelegationRequest,
-	type SmartDelegationResult,
-} from "./orchestrator-memory-bridge.js";
-
-// Class 3.5 Meta-Agent (TAC Pattern: Agent that creates agents)
-export {
-	type AgentGenerationRequest,
-	type AgentSuggestion,
-	type GeneratedAgentSpec,
-	getMetaAgent,
-	MetaAgent,
-	type MetaAgentConfig,
-	resetMetaAgent,
-} from "./meta-agent.js";
-
-// Class 3.6 Context Bundle System (TAC Pattern: Session persistence)
-export {
-	type BundleConfig,
-	type BundleSummary,
-	type ContextBundle,
-	ContextBundleSystem,
-	type ConversationEntry,
-	type FileSnapshot,
-	getBundleSystem,
-	type GitSnapshot,
-	resetBundleSystem,
-} from "./context-bundle.js";
-
-// Class 3.7 Output Style System (TAC Pattern: Configurable formats)
-export {
-	BUILTIN_STYLES,
-	getStyleManager,
-	type OutputStyle,
-	OutputStyleManager,
-	resetStyleManager,
-	type StyleConfig,
-	type StylePreset,
-} from "./output-styles.js";
-
-// Class 3.8 Safety Guards System (TAC Pattern: Dangerous command blocking)
-export {
-	assertSafe,
-	type BlockedCommand,
-	BUILTIN_RULES,
-	getRisk,
-	getSafetyGuards,
-	type GuardCategory,
-	type GuardCheckResult,
-	type GuardContext,
-	type GuardRule,
-	isSafe,
-	resetSafetyGuards,
-	type RiskLevel,
-	SafetyGuards,
-	type SafetyGuardsConfig,
-	withSafetyGuard,
-} from "./safety-guards.js";
-
-// Class 3.9 Agent Feedback Loop (TAC Pattern: Self-improvement through feedback)
-export {
-	AgentFeedbackSystem,
-	type AgentFeedbackSummary,
-	DEFAULT_FEEDBACK_CONFIG,
-	type FeedbackConfig,
-	type FeedbackEntry,
-	type FeedbackRating,
-	getFeedbackSystem,
-	type ImprovementSuggestion,
-	type PromptVariant,
-	resetFeedbackSystem,
-} from "./agent-feedback.js";
-
-// Class 3.10 Agent Notification System (TAC Pattern: Cross-channel alerts)
-export {
-	AgentNotificationSystem,
-	BUILTIN_TEMPLATES,
-	type DeliveryMethod,
-	DEFAULT_NOTIFICATION_CONFIG,
-	getNotificationSystem,
-	type Notification,
-	type NotificationConfig,
-	type NotificationPriority,
-	type NotificationStatus,
-	type NotificationTemplate,
-	resetNotificationSystem,
-	type UserPreferences as NotificationUserPreferences,
-} from "./agent-notifications.js";
-
-// Class 3.11 Session Isolation System (TAC Pattern: Per-conversation state isolation)
-export {
-	getSessionIsolation,
-	type IsolatedSession,
-	resetSessionIsolation,
-	type SessionConfig,
-	SessionIsolationSystem,
-	type SessionMetadata,
-	type SessionSnapshot,
-	type SessionState,
-	type SessionStats,
-	type SessionStatus,
-} from "./session-isolation.js";
-
-// Class 3.12 Agent Versioning System (TAC Pattern: Version control for agent configs)
-export {
-	type AgentConfig,
-	AgentVersioningSystem,
-	type AgentVersion,
-	DEFAULT_AGENT_CONFIG,
-	getVersioningSystem,
-	type MigrationResult,
-	resetVersioningSystem,
-	type VersionDiff,
-	type VersionHistory,
-	type VersioningConfig,
-	type VersioningStats,
-	type VersionTag,
-} from "./agent-versioning.js";
-
-// Class 3.13 Agent Discovery System (TAC Pattern: Dynamic agent registration)
-export {
-	type AgentCapability,
-	AgentDiscoverySystem,
-	type AgentEndpoint,
-	type AgentStatus as DiscoveryAgentStatus,
-	type DiscoveryConfig,
-	type DiscoveryQuery,
-	type DiscoveryResult,
-	type DiscoveryStats,
-	getDiscoverySystem,
-	type HealthCheckResult as DiscoveryHealthCheckResult,
-	type RegisteredAgent,
-	resetDiscoverySystem,
-} from "./agent-discovery.js";
-
-// Class 3.14 Health Monitoring System (TAC Pattern: Comprehensive health checks)
-export {
-	type AlertThreshold,
-	type ComponentHealth,
-	type ComponentType as MonitoringComponentType,
-	getHealthMonitoring,
-	type HealthAlert,
-	type HealthCheck as MonitoringHealthCheck,
-	type HealthChecker as MonitoringHealthChecker,
-	type HealthMetric,
-	HealthMonitoringSystem,
-	type HealthStatus,
-	type MonitoringConfig,
-	resetHealthMonitoring,
-	type SystemHealth,
-} from "./health-monitoring.js";
-
-// Class 3.15 Cost Tracking System (TAC Pattern: Token/API cost monitoring)
-export {
-	type Budget,
-	type BudgetScope,
-	type BudgetStatus,
-	type CostAlert,
-	type CostOptimization,
-	type CostPeriod,
-	type CostProvider,
-	type CostReport,
-	type CostTrackingConfig,
-	CostTrackingSystem,
-	type CostTrendPoint,
-	getCostTracking,
-	type ModelCostSummary,
-	type ModelPricing,
-	type OperationCostSummary,
-	type ProviderCostSummary,
-	resetCostTracking,
-	type UsageRecord,
-} from "./cost-tracking.js";
-
-// Class 3.16 Rate Limiting System (TAC Pattern: API rate limiting and throttling)
-export {
-	getRateLimiting,
-	type Quota,
-	type QuotaPeriod,
-	type QuotaStatus,
-	type QueuedRequest,
-	type RateLimitAlgorithm,
-	type RateLimitConfig,
-	type RateLimitResult,
-	type RateLimitRule,
-	type RateLimitScope,
-	type RateLimitState,
-	type RateLimitStats,
-	RateLimitingSystem,
-	type RequestPriority,
-	resetRateLimiting,
-} from "./rate-limiting.js";
-
-// Class 3.17 Audit Logging System (TAC Pattern: Comprehensive audit trail)
-export {
-	type ActorType,
-	type AuditAction,
-	type AuditActor,
-	type AuditCategory,
-	type AuditConfig,
-	type AuditEntry,
-	AuditLoggingSystem,
-	type AuditQuery,
-	type AuditReport,
-	type AuditSeverity,
-	type AuditStats,
-	getAuditLogging,
-	resetAuditLogging,
-	type ResourceType as AuditResourceType,
-	type RetentionPolicy,
-} from "./audit-logging.js";
-
-// Class 3.18 OODA Loop Engine (AgentJo/Anthropic Pattern: Observe-Orient-Decide-Act)
-export {
-	type Action as OODAAction,
-	type Decision as OODADecision,
-	getOODALoop,
-	type Observation as OODAObservation,
-	type OODACycle,
-	type OODAConfig,
-	type OODAEvents,
-	OODALoopEngine,
-	type OODAPhase,
-	type OODAState,
-	type Orientation as OODAOrientation,
-	resetOODALoop,
-	type ToolBudget,
-} from "./ooda-loop.js";
-
-// Class 3.19 Agent Wrapper System (AgentJo Pattern: Composable agent augmentation)
-export {
-	type AgentAction,
-	type AgentInput,
-	type AgentMessage as WrapperAgentMessage,
-	type AgentOutput,
-	type AgentWrapper,
-	type BaseAgent,
-	BudgetWrapper,
-	compose,
-	conditional,
-	ConversationWrapper,
-	getWrapperManager,
-	MemoryWrapper,
-	PlannerWrapper,
-	ReflectionWrapper,
-	resetWrapperManager,
-	ThoughtsWrapper,
-	type WrapperConfig,
-	WrapperManager,
-	withConfig,
-} from "./agent-wrappers.js";
-
-// Class 3.20 Structured Output Validator (AgentJo Pattern: StrictJSON/YAML)
-export {
-	CommonSchemas,
-	type Correction as StructuredCorrection,
-	type FieldSchema,
-	type FieldType,
-	getStructuredValidator,
-	type OutputSchema,
-	type ParseOptions as StructuredParseOptions,
-	resetStructuredValidator,
-	Schema,
-	StructuredOutputValidator,
-	type ValidationError as StructuredValidationError,
-	type ValidationResult as StructuredValidationResult,
-} from "./structured-output.js";
-
-// Class 3.21 Memory on Demand (AgentJo Pattern: Query-based retrieval)
-export {
-	getMemoryOnDemand,
-	type Memory as MODMemory,
-	type MemoryConfig as MODMemoryConfig,
-	MemoryOnDemand,
-	type MemoryQuery as MODMemoryQuery,
-	type MemoryStats as MODMemoryStats,
-	type MemoryType as MODMemoryType,
-	resetMemoryOnDemand,
-	type RetrievalResult as MODRetrievalResult,
-} from "./memory-on-demand.js";
-
-// Class 3.22 Double-Check Executor (Aider Pattern: Architect + Editor + Verify)
-export {
-	type DoubleCheckConfig,
-	type DoubleCheckEvents,
-	DoubleCheckExecutor,
-	type DoubleCheckIteration,
-	type DoubleCheckSession,
-	type ExecutionResult as DoubleCheckExecutionResult,
-	type ExecutorModel,
-	type ExecutorRole,
-	getDoubleCheckExecutor,
-	type ModelHandlers,
-	type Plan as DoubleCheckPlan,
-	type PlanStep as DoubleCheckPlanStep,
-	resetDoubleCheckExecutor,
-	type StepResult as DoubleCheckStepResult,
-	type ToolExecutor as DoubleCheckToolExecutor,
-	type VerificationIssue,
-	type VerificationResult,
-} from "./double-check-executor.js";
-
-// Class 3.23 Task Decomposition Engine (TaskGen Pattern: Graph-based decomposition)
-export {
-	type DecompositionConfig,
-	type DecompositionEvents,
-	type DecompositionResult,
-	type ExecutionProgress,
-	getTaskDecomposition,
-	resetTaskDecomposition,
-	type SubTask,
-	TaskDecompositionEngine,
-	type TaskGraph,
-	type TaskPriority as DecompositionTaskPriority,
-	type TaskStatus as DecompositionTaskStatus,
-} from "./task-decomposition.js";
-
-// Class 3.24 Hooks System (AgentJo Pattern: Pre/post processing hooks)
-export {
-	type AnyHookContext,
-	type ErrorHookContext,
-	getHooksSystem,
-	type Hook,
-	type HookContext,
-	type HookHandler,
-	type HookPriority,
-	HooksSystem,
-	type HooksConfig,
-	type HookStats,
-	type HookType,
-	type LLMHookContext,
-	resetHooksSystem,
-	type TaskHookContext,
-	type ToolHookContext,
-} from "./hooks-system.js";
-
-// Class 3.25 Parallel Tool Executor (TaskGen Pattern: Dependency-aware parallel execution)
-export {
-	type BatchResult,
-	type ExecutionPlan,
-	getParallelExecutor,
-	type ParallelExecutionResult,
-	ParallelExecutor,
-	type ParallelExecutorConfig,
-	type ParallelExecutorEvents,
-	resetParallelExecutor,
-	type ToolCall,
-	type ToolExecutor,
-	type ToolResult as ParallelToolResult,
-} from "./parallel-executor.js";
-
-// Class 3.26 Smart Tool Selection (Performance-based tool routing)
-export {
-	getSmartToolSelection,
-	resetSmartToolSelection,
-	type SmartToolConfig,
-	type SmartToolEvents,
-	SmartToolSelection,
-	type ToolAlternative,
-	type ToolExecutionRecord,
-	type ToolRecommendation,
-	type ToolSelection,
-	type ToolSelectionContext,
-	type ToolStats,
-} from "./smart-tool-selection.js";
-
-// Class 3.27 Prompt Cache (Semantic caching for LLM responses)
-export {
-	type CacheEntry,
-	type CacheHit,
-	type CacheStats,
-	type EmbeddingFunction,
-	getPromptCache,
-	PromptCache,
-	type PromptCacheConfig,
-	type PromptCacheEvents,
-	resetPromptCache,
-} from "./prompt-cache.js";
-
-// Class 3.28 Token Budget Manager (Phase-based token allocation)
-export {
-	type BudgetAllocation,
-	type BudgetPhase,
-	type BudgetPrediction,
-	type BudgetStats as TokenBudgetStats,
-	getTokenBudget,
-	type PhaseBudget,
-	resetTokenBudget,
-	type TokenBudgetConfig,
-	type TokenBudgetEvents,
-	TokenBudgetManager,
-	type TokenUsage,
-} from "./token-budget.js";
-
-// Class 3.29 Self-Reflection Module (Quality assessment and retry)
-export {
-	BUILTIN_CRITERIA,
-	getSelfReflection,
-	type QualityScore,
-	type ReflectionContext,
-	type ReflectionCriteria,
-	type ReflectionHistory,
-	type ReflectionResult,
-	resetSelfReflection,
-	SelfReflection,
-	type SelfReflectionConfig,
-	type SelfReflectionEvents,
-} from "./self-reflection.js";
-
-// Class 3.30 Experience Replay (Pattern storage and retrieval)
-export {
-	type Experience,
-	type ExperienceMatch,
-	type ExperienceQuery,
-	ExperienceReplay,
-	type ExperienceReplayConfig,
-	type ExperienceReplayEvents,
-	type ExperienceStep,
-	getExperienceReplay,
-	type PatternCluster,
-	resetExperienceReplay,
-} from "./experience-replay.js";
-
-// Class 3.31 Agent Hub (Unified entry point)
-export {
-	type AgentCapability as HubAgentCapability,
-	AgentHub,
-	type AgentHubConfig,
-	type AgentHubEvents,
-	type AgentHandler,
-	type AgentRequest,
-	type AgentResponse,
-	type AgentStats as HubAgentStats,
-	getAgentHub,
-	type HubPlugin,
-	type RegisteredAgent as HubRegisteredAgent,
-	resetAgentHub,
-} from "./agent-hub.js";
-
-// Class 3.32 Delegation Router (Smart task routing)
-export {
-	DelegationRouter,
-	type DelegationRouterConfig,
-	type DelegationRouterEvents,
-	getDelegationRouter,
-	resetDelegationRouter,
-	type RoutingDecision,
-	type RoutingRule as DelegationRoutingRule,
-	type RoutingTarget,
-	type TaskCategory,
-	type TaskClassification,
-	type TaskComplexity,
-} from "./delegation-router.js";
-
-// Class 3.33 Context Fusion (Multi-source context merging)
-export {
-	ContextFusion,
-	type ContextFusionConfig,
-	type ContextFusionEvents,
-	type ContextItem as FusionContextItem,
-	type ContextSource,
-	type ContextSourceType,
-	type FusedContext,
-	type FusionConfig,
-	getContextFusion,
-	resetContextFusion,
-} from "./context-fusion.js";
-
-// Class 3.34 Unified Runtime (Combines all TAC patterns)
-export {
-	getUnifiedRuntime,
-	type LLMExecutor,
-	resetUnifiedRuntime,
-	type RuntimeConfig,
-	type RuntimeEvents,
-	type RuntimeOptions,
-	type RuntimePhase,
-	type RuntimeResult,
-	type RuntimeTask,
-	type ToolCallRecord,
-	type ToolExecutor as RuntimeToolExecutor,
-	UnifiedRuntime,
-} from "./unified-runtime.js";
-
-// Class 3.35 Agent Lifecycle Manager (Agent state machine)
-export {
-	type AgentFactory,
-	AgentLifecycleManager,
-	type AgentResources,
-	type AgentSpec,
-	type AgentState as LifecycleAgentState,
-	getAgentLifecycle,
-	type HealthCheckConfig,
-	type LifecycleConfig,
-	type LifecycleEvent,
-	type LifecycleEvents,
-	type ManagedAgent,
-	resetAgentLifecycle,
-	type RestartPolicy,
-} from "./agent-lifecycle.js";
-
-// Class 3.36 Tool Registry (Centralized tool management)
-export {
-	getToolRegistry,
-	type RegisteredTool,
-	resetToolRegistry,
-	type ToolCategory as RegistryToolCategory,
-	type ToolParameter,
-	type ToolPermission as RegistryToolPermission,
-	ToolRegistry,
-	type ToolRegistryConfig,
-	type ToolRegistryEvents,
-	type ToolSchema,
-	type ToolSearchQuery,
-	type ToolUsageStats,
-} from "./tool-registry.js";
-
-// Class 3.37 Execution Trace (Comprehensive tracing)
-export {
-	ExecutionTracer,
-	type ExecutionTrace,
-	type ExecutionTracerConfig,
-	type ExecutionTracerEvents,
-	getExecutionTracer,
-	resetExecutionTracer,
-	type SpanContext,
-	type SpanEvent,
-	type SpanKind,
-	type SpanStatus,
-	type TraceExport,
-	type TraceSpan,
-} from "./execution-trace.js";
-
-// Class 3.38 Checkpoint Manager (State persistence)
-export {
-	type Checkpoint,
-	type CheckpointData as CheckpointPayload,
-	type CheckpointDiff,
-	type CheckpointFilter,
-	CheckpointManager,
-	type CheckpointManagerConfig,
-	type CheckpointManagerEvents,
-	type CheckpointStats,
-	type CheckpointStatus,
-	getCheckpointManager,
-	resetCheckpointManager,
-	type RestoreOptions,
-} from "./checkpoint-manager.js";
-
-// Class 3.39 Error Recovery (Retry and recovery strategies)
-export {
-	type CircuitBreaker,
-	type CircuitBreakerConfig,
-	type CircuitState,
-	type ErrorCategory,
-	type ErrorClassification,
-	type ErrorRecord,
-	type ErrorRecoveryConfig,
-	ErrorRecoverySystem,
-	type ErrorSeverity,
-	type ErrorStats,
-	type FallbackHandler,
-	getErrorRecovery,
-	type RecoveryResult,
-	type RecoveryStrategy,
-	resetErrorRecovery,
-	type RetryConfig,
-} from "./error-recovery.js";
-
-// Class 3.40 Rate Limiter (API rate limiting)
-export {
-	type EndpointStats as RateLimitEndpointStats,
-	type QueuedRequest as RateLimitQueuedRequest,
-	type RateLimiterConfig,
-	RateLimiterSystem,
-	type RateLimitResult as RateLimiterResult,
-	type RateLimitRule as RateLimiterRule,
-	type RateLimitScope as RateLimiterScope,
-	type RateLimitStats as RateLimiterStats,
-	type RateLimitStatus,
-	type RateLimitRequest,
-	type RequestPriority as RateLimitPriority,
-	getRateLimiter as getRateLimiterSystem,
-	resetRateLimiter,
-	type SlidingWindow,
-	type SlidingWindowEntry,
-	type TokenBucket,
-} from "./rate-limiter.js";
-
-// Class 3.41 Metrics Collector (Telemetry and observability)
-export {
-	type AggregatedMetric,
-	type AggregationType,
-	type CounterValue,
-	type ExportFormat,
-	type GaugeValue,
-	getMetricsCollector,
-	type HistogramValue,
-	type MetricDefinition,
-	type MetricExportOptions,
-	type MetricLabels,
-	type MetricQuery,
-	MetricsCollector,
-	type MetricsCollectorConfig,
-	type MetricSnapshot,
-	type MetricStats,
-	type MetricType,
-	type MetricValue,
-	resetMetricsCollector,
-	type TimerHandle,
-	type TimingValue,
-} from "./metrics-collector.js";
-
-// Class 3.42 Message Bus (Internal pub/sub)
-export {
-	type BusMessage,
-	type BusStats,
-	type DeadLetterEntry,
-	getMessageBus,
-	MessageBus,
-	type MessageBusConfig,
-	type MessageFilter,
-	type MessagePriority as BusMessagePriority,
-	type MessageStatus,
-	type PublishOptions,
-	type ReplayOptions,
-	type RequestReplyResult,
-	resetMessageBus,
-	type Subscription as BusSubscription,
-	type SubscriptionHandler,
-	type SubscriptionOptions,
-	type SubscriptionType,
-} from "./message-bus.js";
-
-// Class 3.43 State Machine (Workflow FSM)
-export {
-	type ContextUpdater,
-	createStateMachine,
-	defineStateMachine,
-	type HistoryType,
-	isStateMachine,
-	type StateDefinition,
-	StateMachine,
-	type StateMachineConfig,
-	type StateMachineEvent,
-	StateMachinePresets,
-	type StateMachineSnapshot,
-	type StateMachineStats,
-	type StateType,
-	type StateValue,
-	type TransitionAction,
-	type TransitionGuard,
-	type TransitionRecord,
-	type TransitionTarget,
-} from "./state-machine.js";
-
-// Class 3.44 Plugin System (Extensible architecture)
-export {
-	type DependencyResolution,
-	getPluginSystem,
-	type HookContext as PluginHookContext,
-	type HookHandler as PluginHookHandler,
-	type HookPhase,
-	type HookRegistry,
-	type HookResult as PluginHookResult,
-	type Plugin as PluginDefinition,
-	type PluginCapability,
-	type PluginDependency,
-	type PluginInstance,
-	type PluginManifest,
-	type PluginSandbox,
-	type PluginStats,
-	type PluginStatus,
-	PluginSystem,
-	type PluginSystemConfig,
-	type PluginVersion,
-	resetPluginSystem,
-} from "./plugin-system.js";
-
-// Class 3.45 Configuration Manager (Dynamic config)
-export {
-	type ConfigChange,
-	type ConfigManagerConfig,
-	type ConfigProfile,
-	type ConfigSchema,
-	type ConfigSnapshot as ConfigBackup,
-	type ConfigStats,
-	type ConfigValue,
-	type ConfigValueType,
-	ConfigurationManager,
-	getConfigManager,
-	resetConfigManager,
-	type ValidationOperator,
-	type ValidationResult as ConfigValidationResult,
-	type ValidationRule,
-} from "./config-manager.js";
-
-// Class 3.46 Resource Pool (Connection pooling)
-export {
-	type AcquireOptions,
-	type AcquireResult,
-	createResourcePool,
-	getDefaultPoolConfig,
-	type PoolMetrics,
-	type PoolState,
-	type PoolStats,
-	type Resource,
-	ResourcePool,
-	type ResourcePoolConfig,
-	type ResourceState,
-	type WaitingRequest,
-} from "./resource-pool.js";
-
-// Class 3.47 Task Scheduler (Cron scheduling)
-export {
-	type CronNextRun,
-	getTaskScheduler,
-	resetTaskScheduler,
-	type RetryStrategy,
-	type SchedulerConfig,
-	type SchedulerStats,
-	type TaskContext,
-	type TaskDefinition,
-	type TaskExecution,
-	type TaskGroup,
-	type TaskHandler,
-	type TaskHistory,
-	type TaskLogger,
-	type TaskPriority as SchedulerTaskPriority,
-	TaskSchedulerSystem,
-	type TaskStatus as SchedulerTaskStatus,
-	type TaskType as SchedulerTaskType,
-} from "./task-scheduler.js";
-
-// Class 3.48 Cache Layer (Multi-tier caching)
-export {
-	type CacheConfig,
-	type CacheEntry as CacheLayerEntry,
-	type CacheGetResult,
-	type CacheInvalidation,
-	CacheLayerSystem,
-	type CacheSetOptions,
-	type CacheStats as CacheLayerStats,
-	type CacheTier,
-	type CacheWarmer,
-	type EvictionPolicy,
-	getCacheLayer,
-	type InvalidationStrategy,
-	type L1Config,
-	type L2Config,
-	type NamespaceStats,
-	resetCacheLayer,
-} from "./cache-layer.js";
-
-// Class 3.49 Event Sourcing (Event store)
-export {
-	type AggregateType,
-	type AppendResult,
-	type DomainEvent,
-	type EventCategory,
-	type EventMetadata,
-	type EventQuery,
-	type EventSourcingConfig,
-	EventStore,
-	type EventStoreStats,
-	type EventStream,
-	getEventStore,
-	type Projection,
-	type ProjectionHandler,
-	type ProjectionStatus,
-	type ReplayResult,
-	resetEventStore,
-	type Snapshot as EventSnapshot,
-	type StreamQuery,
-	type Subscription as EventSubscription,
-	type SubscriptionMode,
-} from "./event-sourcing.js";
-
-// Class 3.50 Saga Orchestrator (Distributed transactions)
-export {
-	getSagaOrchestrator,
-	resetSagaOrchestrator,
-	saga,
-	SagaBuilder,
-	type SagaDefinition,
-	type SagaHistoryEntry,
-	type SagaInstance,
-	SagaOrchestrator,
-	type SagaOrchestratorConfig,
-	type SagaQuery,
-	type SagaStats,
-	type SagaStatus,
-	step,
-	type StepDefinition,
-	type StepExecution,
-	type StepStatus as SagaStepStatus,
-	type RetryPolicy as SagaRetryPolicy,
-} from "./saga-orchestrator.js";
-
-// Class 3.51 Feature Flags (Feature management)
-export {
-	type AuditAction as FlagAuditAction,
-	type AuditLogEntry as FlagAuditLogEntry,
-	type EvaluationContext as FlagEvaluationContext,
-	type EvaluationReason,
-	type EvaluationResult as FlagEvaluationResult,
-	type FeatureFlag,
-	FeatureFlagsSystem,
-	type FeatureFlagsConfig,
-	type FlagOverride,
-	type FlagStats,
-	type FlagStatus,
-	type FlagTarget,
-	type FlagType,
-	type FlagVariant,
-	getFeatureFlags,
-	resetFeatureFlags,
-	type TargetType as FlagTargetType,
-} from "./feature-flags.js";
-
-// Class 3.52 DI Container (Dependency injection)
-export {
-	bindTo,
-	CircularDependencyError,
-	createFactory,
-	createLazyFactory,
-	createToken,
-	DIContainer,
-	type DIContainerConfig,
-	type DIContainerEvent,
-	type DIContainerEventType,
-	type DIContainerStats,
-	DIError,
-	type FactoryFunction,
-	getDIContainer,
-	initDIContainer,
-	INJECT_METADATA_KEY,
-	type Lazy,
-	type RegistrationOptions,
-	resetDIContainer,
-	type ResolutionContext,
-	ResolutionDepthError,
-	type ServiceDescriptor,
-	type ServiceLifetime,
-	ServiceNotFoundError,
-	type ServiceToken,
-	Tokens,
-} from "./di-container.js";
-
-// Class 3.53 Health Monitor (System health)
-export {
-	type AlertSeverity as HealthAlertSeverity,
-	type AlertThreshold as HealthAlertThreshold,
-	type CheckInterval,
-	type ComponentHealth as HealthMonitorComponentHealth,
-	type ComponentType as HealthComponentType,
-	type DashboardData as HealthDashboardData,
-	type DependencyNode as HealthDependencyNode,
-	getHealthMonitor,
-	type HealthAlert as HealthMonitorAlert,
-	type HealthCheck as HealthMonitorCheck,
-	type HealthCheckResult as HealthMonitorCheckResult,
-	type HealthHistoryEntry,
-	type HealthMonitorConfig,
-	HealthMonitorSystem,
-	type HealthStatus as HealthMonitorStatus,
-	type RecoveryInfo,
-	resetHealthMonitor,
-	type SystemHealth as HealthMonitorSystemHealth,
-} from "./health-monitor.js";

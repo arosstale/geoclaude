@@ -11,8 +11,8 @@
  * @module ooda-loop
  */
 
-import { EventEmitter } from "events";
 import Database from "better-sqlite3";
+import { EventEmitter } from "events";
 
 // =============================================================================
 // Types
@@ -232,7 +232,7 @@ export class OODALoopEngine extends EventEmitter {
 		options: {
 			complexity?: ToolBudget["complexity"];
 			metadata?: Record<string, unknown>;
-		} = {}
+		} = {},
 	): Promise<OODAState> {
 		const loopId = `ooda_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 		const budget = this.createBudget(options.complexity || "medium");
@@ -275,7 +275,7 @@ export class OODALoopEngine extends EventEmitter {
 				const observations = await this.withTimeout(
 					handlers.observe(state, budget),
 					this.config.observeTimeout,
-					"Observe timeout"
+					"Observe timeout",
 				);
 				state.observations = observations;
 				this.emit("phase:observe", { state, observations });
@@ -285,7 +285,7 @@ export class OODALoopEngine extends EventEmitter {
 				const orientation = await this.withTimeout(
 					handlers.orient(observations, state),
 					this.config.orientTimeout,
-					"Orient timeout"
+					"Orient timeout",
 				);
 				state.orientation = orientation;
 				this.emit("phase:orient", { state, orientation });
@@ -295,7 +295,7 @@ export class OODALoopEngine extends EventEmitter {
 				const decision = await this.withTimeout(
 					handlers.decide(orientation, state),
 					this.config.decideTimeout,
-					"Decide timeout"
+					"Decide timeout",
 				);
 				state.decision = decision;
 				this.emit("phase:decide", { state, decision });
@@ -311,7 +311,7 @@ export class OODALoopEngine extends EventEmitter {
 				const action = await this.withTimeout(
 					handlers.act(decision, state, budget),
 					this.config.actTimeout,
-					"Act timeout"
+					"Act timeout",
 				);
 				state.action = action;
 				this.emit("phase:act", { state, action });
@@ -383,7 +383,7 @@ export class OODALoopEngine extends EventEmitter {
 			tools: string[];
 			complexity?: ToolBudget["complexity"];
 			maxIterations?: number;
-		}
+		},
 	): Promise<{ success: boolean; result: string; state: OODAState }> {
 		const state = await this.startLoop(
 			`task_${Date.now()}`,
@@ -482,11 +482,10 @@ export class OODALoopEngine extends EventEmitter {
 					return s.decision?.action === "COMPLETE" || s.iteration >= (options.maxIterations || 20);
 				},
 			},
-			{ complexity: options.complexity }
+			{ complexity: options.complexity },
 		);
 
-		const finalResult =
-			state.phase === "complete" ? String(state.action?.result || "") : "Loop failed to complete";
+		const finalResult = state.phase === "complete" ? String(state.action?.result || "") : "Loop failed to complete";
 
 		return {
 			success: state.phase === "complete",
@@ -500,10 +499,7 @@ export class OODALoopEngine extends EventEmitter {
 	// ---------------------------------------------------------------------------
 
 	private async withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
-		return Promise.race([
-			promise,
-			new Promise<T>((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
-		]);
+		return Promise.race([promise, new Promise<T>((_, reject) => setTimeout(() => reject(new Error(message)), ms))]);
 	}
 
 	private persistState(state: OODAState): void {
@@ -522,7 +518,7 @@ export class OODALoopEngine extends EventEmitter {
 			state.iteration,
 			JSON.stringify(state),
 			state.startTime,
-			state.endTime
+			state.endTime,
 		);
 	}
 
@@ -544,7 +540,7 @@ export class OODALoopEngine extends EventEmitter {
 			JSON.stringify(cycle.decision),
 			JSON.stringify(cycle.action),
 			cycle.duration,
-			cycle.timestamp
+			cycle.timestamp,
 		);
 	}
 

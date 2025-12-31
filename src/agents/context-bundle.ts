@@ -12,11 +12,11 @@
  * - Compress large contexts for efficiency
  */
 
-import { EventEmitter } from "events";
 import Database from "better-sqlite3";
-import { existsSync, readFileSync, writeFileSync, statSync } from "fs";
-import { join, relative, resolve } from "path";
 import { createHash } from "crypto";
+import { EventEmitter } from "events";
+import { existsSync, readFileSync, statSync } from "fs";
+import { join, relative, resolve } from "path";
 
 // =============================================================================
 // Types
@@ -471,10 +471,10 @@ export class ContextBundleSystem extends EventEmitter {
 			const { execSync } = await import("child_process");
 
 			// Get recently modified tracked files
-			const output = execSync(
-				'git ls-files -m && git diff --name-only HEAD~5 2>/dev/null | head -20',
-				{ cwd: this.workingDir, encoding: "utf-8" }
-			);
+			const output = execSync("git ls-files -m && git diff --name-only HEAD~5 2>/dev/null | head -20", {
+				cwd: this.workingDir,
+				encoding: "utf-8",
+			});
 
 			return [...new Set(output.split("\n").filter(Boolean))].slice(0, 20);
 		} catch {
@@ -494,7 +494,7 @@ export class ContextBundleSystem extends EventEmitter {
 		// Simple compression: truncate large file contents
 		for (const file of bundle.files) {
 			if (file.content.length > 10000) {
-				file.content = file.content.slice(0, 10000) + "\n... [truncated]";
+				file.content = `${file.content.slice(0, 10000)}\n... [truncated]`;
 			}
 		}
 

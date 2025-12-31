@@ -75,7 +75,7 @@ const LANGUAGE_PATTERNS: Record<string, RegExp[]> = {
 	cpp: [/#include\s*</, /std::/, /int\s+main\(/],
 	sql: [/^SELECT\s+/i, /^INSERT\s+INTO/i, /^CREATE\s+TABLE/i],
 	bash: [/^#!\/bin\/(ba)?sh/, /^\$\s+\w+/, /^echo\s+/],
-	json: [/^\s*\{/, /^\s*\[/, /":\s*["\[\{]/],
+	json: [/^\s*\{/, /^\s*\[/, /":\s*["[{]/],
 	yaml: [/^\s*\w+:\s*$/, /^\s*-\s+\w+/],
 	html: [/<html/i, /<div/i, /<\/\w+>/],
 	css: [/^\.\w+\s*\{/, /^#\w+\s*\{/, /:\s*\d+px/],
@@ -168,7 +168,7 @@ const DISCORD_EMBED_LIMIT = 4096;
 
 export function truncateForDiscord(text: string, limit: number = DISCORD_MESSAGE_LIMIT): string {
 	if (text.length <= limit) return text;
-	return text.slice(0, limit - 3) + "...";
+	return `${text.slice(0, limit - 3)}...`;
 }
 
 export function truncateCodeForEmbed(code: string, language: string): string {
@@ -176,7 +176,7 @@ export function truncateCodeForEmbed(code: string, language: string): string {
 	const maxCodeLength = DISCORD_EMBED_LIMIT - overhead - 100; // 100 char buffer for explanation
 
 	if (code.length <= maxCodeLength) return code;
-	return code.slice(0, maxCodeLength - 50) + "\n// ... truncated ...";
+	return `${code.slice(0, maxCodeLength - 50)}\n// ... truncated ...`;
 }
 
 // ============================================================================

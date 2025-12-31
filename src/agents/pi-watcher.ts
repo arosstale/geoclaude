@@ -14,12 +14,11 @@
  * Based on: Shipping at Inference-Speed workflow patterns
  */
 
-import { EventEmitter } from "events";
-import { randomUUID } from "crypto";
 import { spawn } from "child_process";
-import { join } from "path";
+import { randomUUID } from "crypto";
+import { EventEmitter } from "events";
+import { createBugFixWorkflow, getADWRunner, SECURITY_GATE } from "./adw-wrapper.js";
 import { getOrchestrator } from "./orchestrator.js";
-import { getADWRunner, createBugFixWorkflow, SECURITY_GATE } from "./adw-wrapper.js";
 
 // =============================================================================
 // Types
@@ -646,14 +645,18 @@ export class PiWatcher extends EventEmitter {
 
 let watcherInstance: PiWatcher | null = null;
 
-export function getPiWatcher(config?: Partial<WatcherConfig> & { workingDir: string; orchestratorDbPath: string }): PiWatcher {
+export function getPiWatcher(
+	config?: Partial<WatcherConfig> & { workingDir: string; orchestratorDbPath: string },
+): PiWatcher {
 	if (!watcherInstance && config) {
 		watcherInstance = new PiWatcher(config);
 	}
 	return watcherInstance!;
 }
 
-export function startPiWatcher(config: Partial<WatcherConfig> & { workingDir: string; orchestratorDbPath: string }): PiWatcher {
+export function startPiWatcher(
+	config: Partial<WatcherConfig> & { workingDir: string; orchestratorDbPath: string },
+): PiWatcher {
 	if (watcherInstance) {
 		watcherInstance.stop();
 	}

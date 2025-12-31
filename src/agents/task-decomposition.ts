@@ -14,8 +14,8 @@
  * @module task-decomposition
  */
 
-import { EventEmitter } from "events";
 import Database from "better-sqlite3";
+import { EventEmitter } from "events";
 
 // =============================================================================
 // Types
@@ -166,7 +166,10 @@ export class TaskDecompositionEngine extends EventEmitter {
 
 	async decompose(
 		task: string,
-		decomposer: (task: string, depth: number) => Promise<{
+		decomposer: (
+			task: string,
+			depth: number,
+		) => Promise<{
 			subtasks: Array<{
 				description: string;
 				dependencies: string[];
@@ -174,7 +177,7 @@ export class TaskDecompositionEngine extends EventEmitter {
 				estimatedDuration?: number;
 			}>;
 		}>,
-		options?: { maxDepth?: number }
+		options?: { maxDepth?: number },
 	): Promise<DecompositionResult> {
 		const graphId = `graph_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 		const maxDepth = options?.maxDepth || this.config.maxDepth;
@@ -245,7 +248,10 @@ export class TaskDecompositionEngine extends EventEmitter {
 	private async decomposeRecursive(
 		graph: TaskGraph,
 		parentId: string,
-		decomposer: (task: string, depth: number) => Promise<{
+		decomposer: (
+			task: string,
+			depth: number,
+		) => Promise<{
 			subtasks: Array<{
 				description: string;
 				dependencies: string[];
@@ -254,7 +260,7 @@ export class TaskDecompositionEngine extends EventEmitter {
 			}>;
 		}>,
 		depth: number,
-		maxDepth: number
+		maxDepth: number,
 	): Promise<void> {
 		if (depth >= maxDepth || graph.subtasks.size >= this.config.maxSubtasks) {
 			return;
@@ -276,8 +282,8 @@ export class TaskDecompositionEngine extends EventEmitter {
 					description: subtaskDef.description,
 					dependencies: subtaskDef.dependencies.map((d) => {
 						// Map relative dependencies to absolute IDs
-						const depIndex = parseInt(d);
-						if (!isNaN(depIndex) && depIndex < i) {
+						const depIndex = parseInt(d, 10);
+						if (!Number.isNaN(depIndex) && depIndex < i) {
 							return `task_${graph.subtasks.size - i + depIndex}`;
 						}
 						return d;
@@ -412,7 +418,7 @@ export class TaskDecompositionEngine extends EventEmitter {
 
 		// Process in topological order
 		for (const id of graph.executionOrder) {
-			const task = graph.subtasks.get(id)!;
+			const _task = graph.subtasks.get(id)!;
 			const currentDist = distances.get(id)!;
 
 			const dependents = graph.adjacencyList.get(id) || [];
@@ -471,7 +477,7 @@ export class TaskDecompositionEngine extends EventEmitter {
 	async execute(
 		graph: TaskGraph,
 		executor: (task: SubTask) => Promise<unknown>,
-		options?: { parallelLimit?: number }
+		options?: { parallelLimit?: number },
 	): Promise<Map<string, unknown>> {
 		const parallelLimit = options?.parallelLimit || this.config.parallelLimit;
 		const results = new Map<string, unknown>();
@@ -493,7 +499,7 @@ export class TaskDecompositionEngine extends EventEmitter {
 						batch.map(async (taskId) => {
 							const task = graph.subtasks.get(taskId)!;
 							await this.executeTask(graph, task, executor, results);
-						})
+						}),
 					);
 				}
 			}
@@ -514,7 +520,7 @@ export class TaskDecompositionEngine extends EventEmitter {
 		graph: TaskGraph,
 		task: SubTask,
 		executor: (task: SubTask) => Promise<unknown>,
-		results: Map<string, unknown>
+		results: Map<string, unknown>,
 	): Promise<void> {
 		// Check dependencies
 		for (const depId of task.dependencies) {
@@ -642,7 +648,7 @@ export class TaskDecompositionEngine extends EventEmitter {
 			JSON.stringify(graph.executionOrder),
 			JSON.stringify(graph.parallelGroups),
 			graph.createdAt,
-			graph.status === "completed" || graph.status === "failed" ? Date.now() : null
+			graph.status === "completed" || graph.status === "failed" ? Date.now() : null,
 		);
 	}
 

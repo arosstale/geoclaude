@@ -22,14 +22,7 @@ import { EventEmitter } from "events";
 export type RiskLevel = "safe" | "caution" | "warning" | "danger" | "blocked";
 
 /** Guard category */
-export type GuardCategory =
-	| "filesystem"
-	| "git"
-	| "process"
-	| "network"
-	| "secrets"
-	| "database"
-	| "custom";
+export type GuardCategory = "filesystem" | "git" | "process" | "network" | "secrets" | "database" | "custom";
 
 /** Guard check result */
 export interface GuardCheckResult {
@@ -690,11 +683,7 @@ export function assertSafe(command: string, context?: GuardContext): void {
 }
 
 /** Wrap command execution with safety check */
-export function withSafetyGuard<T>(
-	command: string,
-	executor: () => T,
-	context?: GuardContext,
-): T {
+export function withSafetyGuard<T>(command: string, executor: () => T, context?: GuardContext): T {
 	assertSafe(command, context);
 	return executor();
 }

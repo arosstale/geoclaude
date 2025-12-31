@@ -14,9 +14,9 @@
  * Based on: Tactical Agentic Coding framework
  */
 
-import { EventEmitter } from "events";
 import { randomUUID } from "crypto";
-import { getOrchestrator, type DelegationResult } from "./orchestrator.js";
+import { EventEmitter } from "events";
+import { type DelegationResult, getOrchestrator } from "./orchestrator.js";
 
 // =============================================================================
 // Types
@@ -286,7 +286,7 @@ export function createFeatureWorkflow(featureName: string, requirements: string)
 				name: "Analyze Requirements",
 				description: "Break down requirements into technical tasks",
 				agentRole: "architect",
-				prompt: (ctx) =>
+				prompt: (_ctx) =>
 					`Analyze and break down this feature into implementation tasks:\n\nFeature: ${featureName}\nRequirements: ${requirements}\n\nProvide a structured task list with dependencies.`,
 				qualityGates: [FORMAT_VALID_GATE],
 				timeout: 30000,
@@ -460,10 +460,7 @@ export class ADWRunner extends EventEmitter {
 	}
 
 	/** Execute a workflow */
-	async execute(
-		workflow: ADWWorkflow,
-		initialVariables: Record<string, unknown> = {},
-	): Promise<ADWExecutionResult> {
+	async execute(workflow: ADWWorkflow, initialVariables: Record<string, unknown> = {}): Promise<ADWExecutionResult> {
 		const executionId = randomUUID();
 		const startTime = Date.now();
 
@@ -637,7 +634,7 @@ export class ADWRunner extends EventEmitter {
 	private async executeStep(
 		step: ADWStep,
 		context: ADWContext,
-		onError: ADWWorkflow["onError"],
+		_onError: ADWWorkflow["onError"],
 	): Promise<ADWStepResult> {
 		const startTime = Date.now();
 		let retries = 0;
@@ -706,7 +703,6 @@ export class ADWRunner extends EventEmitter {
 									attempt: retries,
 									reason: `Gate ${gate.name} failed`,
 								});
-								continue;
 							}
 						}
 					} else {

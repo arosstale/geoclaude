@@ -137,11 +137,14 @@ export class TokenBudgetManager extends EventEmitter {
 	// Budget Allocation
 	// ---------------------------------------------------------------------------
 
-	allocate(taskId: string, options: {
-		totalBudget?: number;
-		phases?: BudgetPhase[];
-		weights?: Map<BudgetPhase, number>;
-	} = {}): BudgetAllocation {
+	allocate(
+		taskId: string,
+		options: {
+			totalBudget?: number;
+			phases?: BudgetPhase[];
+			weights?: Map<BudgetPhase, number>;
+		} = {},
+	): BudgetAllocation {
 		const totalBudget = options.totalBudget || this.config.defaultTotalBudget;
 		const phases = options.phases || ["observe", "orient", "decide", "act"];
 		const weights = options.weights || this.config.defaultPhaseWeights;
@@ -186,7 +189,12 @@ export class TokenBudgetManager extends EventEmitter {
 	// Token Consumption
 	// ---------------------------------------------------------------------------
 
-	consume(taskId: string, phase: BudgetPhase, tokens: number, model?: string): {
+	consume(
+		taskId: string,
+		phase: BudgetPhase,
+		tokens: number,
+		model?: string,
+	): {
 		success: boolean;
 		remaining: number;
 		borrowed: number;
@@ -291,11 +299,7 @@ export class TokenBudgetManager extends EventEmitter {
 		for (const [phase, budget] of sortedPhases) {
 			if (borrowed >= needed) break;
 
-			const available = Math.min(
-				budget.remaining,
-				budget.borrowLimit,
-				needed - borrowed
-			);
+			const available = Math.min(budget.remaining, budget.borrowLimit, needed - borrowed);
 
 			if (available > 0) {
 				budget.remaining -= available;

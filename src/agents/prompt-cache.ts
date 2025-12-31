@@ -14,8 +14,8 @@
  * @module prompt-cache
  */
 
-import { EventEmitter } from "events";
 import * as crypto from "crypto";
+import { EventEmitter } from "events";
 
 // =============================================================================
 // Types
@@ -165,7 +165,7 @@ export class PromptCache extends EventEmitter {
 		prompt: string,
 		response: string,
 		model: string,
-		options: { ttl?: number; metadata?: Record<string, unknown> } = {}
+		options: { ttl?: number; metadata?: Record<string, unknown> } = {},
 	): Promise<CacheEntry> {
 		// Evict if at capacity
 		while (this.entries.size >= this.config.maxEntries) {

@@ -13,8 +13,8 @@
  * - Notification templates
  */
 
-import { EventEmitter } from "events";
 import Database from "better-sqlite3";
+import { EventEmitter } from "events";
 import { join } from "path";
 
 // =============================================================================
@@ -474,9 +474,7 @@ export class AgentNotificationSystem extends EventEmitter {
 
 	/** Get user preferences */
 	getUserPreferences(userId: string): UserPreferences {
-		const row = this.db
-			.prepare(`SELECT * FROM user_preferences WHERE user_id = ?`)
-			.get(userId) as any;
+		const row = this.db.prepare(`SELECT * FROM user_preferences WHERE user_id = ?`).get(userId) as any;
 
 		if (!row) {
 			// Return defaults
@@ -553,12 +551,15 @@ export class AgentNotificationSystem extends EventEmitter {
 	// =========================================================================
 
 	/** Get notifications for a user */
-	getUserNotifications(userId: string, options: {
-		status?: NotificationStatus;
-		priority?: NotificationPriority;
-		limit?: number;
-		unreadOnly?: boolean;
-	} = {}): Notification[] {
+	getUserNotifications(
+		userId: string,
+		options: {
+			status?: NotificationStatus;
+			priority?: NotificationPriority;
+			limit?: number;
+			unreadOnly?: boolean;
+		} = {},
+	): Notification[] {
 		let sql = `SELECT * FROM notifications WHERE user_id = ?`;
 		const params: any[] = [userId];
 
@@ -617,9 +618,7 @@ export class AgentNotificationSystem extends EventEmitter {
 		const cutoff = new Date();
 		cutoff.setDate(cutoff.getDate() - this.config.retentionDays);
 
-		const result = this.db
-			.prepare(`DELETE FROM notifications WHERE timestamp < ?`)
-			.run(cutoff.toISOString());
+		const result = this.db.prepare(`DELETE FROM notifications WHERE timestamp < ?`).run(cutoff.toISOString());
 
 		return result.changes;
 	}
@@ -651,9 +650,7 @@ export class AgentNotificationSystem extends EventEmitter {
 			.get() as any;
 
 		const priorityStats = this.db
-			.prepare(
-				`SELECT priority, COUNT(*) as count FROM notifications GROUP BY priority`,
-			)
+			.prepare(`SELECT priority, COUNT(*) as count FROM notifications GROUP BY priority`)
 			.all() as { priority: NotificationPriority; count: number }[];
 
 		const byPriority: Record<NotificationPriority, number> = {
@@ -740,10 +737,7 @@ export class AgentNotificationSystem extends EventEmitter {
 		}
 	}
 
-	private createSkippedNotification(
-		params: any,
-		reason: string,
-	): Notification {
+	private createSkippedNotification(params: any, reason: string): Notification {
 		return {
 			id: crypto.randomUUID(),
 			timestamp: new Date(),
@@ -821,10 +815,7 @@ export class AgentNotificationSystem extends EventEmitter {
 
 let notificationInstance: AgentNotificationSystem | null = null;
 
-export function getNotificationSystem(
-	dataDir: string,
-	config?: Partial<NotificationConfig>,
-): AgentNotificationSystem {
+export function getNotificationSystem(dataDir: string, config?: Partial<NotificationConfig>): AgentNotificationSystem {
 	if (!notificationInstance) {
 		notificationInstance = new AgentNotificationSystem(dataDir, config);
 	}

@@ -1,0 +1,164 @@
+# AI Trading Agent - Docker Compose Configuration
+# Usage: docker-compose up -d
+
+version: '3.8'
+
+services:
+  ai-trading-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ai-trading-agent:latest
+    container_name: ai-trading-agent
+    restart: unless-stopped
+
+    # Security: Run as non-root
+    user: "1001:1001"
+
+    # Resource limits (adjust based on your VPS)
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    ports:
+      - "3001:3001"   # Webhook endpoint
+      - "9090:9090"   # Dashboard/metrics endpoint
+
+    volumes:
+      # Persistent data (database, expertise files, logs)
+      - bot-data:/opt/discord-bot-data
+      # Optional: Mount local data directory for development
+      # - ./data:/opt/discord-bot-data
+
+    # Security: Read-only root filesystem (except volumes)
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777,size=100M
+
+    # Security: Drop all capabilities, add only what's needed
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+
+    # Security: No privilege escalation
+    security_opt:
+      - no-new-privileges:true
+
+    environment:
+      #==========================================================================
+      # REQUIRED
+      #==========================================================================
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+
+      #==========================================================================
+      # AI PROVIDERS
+      #==========================================================================
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - CEREBRAS_API_KEY=${CEREBRAS_API_KEY:-}
+      - ZAI_API_KEY=${ZAI_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - HF_TOKEN=${HF_TOKEN:-}
+      - HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN:-}
+      - DEFAULT_PROVIDER=${DEFAULT_PROVIDER:-openrouter}
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-anthropic/claude-3.5-sonnet}
+
+      #==========================================================================
+      # SEARCH & DATA
+      #==========================================================================
+      - EXA_API_KEY=${EXA_API_KEY:-}
+      - BRIGHTDATA_API_TOKEN=${BRIGHTDATA_API_TOKEN:-}
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY:-}
+
+      #==========================================================================
+      # CREATIVE TOOLS
+      #==========================================================================
+      - FAL_KEY=${FAL_KEY:-}
+      - FAL_API_KEY=${FAL_API_KEY:-}
+      - SUNO_API_KEY=${SUNO_API_KEY:-}
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}
+      - LUMA_API_KEY=${LUMA_API_KEY:-}
+      - LUMALABS_API_KEY=${LUMALABS_API_KEY:-}
+      - MUBERT_API_KEY=${MUBERT_API_KEY:-}
+
+      #==========================================================================
+      # LIVEKIT (Voice/Video)
+      #==========================================================================
+      - LIVEKIT_URL=${LIVEKIT_URL:-}
+      - LIVEKIT_HOST=${LIVEKIT_HOST:-}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-}
+
+      #==========================================================================
+      # INTEGRATIONS
+      #==========================================================================
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - TWITTER_BEARER_TOKEN=${TWITTER_BEARER_TOKEN:-}
+      - TWITTER_API_KEY=${TWITTER_API_KEY:-}
+      - TWITTER_API_SECRET=${TWITTER_API_SECRET:-}
+      - TWITTER_ACCESS_TOKEN=${TWITTER_ACCESS_TOKEN:-}
+      - TWITTER_ACCESS_TOKEN_SECRET=${TWITTER_ACCESS_TOKEN_SECRET:-}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+
+      #==========================================================================
+      # DISCORD CHANNELS
+      #==========================================================================
+      - REPORT_CHANNEL_ID=${REPORT_CHANNEL_ID:-}
+      - ALERTS_CHANNEL_ID=${ALERTS_CHANNEL_ID:-}
+      - SIGNALS_CHANNEL_ID=${SIGNALS_CHANNEL_ID:-}
+      - REPORTS_CHANNEL_ID=${REPORTS_CHANNEL_ID:-}
+      - LOGS_CHANNEL_ID=${LOGS_CHANNEL_ID:-}
+      - NEWS_CHANNEL_ID=${NEWS_CHANNEL_ID:-}
+
+      #==========================================================================
+      # SECURITY
+      #==========================================================================
+      - ALLOWED_USER_IDS=${ALLOWED_USER_IDS:-}
+      - WEBHOOK_API_KEY=${WEBHOOK_API_KEY:-}
+
+      #==========================================================================
+      # SERVER CONFIG
+      #==========================================================================
+      - NODE_ENV=production
+      - WEBHOOK_PORT=3001
+      - DASHBOARD_PORT=9090
+      - METRICS_PORT=9090
+      - DB_PATH=/opt/discord-bot-data/bot.db
+      - TZ=${TZ:-UTC}
+
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "10"
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    # Network isolation (optional - uncomment for extra security)
+    # networks:
+    #   - bot-network
+
+volumes:
+  bot-data:
+    driver: local
+
+# Optional: Isolated network
+# networks:
+#   bot-network:
+#     driver: bridge

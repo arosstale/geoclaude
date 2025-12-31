@@ -199,11 +199,11 @@ export function PlannerWrapper(agent: BaseAgent, config?: WrapperConfig): BaseAg
 						.toLowerCase()
 						.replace("none", "")
 						.split(",")
-						.map((d) => parseInt(d.trim()))
-						.filter((d) => !isNaN(d));
+						.map((d) => parseInt(d.trim(), 10))
+						.filter((d) => !Number.isNaN(d));
 
 					steps.push({
-						id: parseInt(idStr),
+						id: parseInt(idStr, 10),
 						task: task.trim(),
 						dependencies: deps,
 						status: "pending",
@@ -580,10 +580,7 @@ export function withConfig(wrapper: AgentWrapper, config: WrapperConfig): AgentW
 /**
  * Conditional wrapper application
  */
-export function conditional(
-	wrapper: AgentWrapper,
-	condition: (input: AgentInput) => boolean
-): AgentWrapper {
+export function conditional(wrapper: AgentWrapper, condition: (input: AgentInput) => boolean): AgentWrapper {
 	return (agent: BaseAgent, config?: WrapperConfig) => {
 		const wrapped = wrapper(agent, config);
 		return {

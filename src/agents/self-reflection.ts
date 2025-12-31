@@ -136,7 +136,7 @@ export const BUILTIN_CRITERIA: ReflectionCriteria[] = [
 				/\d+/, // numbers
 				/\b[A-Z][a-z]+\b/, // proper nouns
 				/`[^`]+`/, // code snippets
-				/"[^"]+"/,  // quoted text
+				/"[^"]+"/, // quoted text
 				/\b(function|class|const|let|var|import|export)\b/i, // code keywords
 			];
 
@@ -160,7 +160,7 @@ export const BUILTIN_CRITERIA: ReflectionCriteria[] = [
 				context.task
 					.toLowerCase()
 					.split(/\s+/)
-					.filter((w) => w.length > 4)
+					.filter((w) => w.length > 4),
 			);
 
 			const outputWords = output.toLowerCase().split(/\s+/);
@@ -275,10 +275,7 @@ Please revise your response to address these issues while maintaining the good a
 		const improvements = this.generateImprovements(score, context);
 		const feedback = this.generateFeedback(score, context);
 
-		const shouldRetry =
-			this.config.enableAutoRetry &&
-			!score.passed &&
-			context.attempt < this.config.maxRetries;
+		const shouldRetry = this.config.enableAutoRetry && !score.passed && context.attempt < this.config.maxRetries;
 
 		const result: ReflectionResult = {
 			score,
@@ -362,7 +359,7 @@ Please revise your response to address these issues while maintaining the good a
 		}
 	}
 
-	private generateFeedback(score: QualityScore, context: ReflectionContext): string {
+	private generateFeedback(score: QualityScore, _context: ReflectionContext): string {
 		const parts: string[] = [];
 
 		parts.push(`Quality Score: ${(score.overall * 100).toFixed(1)}%`);
@@ -396,7 +393,7 @@ Please revise your response to address these issues while maintaining the good a
 		return parts.join(" | ");
 	}
 
-	private generateRefinedPrompt(context: ReflectionContext, score: QualityScore, improvements: string[]): string {
+	private generateRefinedPrompt(_context: ReflectionContext, score: QualityScore, improvements: string[]): string {
 		return this.config.improvementPromptTemplate
 			.replace("{{score}}", (score.overall * 100).toFixed(0))
 			.replace("{{failedCriteria}}", score.failedCriteria.join(", ") || "none")
@@ -407,11 +404,11 @@ Please revise your response to address these issues while maintaining the good a
 	// Reflection Loop
 	// ---------------------------------------------------------------------------
 
-	async reflectWithRetry<T>(
+	async reflectWithRetry<_T>(
 		taskId: string,
 		task: string,
 		executor: (attempt: number, refinedPrompt?: string) => Promise<string>,
-		options: { maxRetries?: number; model?: string } = {}
+		options: { maxRetries?: number; model?: string } = {},
 	): Promise<{ output: string; history: ReflectionHistory }> {
 		const maxRetries = options.maxRetries ?? this.config.maxRetries;
 
@@ -463,7 +460,7 @@ Please revise your response to address these issues while maintaining the good a
 
 		// Return best attempt even if failed
 		const bestAttempt = history.attempts.reduce((best, current) =>
-			current.score.overall > best.score.overall ? current : best
+			current.score.overall > best.score.overall ? current : best,
 		);
 
 		history.finalOutput = bestAttempt.output;

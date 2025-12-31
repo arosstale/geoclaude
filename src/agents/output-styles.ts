@@ -122,7 +122,7 @@ OUTPUT STYLE: CONCISE-TTS (Text-to-Speech)
 		postProcess: (output) => {
 			// Clean for TTS
 			return output
-				.replace(/[*#`\[\](){}]/g, "")
+				.replace(/[*#`[\](){}]/g, "")
 				.replace(/\n{2,}/g, ". ")
 				.replace(/\n/g, " ")
 				.replace(/\s{2,}/g, " ")
@@ -360,7 +360,7 @@ export class OutputStyleManager extends EventEmitter {
 
 		// Apply max length
 		if (style.maxLength && processed.length > style.maxLength) {
-			processed = processed.slice(0, style.maxLength) + "...";
+			processed = `${processed.slice(0, style.maxLength)}...`;
 		}
 
 		// Apply post-processor
@@ -370,19 +370,14 @@ export class OutputStyleManager extends EventEmitter {
 
 		// Apply global max
 		if (processed.length > this.config.maxOutputLength) {
-			processed = processed.slice(0, this.config.maxOutputLength) + "...";
+			processed = `${processed.slice(0, this.config.maxOutputLength)}...`;
 		}
 
 		return processed;
 	}
 
 	/** Format tool call for display */
-	formatToolCall(
-		toolName: string,
-		input: unknown,
-		output: unknown,
-		styleId: StylePreset | string,
-	): string | null {
+	formatToolCall(toolName: string, input: unknown, output: unknown, styleId: StylePreset | string): string | null {
 		const style = this.getStyle(styleId);
 		if (!style?.showToolCalls) return null;
 

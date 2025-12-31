@@ -1,7 +1,47 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
-build/
-.vscode/
-.idea/
-.DS_Store
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+bot.db
+
+# Runtime data
+data/
+datasette.pid
+
+# Session files
+*.jsonl
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Cache
+.wwebjs_cache/
+.cache/
+
+# Logs
 *.log
+.self-debug.log
+
+# Editor
+*.swp
+*.swo
+*~
+
+# WhatsApp session
+whatsapp-session/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+Thumbs.db

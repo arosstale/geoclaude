@@ -35,7 +35,9 @@ export interface ServiceDescriptor<T = unknown> {
 	/** Factory function to create the service */
 	factory?: FactoryFunction<T>;
 	/** Constructor class (for auto-wiring) */
-	implementation?: new (...args: unknown[]) => T;
+	implementation?: new (
+		...args: unknown[]
+	) => T;
 	/** Pre-created instance (for singleton only) */
 	instance?: T;
 	/** Dependencies to inject (tokens or param indices) */
@@ -47,7 +49,7 @@ export interface ServiceDescriptor<T = unknown> {
 }
 
 /** Registration options */
-export interface RegistrationOptions<T = unknown> {
+export interface RegistrationOptions<_T = unknown> {
 	/** Service lifetime */
 	lifetime?: ServiceLifetime;
 	/** Dependencies to inject */
@@ -215,11 +217,7 @@ export class DIContainer extends EventEmitter {
 	/**
 	 * Register a service with a factory function
 	 */
-	register<T>(
-		token: ServiceToken<T>,
-		factory: FactoryFunction<T>,
-		options: RegistrationOptions<T> = {},
-	): this {
+	register<T>(token: ServiceToken<T>, factory: FactoryFunction<T>, options: RegistrationOptions<T> = {}): this {
 		const descriptor: ServiceDescriptor<T> = {
 			token,
 			factory,
@@ -549,7 +547,11 @@ export class DIContainer extends EventEmitter {
 			return new descriptor.implementation(...dependencies);
 		}
 
-		throw new DIError(`No factory or implementation for service: ${String(descriptor.token)}`, "NO_PROVIDER", descriptor.token);
+		throw new DIError(
+			`No factory or implementation for service: ${String(descriptor.token)}`,
+			"NO_PROVIDER",
+			descriptor.token,
+		);
 	}
 
 	private async createInstanceAsync<T>(descriptor: ServiceDescriptor<T>, context: ResolutionContext): Promise<T> {
@@ -575,7 +577,11 @@ export class DIContainer extends EventEmitter {
 			return new descriptor.implementation(...dependencies);
 		}
 
-		throw new DIError(`No factory or implementation for service: ${String(descriptor.token)}`, "NO_PROVIDER", descriptor.token);
+		throw new DIError(
+			`No factory or implementation for service: ${String(descriptor.token)}`,
+			"NO_PROVIDER",
+			descriptor.token,
+		);
 	}
 
 	// =========================================================================

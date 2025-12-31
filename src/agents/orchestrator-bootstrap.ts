@@ -5,13 +5,12 @@
  * enabling real task delegation and execution.
  */
 
-import { Orchestrator } from "./orchestrator.js";
+import { runAgent as runClaudeAgent } from "./claude-agent.js";
 
 // Agent imports
 import { runAgent as runLightweightAgent } from "./lightweight-agent.js";
-import { runAgent as runClaudeAgent } from "./claude-agent.js";
 import { runOmni } from "./omni-router.js";
-import { runOpenCodeAgent } from "./opencode-agent.js";
+import type { Orchestrator } from "./orchestrator.js";
 
 /** Agent type */
 type AgentType = "skill" | "mcp" | "subprocess" | "webhook" | "inline";
@@ -126,8 +125,7 @@ const DEFAULT_AGENTS: DefaultAgent[] = [
 				prompt: `You are a QA engineer. ${prompt}`,
 				workingDir: config.workingDir,
 				model: config.defaultModel || "glm-4.5-air",
-				systemPrompt:
-					"You are an expert QA engineer. Focus on test coverage, edge cases, and validation.",
+				systemPrompt: "You are an expert QA engineer. Focus on test coverage, edge cases, and validation.",
 			});
 			return result.output;
 		},
@@ -198,8 +196,7 @@ const DEFAULT_AGENTS: DefaultAgent[] = [
 				prompt,
 				workingDir: config.workingDir,
 				model: config.defaultModel || "glm-4.5-air",
-				systemPrompt:
-					"You are a DevOps engineer. Handle infrastructure, automation, CI/CD, and system operations.",
+				systemPrompt: "You are a DevOps engineer. Handle infrastructure, automation, CI/CD, and system operations.",
 			});
 			return result.output;
 		},
@@ -314,10 +311,7 @@ export async function quickDelegate(
 let bootstrappedOrchestrator: Orchestrator | null = null;
 
 /** Get or create bootstrapped orchestrator */
-export async function getBootstrappedOrchestrator(
-	dbPath: string,
-	config: BootstrapConfig,
-): Promise<Orchestrator> {
+export async function getBootstrappedOrchestrator(dbPath: string, config: BootstrapConfig): Promise<Orchestrator> {
 	if (!bootstrappedOrchestrator) {
 		const { getOrchestrator } = await import("./orchestrator.js");
 		bootstrappedOrchestrator = getOrchestrator(dbPath);

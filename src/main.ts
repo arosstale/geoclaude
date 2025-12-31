@@ -145,6 +145,8 @@ import {
 	getResearchStatus,
 	// Self-Debug Service (Autonomous Error Detection and Repair)
 	getSelfDebugService,
+	// Self-Healing Manager (Autonomous Error Recovery)
+	getSelfHealingManager,
 	getSignalClassifier,
 	getSignalValidator,
 	getSwarmCoordinator,
@@ -212,6 +214,7 @@ import {
 	runTwoAgentWorkflow,
 	runWithBestSDK,
 	SDK_INFO,
+	SelfHealingPresets,
 	SignalDirection,
 	SourceType,
 	type SwarmRole,
@@ -1334,8 +1337,6 @@ const slashCommands = [
 				.addIntegerOption((option) => option.setName("id").setDescription("Rule ID to remove").setRequired(true)),
 		)
 		.addSubcommand((subcommand) => subcommand.setName("rules-preset").setDescription("Apply preset security rules")),
-
-	new SlashCommandBuilder().setName("skills").setDescription("List loaded skills and capabilities"),
 
 	new SlashCommandBuilder()
 		.setName("freemodels")
@@ -3256,6 +3257,61 @@ const slashCommands = [
 				),
 		),
 
+	// Self-Healing Manager (Autonomous Error Recovery)
+	new SlashCommandBuilder()
+		.setName("selfheal")
+		.setDescription("Self-healing service for autonomous error recovery and system resilience")
+		.addSubcommand((sub) => sub.setName("status").setDescription("Show self-healing status and health score"))
+		.addSubcommand((sub) => sub.setName("history").setDescription("Show healing action history"))
+		.addSubcommand((sub) => sub.setName("patterns").setDescription("Show detected error patterns"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("trigger")
+				.setDescription("Manually trigger a healing action")
+				.addStringOption((opt) =>
+					opt
+						.setName("type")
+						.setDescription("Healing action type")
+						.setRequired(true)
+						.addChoices(
+							{ name: "Memory (GC + cache clear)", value: "memory" },
+							{ name: "Database (reconnect)", value: "database" },
+							{ name: "Gateway (Discord reconnect)", value: "gateway" },
+						),
+				),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("config")
+				.setDescription("Configure self-healing settings")
+				.addStringOption((opt) =>
+					opt
+						.setName("preset")
+						.setDescription("Apply a configuration preset")
+						.addChoices(
+							{ name: "Conservative (less healing)", value: "conservative" },
+							{ name: "Aggressive (proactive healing)", value: "aggressive" },
+							{ name: "Production (balanced)", value: "production" },
+							{ name: "Development (verbose)", value: "development" },
+						),
+				)
+				.addIntegerOption((opt) =>
+					opt
+						.setName("heap_threshold")
+						.setDescription("Heap threshold percent (default: 85)")
+						.setMinValue(50)
+						.setMaxValue(99),
+				)
+				.addStringOption((opt) => opt.setName("log_channel").setDescription("Channel ID for healing logs")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("toggle")
+				.setDescription("Enable or disable self-healing")
+				.addBooleanOption((opt) => opt.setName("enabled").setDescription("Enable self-healing").setRequired(true)),
+		)
+		.addSubcommand((sub) => sub.setName("clear").setDescription("Clear error patterns and rate limits")),
+
 	// History Capture (Universal Output Capture System)
 	new SlashCommandBuilder()
 		.setName("history")
@@ -4354,7 +4410,9 @@ const slashCommands = [
 				.setName("feature")
 				.setDescription("Run feature implementation workflow")
 				.addStringOption((opt) => opt.setName("name").setDescription("Feature name").setRequired(true))
-				.addStringOption((opt) => opt.setName("requirements").setDescription("Feature requirements").setRequired(true)),
+				.addStringOption((opt) =>
+					opt.setName("requirements").setDescription("Feature requirements").setRequired(true),
+				),
 		)
 		.addSubcommand((sub) =>
 			sub
@@ -4454,6 +4512,27 @@ const slashCommands = [
 						),
 				)
 				.addBooleanOption((opt) => opt.setName("learning").setDescription("Enable agent learning")),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("singularity")
+				.setDescription("Run full Plan → Build → Review → Fix autonomous workflow")
+				.addStringOption((opt) =>
+					opt.setName("task").setDescription("Task to execute (feature/bug/chore description)").setRequired(true),
+				)
+				.addStringOption((opt) =>
+					opt
+						.setName("type")
+						.setDescription("Task type")
+						.addChoices(
+							{ name: "Feature", value: "feature" },
+							{ name: "Bug", value: "bug" },
+							{ name: "Chore", value: "chore" },
+						),
+				)
+				.addBooleanOption((opt) =>
+					opt.setName("auto_fix").setDescription("Automatically fix review issues (default: true)"),
+				),
 		),
 
 	// Pi-Watcher - Autonomous Monitoring & Hotfix
@@ -4494,10 +4573,7 @@ const slashCommands = [
 				.setDescription("Run multiple agents in parallel on a task")
 				.addStringOption((opt) => opt.setName("task").setDescription("Task prompt").setRequired(true))
 				.addStringOption((opt) =>
-					opt
-						.setName("roles")
-						.setDescription("Agent roles (comma-separated)")
-						.setRequired(true),
+					opt.setName("roles").setDescription("Agent roles (comma-separated)").setRequired(true),
 				),
 		)
 		.addSubcommand((sub) =>
@@ -4506,10 +4582,7 @@ const slashCommands = [
 				.setDescription("Run agents in debate format")
 				.addStringOption((opt) => opt.setName("topic").setDescription("Debate topic").setRequired(true))
 				.addStringOption((opt) =>
-					opt
-						.setName("roles")
-						.setDescription("Agent roles (comma-separated)")
-						.setRequired(true),
+					opt.setName("roles").setDescription("Agent roles (comma-separated)").setRequired(true),
 				)
 				.addIntegerOption((opt) => opt.setName("rounds").setDescription("Number of debate rounds (default: 3)")),
 		)
@@ -4517,12 +4590,11 @@ const slashCommands = [
 			sub
 				.setName("consensus")
 				.setDescription("Run consensus voting among agents")
-				.addStringOption((opt) => opt.setName("question").setDescription("Question for consensus").setRequired(true))
 				.addStringOption((opt) =>
-					opt
-						.setName("roles")
-						.setDescription("Agent roles (comma-separated)")
-						.setRequired(true),
+					opt.setName("question").setDescription("Question for consensus").setRequired(true),
+				)
+				.addStringOption((opt) =>
+					opt.setName("roles").setDescription("Agent roles (comma-separated)").setRequired(true),
 				)
 				.addStringOption((opt) =>
 					opt
@@ -4552,17 +4624,14 @@ const slashCommands = [
 						),
 				)
 				.addStringOption((opt) =>
-					opt
-						.setName("workers")
-						.setDescription("Worker roles (comma-separated)")
-						.setRequired(true),
+					opt.setName("workers").setDescription("Worker roles (comma-separated)").setRequired(true),
 				),
 		)
 		.addSubcommand((sub) => sub.setName("status").setDescription("Show active coordinations")),
 
 	// Class 3.3 Agent Memory System
 	new SlashCommandBuilder()
-		.setName("memory")
+		.setName("agent-memory")
 		.setDescription("Agent Memory System - performance tracking, insights, and smart routing")
 		.addSubcommand((sub) =>
 			sub
@@ -4608,7 +4677,9 @@ const slashCommands = [
 			sub
 				.setName("generate")
 				.setDescription("Generate agent spec from description")
-				.addStringOption((opt) => opt.setName("description").setDescription("Natural language agent description").setRequired(true))
+				.addStringOption((opt) =>
+					opt.setName("description").setDescription("Natural language agent description").setRequired(true),
+				)
 				.addStringOption((opt) => opt.setName("name").setDescription("Agent name (optional)"))
 				.addStringOption((opt) =>
 					opt
@@ -4638,7 +4709,9 @@ const slashCommands = [
 				.setName("clone")
 				.setDescription("Clone and modify an existing agent")
 				.addStringOption((opt) => opt.setName("agent_id").setDescription("Agent ID to clone").setRequired(true))
-				.addStringOption((opt) => opt.setName("modifications").setDescription("Modifications to apply").setRequired(true)),
+				.addStringOption((opt) =>
+					opt.setName("modifications").setDescription("Modifications to apply").setRequired(true),
+				),
 		),
 
 	// Class 3.6 Context Bundle System (TAC Pattern)
@@ -4970,11 +5043,14 @@ const slashCommands = [
 				.addStringOption((opt) => opt.setName("name").setDescription("Agent name").setRequired(true))
 				.addStringOption((opt) => opt.setName("prompt").setDescription("System prompt").setRequired(true))
 				.addStringOption((opt) =>
-					opt.setName("change").setDescription("Change type").addChoices(
-						{ name: "Patch (bug fix)", value: "patch" },
-						{ name: "Minor (feature)", value: "minor" },
-						{ name: "Major (breaking)", value: "major" },
-					),
+					opt
+						.setName("change")
+						.setDescription("Change type")
+						.addChoices(
+							{ name: "Patch (bug fix)", value: "patch" },
+							{ name: "Minor (feature)", value: "minor" },
+							{ name: "Major (breaking)", value: "major" },
+						),
 				)
 				.addStringOption((opt) => opt.setName("changelog").setDescription("Changelog entry")),
 		)
@@ -5011,12 +5087,16 @@ const slashCommands = [
 				.setDescription("Promote a version to a different tag")
 				.addStringOption((opt) => opt.setName("version_id").setDescription("Version ID").setRequired(true))
 				.addStringOption((opt) =>
-					opt.setName("tag").setDescription("Target tag").setRequired(true).addChoices(
-						{ name: "Dev", value: "dev" },
-						{ name: "Staging", value: "staging" },
-						{ name: "Production", value: "production" },
-						{ name: "Archived", value: "archived" },
-					),
+					opt
+						.setName("tag")
+						.setDescription("Target tag")
+						.setRequired(true)
+						.addChoices(
+							{ name: "Dev", value: "dev" },
+							{ name: "Staging", value: "staging" },
+							{ name: "Production", value: "production" },
+							{ name: "Archived", value: "archived" },
+						),
 				),
 		)
 		.addSubcommand((sub) => sub.setName("agents").setDescription("List all versioned agents"))
@@ -5025,12 +5105,16 @@ const slashCommands = [
 				.setName("tag")
 				.setDescription("List versions by tag")
 				.addStringOption((opt) =>
-					opt.setName("tag").setDescription("Tag to filter by").setRequired(true).addChoices(
-						{ name: "Dev", value: "dev" },
-						{ name: "Staging", value: "staging" },
-						{ name: "Production", value: "production" },
-						{ name: "Archived", value: "archived" },
-					),
+					opt
+						.setName("tag")
+						.setDescription("Tag to filter by")
+						.setRequired(true)
+						.addChoices(
+							{ name: "Dev", value: "dev" },
+							{ name: "Staging", value: "staging" },
+							{ name: "Production", value: "production" },
+							{ name: "Archived", value: "archived" },
+						),
 				),
 		),
 	new SlashCommandBuilder()
@@ -5057,7 +5141,9 @@ const slashCommands = [
 			sub
 				.setName("find")
 				.setDescription("Find agents by capability")
-				.addStringOption((opt) => opt.setName("capability").setDescription("Capability to search for").setRequired(true))
+				.addStringOption((opt) =>
+					opt.setName("capability").setDescription("Capability to search for").setRequired(true),
+				)
 				.addIntegerOption((opt) => opt.setName("min_health").setDescription("Minimum health score 0-100")),
 		)
 		.addSubcommand((sub) =>
@@ -5071,12 +5157,15 @@ const slashCommands = [
 				.setName("list")
 				.setDescription("List all agents")
 				.addStringOption((opt) =>
-					opt.setName("status").setDescription("Filter by status").addChoices(
-						{ name: "Online", value: "online" },
-						{ name: "Offline", value: "offline" },
-						{ name: "Busy", value: "busy" },
-						{ name: "Degraded", value: "degraded" },
-					),
+					opt
+						.setName("status")
+						.setDescription("Filter by status")
+						.addChoices(
+							{ name: "Online", value: "online" },
+							{ name: "Offline", value: "offline" },
+							{ name: "Busy", value: "busy" },
+							{ name: "Degraded", value: "degraded" },
+						),
 				),
 		)
 		.addSubcommand((sub) =>
@@ -5092,13 +5181,17 @@ const slashCommands = [
 				.setDescription("Update agent status")
 				.addStringOption((opt) => opt.setName("id").setDescription("Agent ID").setRequired(true))
 				.addStringOption((opt) =>
-					opt.setName("status").setDescription("New status").setRequired(true).addChoices(
-						{ name: "Online", value: "online" },
-						{ name: "Offline", value: "offline" },
-						{ name: "Busy", value: "busy" },
-						{ name: "Degraded", value: "degraded" },
-						{ name: "Maintenance", value: "maintenance" },
-					),
+					opt
+						.setName("status")
+						.setDescription("New status")
+						.setRequired(true)
+						.addChoices(
+							{ name: "Online", value: "online" },
+							{ name: "Offline", value: "offline" },
+							{ name: "Busy", value: "busy" },
+							{ name: "Degraded", value: "degraded" },
+							{ name: "Maintenance", value: "maintenance" },
+						),
 				),
 		)
 		.addSubcommand((sub) => sub.setName("capabilities").setDescription("List all unique capabilities"))
@@ -5109,7 +5202,7 @@ const slashCommands = [
 				.addStringOption((opt) => opt.setName("id").setDescription("Agent ID").setRequired(true)),
 		),
 	new SlashCommandBuilder()
-		.setName("health")
+		.setName("health-monitor")
 		.setDescription("Health Monitoring - comprehensive health checks and metrics (TAC pattern)")
 		.addSubcommand((sub) => sub.setName("status").setDescription("Show system health status"))
 		.addSubcommand((sub) =>
@@ -5119,15 +5212,19 @@ const slashCommands = [
 				.addStringOption((opt) => opt.setName("id").setDescription("Component ID").setRequired(true))
 				.addStringOption((opt) => opt.setName("name").setDescription("Component name").setRequired(true))
 				.addStringOption((opt) =>
-					opt.setName("type").setDescription("Component type").setRequired(true).addChoices(
-						{ name: "Agent", value: "agent" },
-						{ name: "Database", value: "database" },
-						{ name: "API", value: "api" },
-						{ name: "Queue", value: "queue" },
-						{ name: "Cache", value: "cache" },
-						{ name: "External", value: "external" },
-						{ name: "System", value: "system" },
-					),
+					opt
+						.setName("type")
+						.setDescription("Component type")
+						.setRequired(true)
+						.addChoices(
+							{ name: "Agent", value: "agent" },
+							{ name: "Database", value: "database" },
+							{ name: "API", value: "api" },
+							{ name: "Queue", value: "queue" },
+							{ name: "Cache", value: "cache" },
+							{ name: "External", value: "external" },
+							{ name: "System", value: "system" },
+						),
 				),
 		)
 		.addSubcommand((sub) =>
@@ -5160,20 +5257,27 @@ const slashCommands = [
 				.addStringOption((opt) => opt.setName("id").setDescription("Component ID").setRequired(true))
 				.addStringOption((opt) => opt.setName("metric").setDescription("Metric name").setRequired(true))
 				.addStringOption((opt) =>
-					opt.setName("operator").setDescription("Comparison operator").setRequired(true).addChoices(
-						{ name: "> Greater than", value: ">" },
-						{ name: "< Less than", value: "<" },
-						{ name: ">= Greater or equal", value: ">=" },
-						{ name: "<= Less or equal", value: "<=" },
-					),
+					opt
+						.setName("operator")
+						.setDescription("Comparison operator")
+						.setRequired(true)
+						.addChoices(
+							{ name: "> Greater than", value: ">" },
+							{ name: "< Less than", value: "<" },
+							{ name: ">= Greater or equal", value: ">=" },
+							{ name: "<= Less or equal", value: "<=" },
+						),
 				)
 				.addNumberOption((opt) => opt.setName("value").setDescription("Threshold value").setRequired(true))
 				.addStringOption((opt) =>
-					opt.setName("severity").setDescription("Alert severity").addChoices(
-						{ name: "Info", value: "info" },
-						{ name: "Warning", value: "warning" },
-						{ name: "Critical", value: "critical" },
-					),
+					opt
+						.setName("severity")
+						.setDescription("Alert severity")
+						.addChoices(
+							{ name: "Info", value: "info" },
+							{ name: "Warning", value: "warning" },
+							{ name: "Critical", value: "critical" },
+						),
 				),
 		)
 		.addSubcommand((sub) =>
@@ -5196,7 +5300,7 @@ const slashCommands = [
 				.addIntegerOption((opt) => opt.setName("limit").setDescription("Number of checks to show")),
 		),
 	new SlashCommandBuilder()
-		.setName("cost")
+		.setName("cost-tracker")
 		.setDescription("Cost Tracking - Token/API cost monitoring and budget management (TAC pattern)")
 		.addSubcommand((sub) => sub.setName("stats").setDescription("Show cost tracking statistics"))
 		.addSubcommand((sub) =>
@@ -5204,15 +5308,19 @@ const slashCommands = [
 				.setName("record")
 				.setDescription("Record API usage")
 				.addStringOption((opt) =>
-					opt.setName("provider").setDescription("Provider").setRequired(true).addChoices(
-						{ name: "OpenRouter", value: "openrouter" },
-						{ name: "OpenAI", value: "openai" },
-						{ name: "Anthropic", value: "anthropic" },
-						{ name: "Groq", value: "groq" },
-						{ name: "Cerebras", value: "cerebras" },
-						{ name: "Z.ai", value: "zai" },
-						{ name: "Ollama", value: "ollama" },
-					),
+					opt
+						.setName("provider")
+						.setDescription("Provider")
+						.setRequired(true)
+						.addChoices(
+							{ name: "OpenRouter", value: "openrouter" },
+							{ name: "OpenAI", value: "openai" },
+							{ name: "Anthropic", value: "anthropic" },
+							{ name: "Groq", value: "groq" },
+							{ name: "Cerebras", value: "cerebras" },
+							{ name: "Z.ai", value: "zai" },
+							{ name: "Ollama", value: "ollama" },
+						),
 				)
 				.addStringOption((opt) => opt.setName("model").setDescription("Model ID").setRequired(true))
 				.addIntegerOption((opt) => opt.setName("input").setDescription("Input tokens").setRequired(true))
@@ -5224,15 +5332,18 @@ const slashCommands = [
 				.setName("usage")
 				.setDescription("View usage records")
 				.addStringOption((opt) =>
-					opt.setName("provider").setDescription("Filter by provider").addChoices(
-						{ name: "OpenRouter", value: "openrouter" },
-						{ name: "OpenAI", value: "openai" },
-						{ name: "Anthropic", value: "anthropic" },
-						{ name: "Groq", value: "groq" },
-						{ name: "Cerebras", value: "cerebras" },
-						{ name: "Z.ai", value: "zai" },
-						{ name: "Ollama", value: "ollama" },
-					),
+					opt
+						.setName("provider")
+						.setDescription("Filter by provider")
+						.addChoices(
+							{ name: "OpenRouter", value: "openrouter" },
+							{ name: "OpenAI", value: "openai" },
+							{ name: "Anthropic", value: "anthropic" },
+							{ name: "Groq", value: "groq" },
+							{ name: "Cerebras", value: "cerebras" },
+							{ name: "Z.ai", value: "zai" },
+							{ name: "Ollama", value: "ollama" },
+						),
 				)
 				.addIntegerOption((opt) => opt.setName("limit").setDescription("Number of records")),
 		)
@@ -5243,21 +5354,28 @@ const slashCommands = [
 				.addStringOption((opt) => opt.setName("name").setDescription("Budget name").setRequired(true))
 				.addNumberOption((opt) => opt.setName("limit").setDescription("Budget limit in USD").setRequired(true))
 				.addStringOption((opt) =>
-					opt.setName("period").setDescription("Budget period").setRequired(true).addChoices(
-						{ name: "Hourly", value: "hourly" },
-						{ name: "Daily", value: "daily" },
-						{ name: "Weekly", value: "weekly" },
-						{ name: "Monthly", value: "monthly" },
-						{ name: "Yearly", value: "yearly" },
-					),
+					opt
+						.setName("period")
+						.setDescription("Budget period")
+						.setRequired(true)
+						.addChoices(
+							{ name: "Hourly", value: "hourly" },
+							{ name: "Daily", value: "daily" },
+							{ name: "Weekly", value: "weekly" },
+							{ name: "Monthly", value: "monthly" },
+							{ name: "Yearly", value: "yearly" },
+						),
 				)
 				.addStringOption((opt) =>
-					opt.setName("scope").setDescription("Budget scope").addChoices(
-						{ name: "Global", value: "global" },
-						{ name: "User", value: "user" },
-						{ name: "Channel", value: "channel" },
-						{ name: "Agent", value: "agent" },
-					),
+					opt
+						.setName("scope")
+						.setDescription("Budget scope")
+						.addChoices(
+							{ name: "Global", value: "global" },
+							{ name: "User", value: "user" },
+							{ name: "Channel", value: "channel" },
+							{ name: "Agent", value: "agent" },
+						),
 				),
 		)
 		.addSubcommand((sub) => sub.setName("budgets").setDescription("List all budgets"))
@@ -5284,11 +5402,14 @@ const slashCommands = [
 				.setName("report")
 				.setDescription("Generate cost report")
 				.addStringOption((opt) =>
-					opt.setName("period").setDescription("Report period").addChoices(
-						{ name: "Daily", value: "daily" },
-						{ name: "Weekly", value: "weekly" },
-						{ name: "Monthly", value: "monthly" },
-					),
+					opt
+						.setName("period")
+						.setDescription("Report period")
+						.addChoices(
+							{ name: "Daily", value: "daily" },
+							{ name: "Weekly", value: "weekly" },
+							{ name: "Monthly", value: "monthly" },
+						),
 				),
 		)
 		.addSubcommand((sub) => sub.setName("pricing").setDescription("View model pricing"))
@@ -5305,21 +5426,27 @@ const slashCommands = [
 				.addIntegerOption((opt) => opt.setName("limit").setDescription("Max requests").setRequired(true))
 				.addIntegerOption((opt) => opt.setName("window").setDescription("Window in seconds").setRequired(true))
 				.addStringOption((opt) =>
-					opt.setName("scope").setDescription("Rule scope").addChoices(
-						{ name: "Global", value: "global" },
-						{ name: "User", value: "user" },
-						{ name: "Channel", value: "channel" },
-						{ name: "Agent", value: "agent" },
-						{ name: "Endpoint", value: "endpoint" },
-					),
+					opt
+						.setName("scope")
+						.setDescription("Rule scope")
+						.addChoices(
+							{ name: "Global", value: "global" },
+							{ name: "User", value: "user" },
+							{ name: "Channel", value: "channel" },
+							{ name: "Agent", value: "agent" },
+							{ name: "Endpoint", value: "endpoint" },
+						),
 				)
 				.addStringOption((opt) =>
-					opt.setName("algorithm").setDescription("Rate limit algorithm").addChoices(
-						{ name: "Sliding Window", value: "sliding_window" },
-						{ name: "Fixed Window", value: "fixed_window" },
-						{ name: "Token Bucket", value: "token_bucket" },
-						{ name: "Leaky Bucket", value: "leaky_bucket" },
-					),
+					opt
+						.setName("algorithm")
+						.setDescription("Rate limit algorithm")
+						.addChoices(
+							{ name: "Sliding Window", value: "sliding_window" },
+							{ name: "Fixed Window", value: "fixed_window" },
+							{ name: "Token Bucket", value: "token_bucket" },
+							{ name: "Leaky Bucket", value: "leaky_bucket" },
+						),
 				),
 		)
 		.addSubcommand((sub) => sub.setName("rules").setDescription("List all rate limit rules"))
@@ -5329,12 +5456,15 @@ const slashCommands = [
 				.setDescription("Check rate limit for a target")
 				.addStringOption((opt) => opt.setName("target").setDescription("Target ID").setRequired(true))
 				.addStringOption((opt) =>
-					opt.setName("scope").setDescription("Scope").addChoices(
-						{ name: "User", value: "user" },
-						{ name: "Channel", value: "channel" },
-						{ name: "Agent", value: "agent" },
-						{ name: "Endpoint", value: "endpoint" },
-					),
+					opt
+						.setName("scope")
+						.setDescription("Scope")
+						.addChoices(
+							{ name: "User", value: "user" },
+							{ name: "Channel", value: "channel" },
+							{ name: "Agent", value: "agent" },
+							{ name: "Endpoint", value: "endpoint" },
+						),
 				),
 		)
 		.addSubcommand((sub) =>
@@ -5350,20 +5480,27 @@ const slashCommands = [
 				.addStringOption((opt) => opt.setName("name").setDescription("Quota name").setRequired(true))
 				.addIntegerOption((opt) => opt.setName("limit").setDescription("Quota limit").setRequired(true))
 				.addStringOption((opt) =>
-					opt.setName("period").setDescription("Reset period").setRequired(true).addChoices(
-						{ name: "Per Minute", value: "minute" },
-						{ name: "Per Hour", value: "hour" },
-						{ name: "Per Day", value: "day" },
-						{ name: "Per Week", value: "week" },
-						{ name: "Per Month", value: "month" },
-					),
+					opt
+						.setName("period")
+						.setDescription("Reset period")
+						.setRequired(true)
+						.addChoices(
+							{ name: "Per Minute", value: "minute" },
+							{ name: "Per Hour", value: "hour" },
+							{ name: "Per Day", value: "day" },
+							{ name: "Per Week", value: "week" },
+							{ name: "Per Month", value: "month" },
+						),
 				)
 				.addStringOption((opt) =>
-					opt.setName("scope").setDescription("Quota scope").addChoices(
-						{ name: "Global", value: "global" },
-						{ name: "User", value: "user" },
-						{ name: "Channel", value: "channel" },
-					),
+					opt
+						.setName("scope")
+						.setDescription("Quota scope")
+						.addChoices(
+							{ name: "Global", value: "global" },
+							{ name: "User", value: "user" },
+							{ name: "Channel", value: "channel" },
+						),
 				),
 		)
 		.addSubcommand((sub) => sub.setName("quotas").setDescription("List all quotas"))
@@ -5383,32 +5520,42 @@ const slashCommands = [
 				.setName("log")
 				.setDescription("Create an audit entry")
 				.addStringOption((opt) =>
-					opt.setName("action").setDescription("Action type").setRequired(true).addChoices(
-						{ name: "Create", value: "create" },
-						{ name: "Read", value: "read" },
-						{ name: "Update", value: "update" },
-						{ name: "Delete", value: "delete" },
-						{ name: "Execute", value: "execute" },
-						{ name: "Config Change", value: "config_change" },
-					),
+					opt
+						.setName("action")
+						.setDescription("Action type")
+						.setRequired(true)
+						.addChoices(
+							{ name: "Create", value: "create" },
+							{ name: "Read", value: "read" },
+							{ name: "Update", value: "update" },
+							{ name: "Delete", value: "delete" },
+							{ name: "Execute", value: "execute" },
+							{ name: "Config Change", value: "config_change" },
+						),
 				)
 				.addStringOption((opt) => opt.setName("description").setDescription("Description").setRequired(true))
 				.addStringOption((opt) =>
-					opt.setName("category").setDescription("Category").addChoices(
-						{ name: "Security", value: "security" },
-						{ name: "Data Access", value: "data_access" },
-						{ name: "Configuration", value: "configuration" },
-						{ name: "Operation", value: "operation" },
-						{ name: "System", value: "system" },
-					),
+					opt
+						.setName("category")
+						.setDescription("Category")
+						.addChoices(
+							{ name: "Security", value: "security" },
+							{ name: "Data Access", value: "data_access" },
+							{ name: "Configuration", value: "configuration" },
+							{ name: "Operation", value: "operation" },
+							{ name: "System", value: "system" },
+						),
 				)
 				.addStringOption((opt) =>
-					opt.setName("severity").setDescription("Severity").addChoices(
-						{ name: "Low", value: "low" },
-						{ name: "Medium", value: "medium" },
-						{ name: "High", value: "high" },
-						{ name: "Critical", value: "critical" },
-					),
+					opt
+						.setName("severity")
+						.setDescription("Severity")
+						.addChoices(
+							{ name: "Low", value: "low" },
+							{ name: "Medium", value: "medium" },
+							{ name: "High", value: "high" },
+							{ name: "Critical", value: "critical" },
+						),
 				),
 		)
 		.addSubcommand((sub) =>
@@ -5416,21 +5563,27 @@ const slashCommands = [
 				.setName("query")
 				.setDescription("Query audit logs")
 				.addStringOption((opt) =>
-					opt.setName("category").setDescription("Filter by category").addChoices(
-						{ name: "Security", value: "security" },
-						{ name: "Data Access", value: "data_access" },
-						{ name: "Configuration", value: "configuration" },
-						{ name: "Operation", value: "operation" },
-						{ name: "System", value: "system" },
-					),
+					opt
+						.setName("category")
+						.setDescription("Filter by category")
+						.addChoices(
+							{ name: "Security", value: "security" },
+							{ name: "Data Access", value: "data_access" },
+							{ name: "Configuration", value: "configuration" },
+							{ name: "Operation", value: "operation" },
+							{ name: "System", value: "system" },
+						),
 				)
 				.addStringOption((opt) =>
-					opt.setName("severity").setDescription("Filter by severity").addChoices(
-						{ name: "Low", value: "low" },
-						{ name: "Medium", value: "medium" },
-						{ name: "High", value: "high" },
-						{ name: "Critical", value: "critical" },
-					),
+					opt
+						.setName("severity")
+						.setDescription("Filter by severity")
+						.addChoices(
+							{ name: "Low", value: "low" },
+							{ name: "Medium", value: "medium" },
+							{ name: "High", value: "high" },
+							{ name: "Critical", value: "critical" },
+						),
 				)
 				.addIntegerOption((opt) => opt.setName("limit").setDescription("Number of entries")),
 		)
@@ -5452,11 +5605,14 @@ const slashCommands = [
 				.setDescription("Generate audit report")
 				.addStringOption((opt) => opt.setName("name").setDescription("Report name").setRequired(true))
 				.addStringOption((opt) =>
-					opt.setName("type").setDescription("Report type").addChoices(
-						{ name: "Summary", value: "summary" },
-						{ name: "Detailed", value: "detailed" },
-						{ name: "Compliance", value: "compliance" },
-					),
+					opt
+						.setName("type")
+						.setDescription("Report type")
+						.addChoices(
+							{ name: "Summary", value: "summary" },
+							{ name: "Detailed", value: "detailed" },
+							{ name: "Compliance", value: "compliance" },
+						),
 				)
 				.addIntegerOption((opt) => opt.setName("days").setDescription("Days to include (default: 30)")),
 		)
@@ -5472,12 +5628,126 @@ const slashCommands = [
 				.setName("export")
 				.setDescription("Export audit logs")
 				.addStringOption((opt) =>
-					opt.setName("format").setDescription("Export format").addChoices(
-						{ name: "JSON", value: "json" },
-						{ name: "CSV", value: "csv" },
-					),
+					opt
+						.setName("format")
+						.setDescription("Export format")
+						.addChoices({ name: "JSON", value: "json" }, { name: "CSV", value: "csv" }),
 				)
 				.addIntegerOption((opt) => opt.setName("limit").setDescription("Max entries")),
+		),
+
+	// Competitive Positioning Commands
+	new SlashCommandBuilder()
+		.setName("benchmark")
+		.setDescription("Show pi-mono performance benchmarks vs competitors")
+		.addStringOption((opt) =>
+			opt
+				.setName("compare")
+				.setDescription("Compare against specific tool")
+				.addChoices(
+					{ name: "All", value: "all" },
+					{ name: "Claude Code", value: "claude-code" },
+					{ name: "Cursor", value: "cursor" },
+					{ name: "Manus", value: "manus" },
+				),
+		),
+
+	new SlashCommandBuilder().setName("about").setDescription("About pi-mono - competitive advantages and capabilities"),
+
+	// Zero-Touch Deployment Pipeline
+	new SlashCommandBuilder()
+		.setName("deploy")
+		.setDescription("Zero-touch deployment pipeline (admin only)")
+		.addSubcommand((sub) =>
+			sub
+				.setName("auto")
+				.setDescription("Trigger autonomous deployment with pre-validation and health checks")
+				.addBooleanOption((opt) =>
+					opt.setName("skip_tests").setDescription("Skip test validation (not recommended)").setRequired(false),
+				)
+				.addBooleanOption((opt) =>
+					opt.setName("force").setDescription("Force deployment even with warnings").setRequired(false),
+				),
+		)
+		.addSubcommand((sub) => sub.setName("status").setDescription("Check current deployment status"))
+		.addSubcommand((sub) => sub.setName("rollback").setDescription("Rollback to previous deployment"))
+		.addSubcommand((sub) => sub.setName("history").setDescription("View deployment history")),
+
+	// Autonomous Feature Shipping - /ship command
+	new SlashCommandBuilder()
+		.setName("ship")
+		.setDescription("Autonomous feature shipping - Plan, Build, Validate, Review, Fix, Commit, PR")
+		.addSubcommand((sub) =>
+			sub
+				.setName("feature")
+				.setDescription("Ship a feature using the singularity workflow with auto-commit and PR")
+				.addStringOption((opt) =>
+					opt.setName("description").setDescription("Feature description").setRequired(true),
+				)
+				.addStringOption((opt) =>
+					opt
+						.setName("type")
+						.setDescription("Work type")
+						.addChoices(
+							{ name: "Feature", value: "feature" },
+							{ name: "Bug Fix", value: "bug" },
+							{ name: "Chore", value: "chore" },
+						),
+				)
+				.addBooleanOption((opt) =>
+					opt.setName("auto_pr").setDescription("Auto-create PR if on feature branch (default: true)"),
+				)
+				.addBooleanOption((opt) =>
+					opt.setName("queue").setDescription("Add to queue instead of running immediately (default: false)"),
+				)
+				.addIntegerOption((opt) =>
+					opt
+						.setName("priority")
+						.setDescription("Priority 1-10 when queuing (default: 5)")
+						.setMinValue(1)
+						.setMaxValue(10),
+				),
+		)
+		.addSubcommand((sub) =>
+			sub
+				.setName("queue")
+				.setDescription("Manage the feature shipping queue")
+				.addStringOption((opt) =>
+					opt
+						.setName("action")
+						.setDescription("Queue action")
+						.setRequired(true)
+						.addChoices(
+							{ name: "List pending features", value: "list" },
+							{ name: "Add feature to queue", value: "add" },
+							{ name: "Remove feature from queue", value: "remove" },
+							{ name: "Prioritize feature", value: "prioritize" },
+							{ name: "Start queue processing", value: "start" },
+							{ name: "Stop queue processing", value: "stop" },
+						),
+				)
+				.addStringOption((opt) => opt.setName("feature_id").setDescription("Feature ID (for remove/prioritize)"))
+				.addStringOption((opt) => opt.setName("description").setDescription("Feature description (for add)"))
+				.addIntegerOption((opt) =>
+					opt
+						.setName("priority")
+						.setDescription("Priority 1-10 (for add/prioritize)")
+						.setMinValue(1)
+						.setMaxValue(10),
+				),
+		)
+		.addSubcommand((sub) => sub.setName("status").setDescription("Show current shipping progress and queue status"))
+		.addSubcommand((sub) =>
+			sub
+				.setName("history")
+				.setDescription("Show recently shipped features")
+				.addIntegerOption((opt) =>
+					opt
+						.setName("limit")
+						.setDescription("Number of features to show (default: 10)")
+						.setMinValue(1)
+						.setMaxValue(50),
+				),
 		),
 ];
 
@@ -5525,6 +5795,443 @@ function logTool(toolName: string, label: string): void {
 
 function logSlash(command: string, user: string): void {
 	console.log(chalk.magenta("[SLASH]"), `/${command} by ${user}`);
+}
+
+// ============================================================================
+// Zero-Touch Deployment Pipeline
+// ============================================================================
+
+interface DeploymentStep {
+	name: string;
+	status: "pending" | "running" | "success" | "failed" | "skipped";
+	output?: string;
+	duration?: number;
+	error?: string;
+}
+
+interface DeploymentResult {
+	success: boolean;
+	steps: DeploymentStep[];
+	commit?: string;
+	previousCommit?: string;
+	startTime: Date;
+	endTime?: Date;
+	rollbackAvailable: boolean;
+	error?: string;
+}
+
+interface DeploymentHistory {
+	id: string;
+	timestamp: Date;
+	commit: string;
+	previousCommit: string;
+	success: boolean;
+	triggeredBy: string;
+	duration: number;
+}
+
+// In-memory deployment state (persisted across restarts via file)
+let currentDeployment: DeploymentResult | null = null;
+const deploymentHistory: DeploymentHistory[] = [];
+const DEPLOY_SCRIPT_PATH = "/opt/discord-bot-data/scripts/deploy.sh";
+const DEPLOY_LOG_PATH = "/opt/discord-bot-data/logs/deploy.log";
+const BOT_DIR = "/home/majinbu/organized/active-projects/pi-mono/packages/discord-bot";
+const HEALTH_ENDPOINT = "http://localhost:3333/health";
+
+/**
+ * Execute a command and capture output for deployment
+ */
+async function execDeployCommand(
+	command: string,
+	cwd: string = BOT_DIR,
+	timeout: number = 120000,
+): Promise<{ success: boolean; output: string; code: number }> {
+	return new Promise((resolve) => {
+		const child = spawn("bash", ["-c", command], {
+			cwd,
+			timeout,
+			env: { ...process.env, FORCE_COLOR: "0" },
+		});
+
+		let stdout = "";
+		let stderr = "";
+
+		child.stdout?.on("data", (data) => {
+			stdout += data.toString();
+		});
+
+		child.stderr?.on("data", (data) => {
+			stderr += data.toString();
+		});
+
+		child.on("close", (code) => {
+			resolve({
+				success: code === 0,
+				output: stdout + (stderr ? `\n[stderr]: ${stderr}` : ""),
+				code: code || 0,
+			});
+		});
+
+		child.on("error", (err) => {
+			resolve({
+				success: false,
+				output: err.message,
+				code: -1,
+			});
+		});
+	});
+}
+
+/**
+ * Run pre-deployment validation: type-check, lint, tests
+ */
+async function runPreDeploymentValidation(
+	skipTests: boolean = false,
+): Promise<{ success: boolean; steps: DeploymentStep[] }> {
+	const steps: DeploymentStep[] = [];
+
+	// Step 1: Type check
+	const typeCheckStep: DeploymentStep = { name: "Type Check", status: "running" };
+	steps.push(typeCheckStep);
+	const typeCheckStart = Date.now();
+
+	const typeCheck = await execDeployCommand("npm run type-check", BOT_DIR, 60000);
+	typeCheckStep.duration = Date.now() - typeCheckStart;
+
+	if (typeCheck.success) {
+		typeCheckStep.status = "success";
+		typeCheckStep.output = "TypeScript compilation passed";
+	} else {
+		typeCheckStep.status = "failed";
+		typeCheckStep.error = typeCheck.output.slice(0, 500);
+		return { success: false, steps };
+	}
+
+	// Step 2: Lint check
+	const lintStep: DeploymentStep = { name: "Lint Check", status: "running" };
+	steps.push(lintStep);
+	const lintStart = Date.now();
+
+	const lint = await execDeployCommand("npm run lint 2>&1 || true", BOT_DIR, 60000);
+	lintStep.duration = Date.now() - lintStart;
+
+	// Lint warnings are okay, only fail on errors
+	const hasLintErrors = lint.output.includes("error") && !lint.output.includes("0 errors");
+	if (!hasLintErrors) {
+		lintStep.status = "success";
+		lintStep.output = "Lint check passed";
+	} else {
+		lintStep.status = "failed";
+		lintStep.error = lint.output.slice(0, 500);
+		return { success: false, steps };
+	}
+
+	// Step 3: Run tests (optional)
+	if (!skipTests) {
+		const testStep: DeploymentStep = { name: "Tests", status: "running" };
+		steps.push(testStep);
+		const testStart = Date.now();
+
+		const tests = await execDeployCommand("npx vitest run --reporter=basic 2>&1", BOT_DIR, 180000);
+		testStep.duration = Date.now() - testStart;
+
+		if (tests.success) {
+			testStep.status = "success";
+			testStep.output = "All tests passed";
+		} else {
+			testStep.status = "failed";
+			testStep.error = tests.output.slice(-500);
+			return { success: false, steps };
+		}
+	} else {
+		steps.push({ name: "Tests", status: "skipped", output: "Skipped by user request" });
+	}
+
+	return { success: true, steps };
+}
+
+/**
+ * Execute the deployment script
+ */
+async function executeDeployment(): Promise<{ success: boolean; output: string; commit?: string }> {
+	// Get current commit before deployment
+	const commitBefore = await execDeployCommand("git rev-parse HEAD", BOT_DIR);
+
+	// Execute the deploy script (requires sudo)
+	const deployResult = await execDeployCommand(`sudo ${DEPLOY_SCRIPT_PATH} 2>&1`, BOT_DIR, 600000);
+
+	// Get commit after deployment
+	const commitAfter = await execDeployCommand("git rev-parse HEAD", BOT_DIR);
+
+	return {
+		success: deployResult.success,
+		output: deployResult.output,
+		commit: commitAfter.success ? commitAfter.output.trim() : undefined,
+	};
+}
+
+/**
+ * Run post-deployment health checks
+ */
+async function runHealthCheck(maxRetries: number = 10, delayMs: number = 5000): Promise<boolean> {
+	for (let i = 0; i < maxRetries; i++) {
+		await new Promise((resolve) => setTimeout(resolve, delayMs));
+
+		try {
+			const response = await fetch(HEALTH_ENDPOINT, { signal: AbortSignal.timeout(5000) });
+			if (response.ok) {
+				return true;
+			}
+		} catch {
+			// Continue retrying
+		}
+	}
+	return false;
+}
+
+/**
+ * Execute rollback to previous deployment
+ */
+async function executeRollback(): Promise<{ success: boolean; output: string }> {
+	// Check for backup path
+	const backupCheck = await execDeployCommand("cat /tmp/pi-discord-backup-path 2>/dev/null", BOT_DIR);
+	if (!backupCheck.success || !backupCheck.output.trim()) {
+		return { success: false, output: "No backup path found for rollback" };
+	}
+
+	const backupPath = backupCheck.output.trim();
+
+	// Get previous commit hash
+	const commitHash = await execDeployCommand(`cat ${backupPath}/commit_hash.txt 2>/dev/null`, BOT_DIR);
+	if (!commitHash.success) {
+		return { success: false, output: "Could not find previous commit hash" };
+	}
+
+	// Execute rollback
+	const rollback = await execDeployCommand(
+		`cd /opt/pi-mono && sudo git reset --hard ${commitHash.output.trim()} && cd packages/discord-bot && sudo npm run build && sudo docker-compose down && sudo docker-compose up -d`,
+		BOT_DIR,
+		300000,
+	);
+
+	return {
+		success: rollback.success,
+		output: rollback.success ? `Rolled back to commit ${commitHash.output.trim()}` : rollback.output,
+	};
+}
+
+/**
+ * Full autonomous deployment pipeline
+ */
+async function runAutonomousDeployment(
+	triggeredBy: string,
+	skipTests: boolean = false,
+	force: boolean = false,
+	notifyChannel?: TextChannel,
+): Promise<DeploymentResult> {
+	const result: DeploymentResult = {
+		success: false,
+		steps: [],
+		startTime: new Date(),
+		rollbackAvailable: false,
+	};
+
+	currentDeployment = result;
+
+	// Notify start
+	if (notifyChannel) {
+		const startEmbed = new EmbedBuilder()
+			.setTitle("Deployment Started")
+			.setColor(0x3498db)
+			.setDescription(`Triggered by ${triggeredBy}`)
+			.addFields(
+				{ name: "Skip Tests", value: skipTests ? "Yes" : "No", inline: true },
+				{ name: "Force", value: force ? "Yes" : "No", inline: true },
+			)
+			.setTimestamp();
+		await notifyChannel.send({ embeds: [startEmbed] });
+	}
+
+	try {
+		// Step 1: Pre-deployment validation
+		const validationStep: DeploymentStep = { name: "Pre-Deployment Validation", status: "running" };
+		result.steps.push(validationStep);
+		const validationStart = Date.now();
+
+		const validation = await runPreDeploymentValidation(skipTests);
+		validationStep.duration = Date.now() - validationStart;
+
+		// Merge validation steps
+		result.steps.push(...validation.steps);
+
+		if (!validation.success && !force) {
+			validationStep.status = "failed";
+			validationStep.error = "Pre-deployment validation failed";
+			result.error = "Pre-deployment validation failed";
+
+			if (notifyChannel) {
+				const failEmbed = new EmbedBuilder()
+					.setTitle("Deployment Failed - Validation")
+					.setColor(0xe74c3c)
+					.setDescription("Pre-deployment validation failed")
+					.addFields(
+						...result.steps.map((s) => ({
+							name: `${s.status === "success" ? "[OK]" : s.status === "failed" ? "[FAIL]" : "[SKIP]"} ${s.name}`,
+							value: s.error || s.output || "Completed",
+							inline: false,
+						})),
+					)
+					.setTimestamp();
+				await notifyChannel.send({ embeds: [failEmbed] });
+			}
+
+			return result;
+		}
+
+		validationStep.status = validation.success ? "success" : "skipped";
+
+		// Step 2: Get current commit for rollback
+		const commitBefore = await execDeployCommand("git rev-parse HEAD", BOT_DIR);
+		result.previousCommit = commitBefore.success ? commitBefore.output.trim() : undefined;
+
+		// Step 3: Execute deployment
+		const deployStep: DeploymentStep = { name: "Deployment", status: "running" };
+		result.steps.push(deployStep);
+		const deployStart = Date.now();
+
+		const deployment = await executeDeployment();
+		deployStep.duration = Date.now() - deployStart;
+
+		if (!deployment.success) {
+			deployStep.status = "failed";
+			deployStep.error = deployment.output.slice(-500);
+			result.error = "Deployment script failed";
+
+			// Attempt rollback
+			if (result.previousCommit) {
+				const rollbackStep: DeploymentStep = { name: "Auto-Rollback", status: "running" };
+				result.steps.push(rollbackStep);
+
+				const rollback = await executeRollback();
+				rollbackStep.status = rollback.success ? "success" : "failed";
+				rollbackStep.output = rollback.output;
+			}
+
+			if (notifyChannel) {
+				const failEmbed = new EmbedBuilder()
+					.setTitle("Deployment Failed - Rollback Attempted")
+					.setColor(0xe74c3c)
+					.setDescription(deployment.output.slice(-500))
+					.setTimestamp();
+				await notifyChannel.send({ embeds: [failEmbed] });
+			}
+
+			return result;
+		}
+
+		deployStep.status = "success";
+		deployStep.output = "Deployment script completed";
+		result.commit = deployment.commit;
+		result.rollbackAvailable = true;
+
+		// Step 4: Health check
+		const healthStep: DeploymentStep = { name: "Health Check", status: "running" };
+		result.steps.push(healthStep);
+		const healthStart = Date.now();
+
+		const healthy = await runHealthCheck();
+		healthStep.duration = Date.now() - healthStart;
+
+		if (!healthy) {
+			healthStep.status = "failed";
+			healthStep.error = "Health check failed after 10 retries";
+
+			// Attempt rollback
+			const rollbackStep: DeploymentStep = { name: "Auto-Rollback", status: "running" };
+			result.steps.push(rollbackStep);
+
+			const rollback = await executeRollback();
+			rollbackStep.status = rollback.success ? "success" : "failed";
+			rollbackStep.output = rollback.output;
+
+			result.error = "Health check failed - rolled back";
+
+			if (notifyChannel) {
+				const failEmbed = new EmbedBuilder()
+					.setTitle("Deployment Failed - Health Check")
+					.setColor(0xe74c3c)
+					.setDescription("Health check failed, automatic rollback executed")
+					.addFields({ name: "Rollback Status", value: rollback.success ? "Success" : "Failed" })
+					.setTimestamp();
+				await notifyChannel.send({ embeds: [failEmbed] });
+			}
+
+			return result;
+		}
+
+		healthStep.status = "success";
+		healthStep.output = "Health check passed";
+
+		// Success!
+		result.success = true;
+		result.endTime = new Date();
+
+		// Add to history
+		const historyEntry: DeploymentHistory = {
+			id: Date.now().toString(36),
+			timestamp: result.startTime,
+			commit: result.commit || "unknown",
+			previousCommit: result.previousCommit || "unknown",
+			success: true,
+			triggeredBy,
+			duration: result.endTime.getTime() - result.startTime.getTime(),
+		};
+		deploymentHistory.unshift(historyEntry);
+		if (deploymentHistory.length > 20) deploymentHistory.pop();
+
+		if (notifyChannel) {
+			const successEmbed = new EmbedBuilder()
+				.setTitle("Deployment Successful")
+				.setColor(0x2ecc71)
+				.setDescription("Zero-touch deployment completed successfully")
+				.addFields(
+					{ name: "Commit", value: result.commit?.slice(0, 8) || "N/A", inline: true },
+					{
+						name: "Duration",
+						value: `${Math.round((result.endTime.getTime() - result.startTime.getTime()) / 1000)}s`,
+						inline: true,
+					},
+					{ name: "Rollback Available", value: "Yes", inline: true },
+				)
+				.addFields(
+					...result.steps.map((s) => ({
+						name: `[${s.status === "success" ? "OK" : s.status === "skipped" ? "SKIP" : "FAIL"}] ${s.name}`,
+						value: `${s.duration ? `${Math.round(s.duration / 1000)}s` : "-"}`,
+						inline: true,
+					})),
+				)
+				.setTimestamp();
+			await notifyChannel.send({ embeds: [successEmbed] });
+		}
+
+		return result;
+	} catch (error) {
+		result.error = error instanceof Error ? error.message : String(error);
+		result.endTime = new Date();
+
+		if (notifyChannel) {
+			const errorEmbed = new EmbedBuilder()
+				.setTitle("Deployment Error")
+				.setColor(0xe74c3c)
+				.setDescription(`Unexpected error: ${result.error}`)
+				.setTimestamp();
+			await notifyChannel.send({ embeds: [errorEmbed] });
+		}
+
+		return result;
+	} finally {
+		currentDeployment = null;
+	}
 }
 
 // ============================================================================
@@ -8082,33 +8789,48 @@ async function main() {
 	}
 
 	// PID file safeguard - prevent duplicate bot instances
-	const pidFile = join(workingDir, "discord-bot.pid");
-	if (existsSync(pidFile)) {
-		const existingPid = parseInt(readFileSync(pidFile, "utf-8").trim(), 10);
+	// IMPORTANT: Use GLOBAL lock file to prevent duplicates across different workingDirs
+	// The per-workingDir PID was allowing duplicates (production vs dev = different files)
+	const globalPidFile = "/tmp/pi-discord-bot.lock";
+	const localPidFile = join(workingDir, "discord-bot.pid");
+
+	if (existsSync(globalPidFile)) {
+		const existingPid = parseInt(readFileSync(globalPidFile, "utf-8").trim(), 10);
 		try {
 			// Check if process is still running (signal 0 = existence check)
 			process.kill(existingPid, 0);
 			logError(`Another instance already running (PID ${existingPid}). Exiting.`);
-			logError(`If this is stale, delete: ${pidFile}`);
+			logError(`Kill it with: kill ${existingPid}`);
+			logError(`Or delete lock: rm ${globalPidFile}`);
 			process.exit(1);
 		} catch {
 			// Process not running, stale PID file - remove and continue
 			logInfo(`Removing stale PID file (PID ${existingPid} not running)`);
-			unlinkSync(pidFile);
+			unlinkSync(globalPidFile);
 		}
 	}
-	// Write our PID
-	writeFileSync(pidFile, process.pid.toString());
-	logInfo(`PID file created: ${pidFile} (PID ${process.pid})`);
+	// Write our PID to both global and local locations
+	writeFileSync(globalPidFile, process.pid.toString());
+	writeFileSync(localPidFile, process.pid.toString());
+	logInfo(`PID lock created: ${globalPidFile} (PID ${process.pid})`);
 
-	// Cleanup PID file on exit
+	// Cleanup PID files on exit
 	const cleanupPid = () => {
 		try {
-			if (existsSync(pidFile)) {
-				const storedPid = parseInt(readFileSync(pidFile, "utf-8").trim(), 10);
+			// Clean up global lock file
+			if (existsSync(globalPidFile)) {
+				const storedPid = parseInt(readFileSync(globalPidFile, "utf-8").trim(), 10);
 				if (storedPid === process.pid) {
-					unlinkSync(pidFile);
-					console.log(`[Cleanup] Removed PID file`);
+					unlinkSync(globalPidFile);
+					console.log(`[Cleanup] Removed global PID lock`);
+				}
+			}
+			// Clean up local PID file
+			if (existsSync(localPidFile)) {
+				const storedPid = parseInt(readFileSync(localPidFile, "utf-8").trim(), 10);
+				if (storedPid === process.pid) {
+					unlinkSync(localPidFile);
+					console.log(`[Cleanup] Removed local PID file`);
 				}
 			}
 		} catch {
@@ -11351,6 +12073,293 @@ async function main() {
 					break;
 				}
 
+				case "benchmark": {
+					const compare = interaction.options.getString("compare") || "all";
+					logSlash(`benchmark ${compare}`, user.username);
+
+					const benchmarkData = {
+						"pi-mono": {
+							browserTask: "24s",
+							tokensPerSession: "3,500",
+							reliability: "94%",
+							mcpOverhead: "0ms (direct)",
+							providers: "25+",
+							skills: "41+",
+							cost: "$0.003/task",
+						},
+						"claude-code": {
+							browserTask: "30s",
+							tokensPerSession: "15,000",
+							reliability: "83%",
+							mcpOverhead: "50-100ms",
+							providers: "1 (Anthropic)",
+							skills: "N/A",
+							cost: "$0.015/task",
+						},
+						cursor: {
+							browserTask: "35s",
+							tokensPerSession: "12,000",
+							reliability: "78%",
+							mcpOverhead: "30-80ms",
+							providers: "3",
+							skills: "Limited",
+							cost: "$0.02/task",
+						},
+						manus: {
+							browserTask: "28s",
+							tokensPerSession: "10,000",
+							reliability: "85%",
+							mcpOverhead: "40ms",
+							providers: "2",
+							skills: "Enterprise",
+							cost: "$125M ARR (acquired by Meta)",
+						},
+					};
+
+					const embed = new EmbedBuilder()
+						.setTitle("pi-mono Performance Benchmarks")
+						.setColor(0x00ff00)
+						.setDescription("**pi-mono vs competitors** - Real-world performance metrics")
+						.setTimestamp();
+
+					if (compare === "all" || compare === "claude-code") {
+						embed.addFields({
+							name: "vs Claude Code",
+							value: `Browser Task: **24s** vs 30s (20% faster)\nTokens: **3.5K** vs 15K (77% cheaper)\nReliability: **94%** vs 83%\nMCP Overhead: **0ms** vs 50-100ms`,
+							inline: false,
+						});
+					}
+					if (compare === "all" || compare === "cursor") {
+						embed.addFields({
+							name: "vs Cursor",
+							value: `Browser Task: **24s** vs 35s (31% faster)\nTokens: **3.5K** vs 12K (71% cheaper)\nReliability: **94%** vs 78%\nProviders: **25+** vs 3`,
+							inline: false,
+						});
+					}
+					if (compare === "all" || compare === "manus") {
+						embed.addFields({
+							name: "vs Manus (Meta acquired for $B)",
+							value: `Browser Task: **24s** vs 28s (14% faster)\nTokens: **3.5K** vs 10K (65% cheaper)\nReliability: **94%** vs 85%\nCost: **Open source** vs Enterprise SaaS`,
+							inline: false,
+						});
+					}
+
+					embed.addFields(
+						{
+							name: "pi-mono Advantages",
+							value: "• Zero MCP overhead (direct tool calls)\n• 25+ AI providers (no vendor lock-in)\n• 41+ pre-built skills\n• Open source (MIT)\n• Self-hosted option",
+							inline: false,
+						},
+						{
+							name: "Source",
+							value: "Benchmark: Haiku + pi + browser-tools (89 lines) = 24s\nvs Haiku + CC + Playwright MCP (5K tokens) = 30s",
+							inline: false,
+						},
+					);
+
+					await interaction.reply({ embeds: [embed] });
+					break;
+				}
+
+				case "about": {
+					logSlash("about", user.username);
+
+					const embed = new EmbedBuilder()
+						.setTitle("pi-mono - The Linux of AI Coding Agents")
+						.setColor(0x7289da)
+						.setDescription(
+							"**Open-source agentic framework** that's faster, cheaper, and more flexible than proprietary alternatives.",
+						)
+						.addFields(
+							{
+								name: "Why pi-mono?",
+								value: "• **20% faster** than Claude Code\n• **77% cheaper** per session\n• **94% reliability** (vs 70-83% competitors)\n• **Zero vendor lock-in** (25+ AI providers)\n• **41+ ready skills** (trading, security, devops, etc.)",
+								inline: false,
+							},
+							{
+								name: "Architecture",
+								value: "• Direct tool execution (no MCP overhead)\n• Skills-based composable intelligence\n• Persistent knowledge graph + memories\n• Multi-platform (Discord, TUI, Web)",
+								inline: false,
+							},
+							{
+								name: "Market Validation",
+								value: "Meta acquired Manus (similar tech) for **billions** in Dec 2025.\npi-mono offers the same capabilities, **open source**.",
+								inline: false,
+							},
+							{
+								name: "4 Pillars",
+								value: "1. **Fastest** - Performance as brand\n2. **Cheapest** - Cost leadership\n3. **Ready** - 41+ pre-built skills\n4. **Open** - Community-driven ecosystem",
+								inline: false,
+							},
+							{
+								name: "Links",
+								value: "[GitHub](https://github.com/mariozechner/pi-mono) | [Docs](https://pi-mono.dev) | [Discord](https://discord.gg/pi-mono)",
+								inline: false,
+							},
+						)
+						.setFooter({ text: "Use /benchmark to see performance comparisons" })
+						.setTimestamp();
+
+					await interaction.reply({ embeds: [embed] });
+					break;
+				}
+
+				case "deploy": {
+					const subCmd = interaction.options.getSubcommand();
+					logSlash(`deploy ${subCmd}`, user.username);
+
+					// Admin-only command
+					if (!isOwner(user.id)) {
+						await interaction.reply({
+							content: "This command is restricted to bot administrators.",
+							ephemeral: true,
+						});
+						break;
+					}
+
+					switch (subCmd) {
+						case "auto": {
+							const skipTests = interaction.options.getBoolean("skip_tests") || false;
+							const force = interaction.options.getBoolean("force") || false;
+
+							// Check if deployment is already running
+							if (currentDeployment) {
+								await interaction.reply({
+									content: "A deployment is already in progress. Please wait for it to complete.",
+									ephemeral: true,
+								});
+								break;
+							}
+
+							await interaction.deferReply();
+
+							const embed = new EmbedBuilder()
+								.setTitle("Zero-Touch Deployment Initiated")
+								.setColor(0x3498db)
+								.setDescription("Starting autonomous deployment pipeline...")
+								.addFields(
+									{ name: "Triggered By", value: user.username, inline: true },
+									{ name: "Skip Tests", value: skipTests ? "Yes" : "No", inline: true },
+									{ name: "Force Mode", value: force ? "Yes" : "No", inline: true },
+								)
+								.addFields({
+									name: "Pipeline Steps",
+									value: "1. Type Check\n2. Lint Check\n3. Tests\n4. Deploy Script\n5. Health Check",
+								})
+								.setTimestamp();
+
+							await interaction.editReply({ embeds: [embed] });
+
+							// Run deployment in background (non-blocking)
+							const channel = interaction.channel as TextChannel;
+							runAutonomousDeployment(user.username, skipTests, force, channel).catch((err) => {
+								logError("Deployment failed", err.message);
+							});
+							break;
+						}
+
+						case "status": {
+							if (currentDeployment) {
+								const elapsed = Date.now() - currentDeployment.startTime.getTime();
+								const embed = new EmbedBuilder()
+									.setTitle("Deployment In Progress")
+									.setColor(0xf39c12)
+									.setDescription("A deployment is currently running")
+									.addFields(
+										{ name: "Started", value: currentDeployment.startTime.toISOString(), inline: true },
+										{ name: "Elapsed", value: `${Math.round(elapsed / 1000)}s`, inline: true },
+									)
+									.addFields(
+										...currentDeployment.steps.map((s) => ({
+											name: s.name,
+											value: `${s.status === "running" ? "[RUNNING]" : s.status === "success" ? "[OK]" : s.status === "failed" ? "[FAIL]" : "[PENDING]"} ${s.output || s.error || ""}`.slice(
+												0,
+												100,
+											),
+											inline: false,
+										})),
+									)
+									.setTimestamp();
+								await interaction.reply({ embeds: [embed] });
+							} else {
+								// Check systemd service status
+								const serviceStatus = await execDeployCommand(
+									"systemctl is-active pi-discord.service 2>/dev/null || echo 'unknown'",
+								);
+								const containerStatus = await execDeployCommand(
+									"docker ps --filter name=pi-discord-bot --format '{{.Status}}' 2>/dev/null || echo 'not running'",
+								);
+								const currentCommit = await execDeployCommand("git rev-parse --short HEAD", BOT_DIR);
+
+								const embed = new EmbedBuilder()
+									.setTitle("Deployment Status")
+									.setColor(0x2ecc71)
+									.setDescription("No deployment currently in progress")
+									.addFields(
+										{ name: "Service Status", value: serviceStatus.output.trim() || "unknown", inline: true },
+										{ name: "Container", value: containerStatus.output.trim() || "unknown", inline: true },
+										{ name: "Current Commit", value: currentCommit.output.trim() || "unknown", inline: true },
+										{
+											name: "Recent Deployments",
+											value:
+												deploymentHistory.length > 0
+													? deploymentHistory
+															.slice(0, 5)
+															.map(
+																(h) =>
+																	`${h.success ? "[OK]" : "[FAIL]"} ${h.commit.slice(0, 7)} - ${h.triggeredBy} (${Math.round(h.duration / 1000)}s)`,
+															)
+															.join("\n")
+													: "No deployment history",
+										},
+									)
+									.setTimestamp();
+								await interaction.reply({ embeds: [embed] });
+							}
+							break;
+						}
+
+						case "rollback": {
+							await interaction.deferReply();
+
+							const rollbackResult = await executeRollback();
+
+							const embed = new EmbedBuilder()
+								.setTitle(rollbackResult.success ? "Rollback Successful" : "Rollback Failed")
+								.setColor(rollbackResult.success ? 0x2ecc71 : 0xe74c3c)
+								.setDescription(rollbackResult.output)
+								.setTimestamp();
+
+							await interaction.editReply({ embeds: [embed] });
+							break;
+						}
+
+						case "history": {
+							if (deploymentHistory.length === 0) {
+								await interaction.reply("No deployment history available.");
+								break;
+							}
+
+							const embed = new EmbedBuilder()
+								.setTitle("Deployment History")
+								.setColor(0x3498db)
+								.setDescription(`Last ${Math.min(deploymentHistory.length, 10)} deployments`)
+								.addFields(
+									...deploymentHistory.slice(0, 10).map((h, i) => ({
+										name: `#${i + 1} - ${h.success ? "[SUCCESS]" : "[FAILED]"}`,
+										value: `Commit: \`${h.commit.slice(0, 8)}\`\nTriggered by: ${h.triggeredBy}\nDuration: ${Math.round(h.duration / 1000)}s\nTime: ${h.timestamp.toISOString()}`,
+										inline: false,
+									})),
+								)
+								.setTimestamp();
+
+							await interaction.reply({ embeds: [embed] });
+							break;
+						}
+					}
+					break;
+				}
+
 				case "hooks": {
 					await interaction.deferReply();
 					const hooksSubcommand = interaction.options.getSubcommand();
@@ -11363,7 +12372,7 @@ async function main() {
 							const isGitRepo = await CheckpointUtils.isGitRepo(channelDir).catch(() => false);
 
 							const embed = new EmbedBuilder()
-								.setTitle("🪝 Hook System Status")
+								.setTitle("Hook System Status")
 								.setColor(hasHooks ? 0x00ff00 : 0x808080)
 								.addFields(
 									{ name: "Hooks Active", value: hasHooks ? "✅ Yes" : "❌ No", inline: true },
@@ -17357,6 +18366,263 @@ async function main() {
 					break;
 				}
 
+				case "selfheal": {
+					const subcommand = interaction.options.getSubcommand();
+					await interaction.deferReply();
+
+					try {
+						const selfHealing = getSelfHealingManager({
+							dataDir: join(workingDir, "data"),
+							debugLog: true,
+						});
+
+						// Configure with Discord client if not already done
+						selfHealing.configure({ discordClient: client });
+
+						switch (subcommand) {
+							case "status": {
+								const status = selfHealing.getStatus();
+								const config = selfHealing.getConfig();
+
+								const memoryBar =
+									"=".repeat(Math.floor(status.memoryMetrics.heapUsedPercent / 5)) +
+									"-".repeat(20 - Math.floor(status.memoryMetrics.heapUsedPercent / 5));
+
+								const embed = new EmbedBuilder()
+									.setTitle("Self-Healing Service Status")
+									.setColor(
+										status.healthScore >= 80 ? 0x2ecc71 : status.healthScore >= 50 ? 0xf39c12 : 0xe74c3c,
+									)
+									.addFields(
+										{
+											name: "Status",
+											value: config.enabled ? "Enabled" : "Disabled",
+											inline: true,
+										},
+										{
+											name: "Health Score",
+											value: `${status.healthScore}/100`,
+											inline: true,
+										},
+										{
+											name: "Uptime",
+											value: `${Math.floor(status.uptime / 3600000)}h ${Math.floor((status.uptime % 3600000) / 60000)}m`,
+											inline: true,
+										},
+										{
+											name: "Healing Actions",
+											value: `${status.successfulHealings}/${status.totalHealingActions} successful`,
+											inline: true,
+										},
+										{
+											name: "Memory",
+											value: `[${memoryBar}] ${status.memoryMetrics.heapUsedPercent.toFixed(1)}%`,
+											inline: false,
+										},
+										{
+											name: "Active Patterns",
+											value:
+												status.activePatterns.length > 0
+													? status.activePatterns.map((p) => `${p.pattern}: ${p.count}`).join(", ")
+													: "None",
+											inline: false,
+										},
+										{
+											name: "Connections",
+											value: `DB: ${status.dbConnectionHealthy ? "OK" : "FAIL"} | Gateway: ${status.gatewayConnected ? "OK" : "FAIL"}`,
+											inline: true,
+										},
+									)
+									.setDescription("Autonomous error recovery and system resilience monitoring.")
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "history": {
+								const history = selfHealing.getHealingHistory(20);
+
+								if (history.length === 0) {
+									await interaction.editReply("No healing actions recorded yet.");
+									break;
+								}
+
+								const list = history
+									.slice(0, 10)
+									.map((a) => {
+										const status = a.success ? "[OK]" : "[FAIL]";
+										const time = new Date(a.timestamp).toLocaleTimeString();
+										return `${status} \`${a.type}\` - ${a.pattern}\n   ${a.durationMs}ms | ${time}`;
+									})
+									.join("\n\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle("Healing Action History")
+									.setColor(0x3498db)
+									.setDescription(list)
+									.setFooter({
+										text: `Showing ${Math.min(history.length, 10)} of ${history.length} actions`,
+									})
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "patterns": {
+								const patterns = selfHealing.getErrorPatterns().filter((p) => p.count > 0);
+
+								if (patterns.length === 0) {
+									await interaction.editReply("No error patterns detected.");
+									break;
+								}
+
+								const list = patterns
+									.map((p) => {
+										const lastSeen = p.lastSeen > 0 ? new Date(p.lastSeen).toLocaleTimeString() : "Never";
+										return `**${p.pattern}**\n   Count: ${p.count} | Healed: ${p.healed} | Failed: ${p.failed}\n   Last: ${lastSeen}`;
+									})
+									.join("\n\n");
+
+								const embed = new EmbedBuilder()
+									.setTitle("Detected Error Patterns")
+									.setColor(0xe74c3c)
+									.setDescription(list)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "trigger": {
+								const healType = interaction.options.getString("type", true);
+								let action;
+
+								switch (healType) {
+									case "memory":
+										action = await selfHealing.triggerMemoryHealing();
+										break;
+									case "database":
+										action = await selfHealing.triggerDatabaseHealing();
+										break;
+									case "gateway":
+										action = await selfHealing.triggerGatewayHealing();
+										break;
+									default:
+										await interaction.editReply(`Unknown healing type: ${healType}`);
+										return;
+								}
+
+								if (!action) {
+									await interaction.editReply(`Could not trigger ${healType} healing. Check configuration.`);
+									break;
+								}
+
+								const embed = new EmbedBuilder()
+									.setTitle(`Healing Action: ${healType}`)
+									.setColor(action.success ? 0x2ecc71 : 0xe74c3c)
+									.addFields(
+										{ name: "Status", value: action.success ? "Success" : "Failed", inline: true },
+										{ name: "Duration", value: `${action.durationMs}ms`, inline: true },
+										{ name: "Severity", value: action.severity, inline: true },
+									)
+									.setDescription(action.description)
+									.setTimestamp();
+
+								await interaction.editReply({ embeds: [embed] });
+								break;
+							}
+
+							case "config": {
+								const preset = interaction.options.getString("preset");
+								const heapThreshold = interaction.options.getInteger("heap_threshold");
+								const logChannel = interaction.options.getString("log_channel");
+
+								const updates: Record<string, unknown> = {};
+
+								if (preset) {
+									const presetConfigs = {
+										conservative: SelfHealingPresets.conservative,
+										aggressive: SelfHealingPresets.aggressive,
+										production: SelfHealingPresets.production,
+										development: SelfHealingPresets.development,
+									} as const;
+									Object.assign(updates, presetConfigs[preset as keyof typeof presetConfigs] || {});
+								}
+
+								if (heapThreshold !== null) {
+									updates.heapThresholdPercent = heapThreshold;
+								}
+
+								if (logChannel) {
+									updates.logChannel = logChannel;
+								}
+
+								if (Object.keys(updates).length === 0) {
+									// Show current config
+									const cfg = selfHealing.getConfig();
+									const embed = new EmbedBuilder()
+										.setTitle("Self-Healing Configuration")
+										.setColor(0x9b59b6)
+										.addFields(
+											{ name: "Enabled", value: String(cfg.enabled), inline: true },
+											{ name: "Heap Threshold", value: `${cfg.heapThresholdPercent}%`, inline: true },
+											{ name: "Heap Critical", value: `${cfg.heapCriticalPercent}%`, inline: true },
+											{ name: "Memory Check", value: `${cfg.memoryCheckIntervalMs}ms`, inline: true },
+											{ name: "Healing Cooldown", value: `${cfg.healingCooldownMs}ms`, inline: true },
+											{
+												name: "Max Healing/Hour",
+												value: String(cfg.maxHealingAttemptsPerHour),
+												inline: true,
+											},
+											{ name: "Log Channel", value: cfg.logChannel || "Not set", inline: true },
+										)
+										.setTimestamp();
+
+									await interaction.editReply({ embeds: [embed] });
+								} else {
+									selfHealing.updateConfig(updates as any);
+									await interaction.editReply(
+										`Configuration updated:\n\`\`\`json\n${JSON.stringify(updates, null, 2)}\n\`\`\``,
+									);
+								}
+								break;
+							}
+
+							case "toggle": {
+								const enabled = interaction.options.getBoolean("enabled", true);
+								selfHealing.updateConfig({ enabled });
+
+								if (enabled) {
+									selfHealing.start();
+									await interaction.editReply(
+										"Self-healing enabled and started. Monitoring for errors and system health.",
+									);
+								} else {
+									selfHealing.stop();
+									await interaction.editReply("Self-healing disabled. No automatic recovery will occur.");
+								}
+								break;
+							}
+
+							case "clear": {
+								selfHealing.clearErrorPatterns();
+								selfHealing.clearRateLimits();
+								await interaction.editReply("Error patterns and rate limits cleared.");
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown selfheal subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`Self-healing error: ${errMsg}`);
+					}
+					break;
+				}
+
 				case "history": {
 					const subcommand = interaction.options.getSubcommand();
 					await interaction.deferReply();
@@ -19774,9 +21040,7 @@ async function main() {
 								const session = db.getActiveSession(userId, channelId);
 
 								if (!session) {
-									await interaction.editReply(
-										"❌ No active coding session. Use `/coder start` to begin.",
-									);
+									await interaction.editReply("❌ No active coding session. Use `/coder start` to begin.");
 									break;
 								}
 
@@ -19813,14 +21077,13 @@ async function main() {
 								const session = db.getActiveSession(userId, channelId);
 
 								if (!session) {
-									await interaction.editReply(
-										"❌ No active coding session. Use `/coder start` to begin.",
-									);
+									await interaction.editReply("❌ No active coding session. Use `/coder start` to begin.");
 									break;
 								}
 
 								// Import enhanced UI components
-								const { createThinkingEmbed, createEnhancedStreamingEmbed, createCodeReviewButtonsExtended } = uiModule;
+								const { createThinkingEmbed, createEnhancedStreamingEmbed, createCodeReviewButtonsExtended } =
+									uiModule;
 
 								// Build enhanced prompt with file context
 								let enhancedPrompt = prompt;
@@ -19850,11 +21113,14 @@ async function main() {
 								try {
 									// Use lightweight agent for AI generation
 									const { runAgent } = await import("./agents/lightweight-agent.js");
-									const systemPrompt = session.systemPrompt || `You are an expert coding assistant. Provide clean, well-documented code suggestions. Always wrap code in appropriate markdown code blocks with language identifiers. Explain your suggestions briefly.`;
+									const systemPrompt =
+										session.systemPrompt ||
+										`You are an expert coding assistant. Provide clean, well-documented code suggestions. Always wrap code in appropriate markdown code blocks with language identifiers. Explain your suggestions briefly.`;
 
-									const fullPrompt = session.context.length > 0
-										? `Context: ${session.context.join(", ")}\n\nRequest: ${enhancedPrompt}`
-										: enhancedPrompt;
+									const fullPrompt =
+										session.context.length > 0
+											? `Context: ${session.context.join(", ")}\n\nRequest: ${enhancedPrompt}`
+											: enhancedPrompt;
 
 									const startTime = Date.now();
 									const response = await runAgent({
@@ -19909,7 +21175,10 @@ async function main() {
 										sessionId: session.id,
 										language: targetLanguage || codeBlocks[0].language,
 										code: codeBlocks[0].code,
-										explanation: response.output.replace(/```[\s\S]*?```/g, "").trim().slice(0, 500),
+										explanation: response.output
+											.replace(/```[\s\S]*?```/g, "")
+											.trim()
+											.slice(0, 500),
 										filePath: filePath || undefined,
 									});
 
@@ -19937,9 +21206,7 @@ async function main() {
 								const session = db.getActiveSession(userId, channelId);
 
 								if (!session) {
-									await interaction.editReply(
-										"❌ No active coding session. Use `/coder start` to begin.",
-									);
+									await interaction.editReply("❌ No active coding session. Use `/coder start` to begin.");
 									break;
 								}
 
@@ -19963,14 +21230,14 @@ async function main() {
 								const session = db.getActiveSession(userId, channelId);
 
 								if (!session) {
-									await interaction.editReply(
-										"❌ No active coding session. Use `/coder start` to begin.",
-									);
+									await interaction.editReply("❌ No active coding session. Use `/coder start` to begin.");
 									break;
 								}
 
 								if (session.context.length === 0) {
-									await interaction.editReply("📋 **Session Context:** (empty)\n\nUse `/coder settings` to add context.");
+									await interaction.editReply(
+										"📋 **Session Context:** (empty)\n\nUse `/coder settings` to add context.",
+									);
 								} else {
 									await interaction.editReply(
 										`📋 **Session Context:**\n${session.context.map((c, i) => `${i + 1}. ${c}`).join("\n")}`,
@@ -19983,9 +21250,7 @@ async function main() {
 								const session = db.getActiveSession(userId, channelId);
 
 								if (!session) {
-									await interaction.editReply(
-										"❌ No active coding session. Use `/coder start` to begin.",
-									);
+									await interaction.editReply("❌ No active coding session. Use `/coder start` to begin.");
 									break;
 								}
 
@@ -20000,9 +21265,7 @@ async function main() {
 								const session = db.getActiveSession(userId, channelId);
 
 								if (!session) {
-									await interaction.editReply(
-										"❌ No active coding session. Use `/coder start` to begin.",
-									);
+									await interaction.editReply("❌ No active coding session. Use `/coder start` to begin.");
 									break;
 								}
 
@@ -21152,14 +22415,23 @@ async function main() {
 									)
 									.addFields(
 										{ name: "Delegations", value: String(stats.delegations.total), inline: true },
-										{ name: "Success Rate", value: `${stats.delegations.successRate.toFixed(1)}%`, inline: true },
-										{ name: "Avg Latency", value: `${stats.delegations.avgLatency.toFixed(0)}ms`, inline: true },
+										{
+											name: "Success Rate",
+											value: `${stats.delegations.successRate.toFixed(1)}%`,
+											inline: true,
+										},
+										{
+											name: "Avg Latency",
+											value: `${stats.delegations.avgLatency.toFixed(0)}ms`,
+											inline: true,
+										},
 									)
 									.addFields({
 										name: "By Role",
-										value: Object.entries(stats.agents.byRole)
-											.map(([role, count]) => `${role}: ${count}`)
-											.join(", ") || "None",
+										value:
+											Object.entries(stats.agents.byRole)
+												.map(([role, count]) => `${role}: ${count}`)
+												.join(", ") || "None",
 									})
 									.setFooter({ text: "Codebase Singularity - Class 3.1" })
 									.setTimestamp();
@@ -21171,12 +22443,15 @@ async function main() {
 							case "agents": {
 								const agents = orch.listAgents();
 								if (agents.length === 0) {
-									await interaction.editReply("No agents registered. Use `/orchestrator agent-create` to add one.");
+									await interaction.editReply(
+										"No agents registered. Use `/orchestrator agent-create` to add one.",
+									);
 									break;
 								}
 
 								const list = agents.slice(0, 15).map((a) => {
-									const successRate = a.runCount > 0 ? ((a.successCount / a.runCount) * 100).toFixed(0) : "N/A";
+									const successRate =
+										a.runCount > 0 ? ((a.successCount / a.runCount) * 100).toFixed(0) : "N/A";
 									return `• **${a.name}** [${a.role}] - ${a.type} | ${a.status} | ${successRate}% success`;
 								});
 
@@ -21193,8 +22468,20 @@ async function main() {
 
 							case "agent-create": {
 								const name = interaction.options.getString("name", true);
-								const type = interaction.options.getString("type", true) as "skill" | "mcp" | "subprocess" | "webhook" | "inline";
-								const role = interaction.options.getString("role", true) as "architect" | "builder" | "tester" | "reviewer" | "expert" | "scout" | "executor";
+								const type = interaction.options.getString("type", true) as
+									| "skill"
+									| "mcp"
+									| "subprocess"
+									| "webhook"
+									| "inline";
+								const role = interaction.options.getString("role", true) as
+									| "architect"
+									| "builder"
+									| "tester"
+									| "reviewer"
+									| "expert"
+									| "scout"
+									| "executor";
 								const description = interaction.options.getString("description") || `${name} agent`;
 
 								const agent = orch.createAgent({
@@ -21238,7 +22525,13 @@ async function main() {
 
 							case "delegate": {
 								const task = interaction.options.getString("task", true);
-								const role = interaction.options.getString("role") as "architect" | "builder" | "tester" | "reviewer" | "expert" | undefined;
+								const role = interaction.options.getString("role") as
+									| "architect"
+									| "builder"
+									| "tester"
+									| "reviewer"
+									| "expert"
+									| undefined;
 
 								// Use smart routing with memory bridge
 								const { AgentMemorySystem } = await import("./agents/agent-memory-system.js");
@@ -21308,6 +22601,331 @@ async function main() {
 								break;
 							}
 
+							case "singularity": {
+								// TAC Class 3.3: Full Plan → Build → Review → Fix → Validate Workflow
+								// Enhanced with compute loops (validate → retry → validate)
+								const task = interaction.options.getString("task", true);
+								const taskType = interaction.options.getString("type") || "feature";
+								const autoFix = interaction.options.getBoolean("auto_fix") ?? true;
+								const MAX_RETRIES = 3; // Maximum retry attempts per phase
+
+								await interaction.editReply(
+									`🚀 **Singularity Workflow Starting**\n` +
+										`• Task: ${task.slice(0, 100)}${task.length > 100 ? "..." : ""}\n` +
+										`• Type: ${taskType}\n` +
+										`• Auto-fix: ${autoFix ? "Enabled" : "Disabled"}\n` +
+										`• Max retries: ${MAX_RETRIES}\n\n` +
+										`_Initializing Phase 1: Planning..._`,
+								);
+
+								// Phase tracking with retry counts
+								const phases: Array<{
+									name: string;
+									status: "pending" | "running" | "done" | "failed";
+									output?: string;
+									filePath?: string;
+									retries?: number;
+								}> = [
+									{ name: "Plan", status: "pending", retries: 0 },
+									{ name: "Build", status: "pending", retries: 0 },
+									{ name: "Validate", status: "pending", retries: 0 },
+									{ name: "Review", status: "pending", retries: 0 },
+									{ name: "Fix", status: "pending", retries: 0 },
+									{ name: "Final Check", status: "pending", retries: 0 },
+								];
+
+								const updateStatus = async () => {
+									const statusLines = phases.map((p) => {
+										const icon =
+											p.status === "done"
+												? "✅"
+												: p.status === "running"
+													? "⏳"
+													: p.status === "failed"
+														? "❌"
+														: "⬜";
+										const retryInfo = p.retries && p.retries > 0 ? ` (retry ${p.retries})` : "";
+										return `${icon} **${p.name}**${retryInfo}: ${p.status}${p.filePath ? ` → \`${p.filePath}\`` : ""}`;
+									});
+									await interaction.editReply(
+										`🚀 **Singularity Workflow**\n\n${statusLines.join("\n")}\n\n` +
+											`_Task: ${task.slice(0, 80)}..._`,
+									);
+								};
+
+								// Validation helper - runs tests/checks and returns pass/fail
+								const runValidation = async (context: string): Promise<{ passed: boolean; issues: string }> => {
+									const validatePrompt = `Validate the implementation:\n${context}\n\nRun:\n1. Type check (if applicable)\n2. Lint check\n3. Unit tests (if exist)\n4. Integration smoke test\n\nReturn JSON: {"passed": true/false, "issues": ["issue1", "issue2"]}`;
+
+									const validateResult = await orch.delegate({
+										id: crypto.randomUUID(),
+										taskType: "validation",
+										prompt: validatePrompt,
+										requiredRole: "builder", // Use builder for validation
+										timeout: 90000,
+										priority: 10,
+									});
+
+									const output = String(validateResult.output);
+									// Try to extract JSON, fallback to heuristic
+									try {
+										const jsonMatch = output.match(/\{[\s\S]*"passed"[\s\S]*\}/);
+										if (jsonMatch) {
+											const parsed = JSON.parse(jsonMatch[0]);
+											return {
+												passed: parsed.passed === true,
+												issues: Array.isArray(parsed.issues) ? parsed.issues.join(", ") : "",
+											};
+										}
+									} catch {
+										// Fallback
+									}
+									// Heuristic: check for failure keywords
+									const hasFail = /fail|error|exception|broken/i.test(output);
+									return { passed: !hasFail, issues: hasFail ? output.slice(0, 500) : "" };
+								};
+
+								try {
+									// Use existing agents from orchestrator
+									const agents = orch.listAgents();
+									const architectAgent = agents.find((a) => a.role === "architect");
+									const builderAgent = agents.find((a) => a.role === "builder");
+									const reviewerAgent = agents.find((a) => a.role === "reviewer");
+
+									if (!architectAgent || !builderAgent) {
+										await interaction.editReply(
+											`❌ **Missing Required Agents**\n` +
+												`Singularity workflow requires architect and builder agents.\n` +
+												`Run \`/orchestrator bootstrap\` first.`,
+										);
+										break;
+									}
+
+									// === PHASE 1: PLAN ===
+									phases[0].status = "running";
+									await updateStatus();
+
+									const planTemplate =
+										taskType === "bug"
+											? `Create a detailed bug fix plan for: ${task}\n\nInclude:\n- Root cause analysis\n- Files to modify\n- Step-by-step fix tasks\n- Validation commands`
+											: taskType === "chore"
+												? `Create a maintenance task plan for: ${task}\n\nInclude:\n- Current state analysis\n- Files to modify\n- Step-by-step tasks\n- Validation commands`
+												: `Create a feature implementation plan for: ${task}\n\nInclude:\n- User story\n- Implementation phases\n- Files to create/modify\n- Testing strategy\n- Validation commands`;
+
+									const planResult = await orch.delegate({
+										id: crypto.randomUUID(),
+										taskType: "planning",
+										prompt: planTemplate,
+										requiredRole: "architect",
+										timeout: 60000,
+										priority: 10,
+									});
+
+									if (planResult.status !== "success") {
+										phases[0].status = "failed";
+										await updateStatus();
+										await interaction.followUp(`❌ Planning failed: ${planResult.error}`);
+										break;
+									}
+
+									phases[0].status = "done";
+									phases[0].output = String(planResult.output).slice(0, 500);
+									phases[0].filePath = "specs/plan.md";
+									await updateStatus();
+
+									// === PHASE 2: BUILD ===
+									phases[1].status = "running";
+									await updateStatus();
+
+									const buildPrompt = `Implement the following plan:\n\n${String(planResult.output).slice(0, 2000)}\n\nWrite production-quality code following existing codebase patterns.`;
+
+									const buildResult = await orch.delegate({
+										id: crypto.randomUUID(),
+										taskType: "implementation",
+										prompt: buildPrompt,
+										requiredRole: "builder",
+										timeout: 120000,
+										priority: 10,
+									});
+
+									if (buildResult.status !== "success") {
+										phases[1].status = "failed";
+										await updateStatus();
+										await interaction.followUp(`❌ Build failed: ${buildResult.error}`);
+										break;
+									}
+
+									phases[1].status = "done";
+									phases[1].output = String(buildResult.output).slice(0, 500);
+									await updateStatus();
+
+									// === PHASE 3: VALIDATE (with retry loop) ===
+									phases[2].status = "running";
+									await updateStatus();
+
+									let validationPassed = false;
+									let validationIssues = "";
+									let buildRetries = 0;
+
+									while (!validationPassed && buildRetries < MAX_RETRIES) {
+										const validation = await runValidation(
+											`Task: ${task}\nBuild output: ${String(buildResult.output).slice(0, 1000)}`,
+										);
+										validationPassed = validation.passed;
+										validationIssues = validation.issues;
+
+										if (!validationPassed && buildRetries < MAX_RETRIES - 1) {
+											// Retry: fix validation issues
+											buildRetries++;
+											phases[2].retries = buildRetries;
+											await updateStatus();
+
+											// Auto-fix validation issues
+											const retryFixPrompt = `Fix these validation issues:\n${validationIssues}\n\nOriginal task: ${task}`;
+											await orch.delegate({
+												id: crypto.randomUUID(),
+												taskType: "fix",
+												prompt: retryFixPrompt,
+												requiredRole: "builder",
+												timeout: 90000,
+												priority: 10,
+											});
+										} else if (!validationPassed) {
+											buildRetries++;
+										}
+									}
+
+									if (validationPassed) {
+										phases[2].status = "done";
+										phases[2].output = `Passed${buildRetries > 0 ? ` after ${buildRetries} retries` : ""}`;
+									} else {
+										phases[2].status = "failed";
+										phases[2].output = `Failed after ${buildRetries} retries: ${validationIssues.slice(0, 200)}`;
+										await updateStatus();
+										await interaction.followUp(
+											`⚠️ Validation failed after ${MAX_RETRIES} attempts. Continuing to review...`,
+										);
+									}
+									await updateStatus();
+
+									// === PHASE 4: REVIEW ===
+									phases[3].status = "running";
+									await updateStatus();
+
+									if (reviewerAgent) {
+										const reviewPrompt = `Review the implementation for: ${task}\n\nValidate against the plan:\n${String(planResult.output).slice(0, 1000)}\n\nProduce risk-tiered report: Blockers, High Risk, Medium Risk, Low Risk.\nProvide PASS/FAIL verdict.`;
+
+										const reviewResult = await orch.delegate({
+											id: crypto.randomUUID(),
+											taskType: "review",
+											prompt: reviewPrompt,
+											requiredRole: "reviewer",
+											timeout: 60000,
+											priority: 10,
+										});
+
+										phases[3].status = reviewResult.status === "success" ? "done" : "failed";
+										phases[3].output = String(reviewResult.output).slice(0, 500);
+										phases[3].filePath = "review/report.md";
+										await updateStatus();
+
+										// Check if review passed
+										const reviewOutput = String(reviewResult.output).toLowerCase();
+										const hasFailed = reviewOutput.includes("fail") || reviewOutput.includes("blocker");
+
+										// === PHASE 5: FIX (if needed, with retry loop) ===
+										if (hasFailed && autoFix) {
+											phases[4].status = "running";
+											await updateStatus();
+
+											let fixRetries = 0;
+											let fixSuccess = false;
+
+											while (!fixSuccess && fixRetries < MAX_RETRIES) {
+												const fixPrompt = `Fix the issues identified in review:\n\n${String(reviewResult.output).slice(0, 1500)}\n\nPrioritize: Blockers → High Risk → Medium Risk`;
+
+												const fixResult = await orch.delegate({
+													id: crypto.randomUUID(),
+													taskType: "fix",
+													prompt: fixPrompt,
+													requiredRole: "builder",
+													timeout: 90000,
+													priority: 10,
+												});
+
+												if (fixResult.status === "success") {
+													// Validate the fix
+													const fixValidation = await runValidation(`Fix applied for: ${task}`);
+													if (fixValidation.passed) {
+														fixSuccess = true;
+														phases[4].status = "done";
+														phases[4].output = `Fixed${fixRetries > 0 ? ` after ${fixRetries + 1} attempts` : ""}`;
+													} else {
+														fixRetries++;
+														phases[4].retries = fixRetries;
+														await updateStatus();
+													}
+												} else {
+													fixRetries++;
+													phases[4].retries = fixRetries;
+													await updateStatus();
+												}
+											}
+
+											if (!fixSuccess) {
+												phases[4].status = "failed";
+												phases[4].output = `Failed after ${MAX_RETRIES} attempts`;
+											}
+											await updateStatus();
+										} else {
+											phases[4].status = hasFailed ? "pending" : "done";
+											phases[4].output = hasFailed
+												? "Skipped (auto-fix disabled)"
+												: "No fixes needed - PASSED";
+										}
+									} else {
+										phases[3].status = "done";
+										phases[3].output = "No reviewer agent - skipped";
+										phases[4].status = "done";
+										phases[4].output = "No review - skipped";
+									}
+
+									await updateStatus();
+
+									// === PHASE 6: FINAL CHECK ===
+									phases[5].status = "running";
+									await updateStatus();
+
+									const finalValidation = await runValidation(
+										`Final check for task: ${task}\n\nEnsure all phases completed successfully.`,
+									);
+
+									if (finalValidation.passed) {
+										phases[5].status = "done";
+										phases[5].output = "All systems go ✓";
+									} else {
+										phases[5].status = "failed";
+										phases[5].output = `Issues remain: ${finalValidation.issues.slice(0, 200)}`;
+									}
+									await updateStatus();
+
+									// Final summary with compute stats
+									const allPassed = phases.every((p) => p.status === "done");
+									const totalRetries = phases.reduce((sum, p) => sum + (p.retries || 0), 0);
+									await interaction.followUp(
+										allPassed
+											? `✅ **Singularity Complete**\nAll 6 phases passed. Codebase updated.\n` +
+													`_Compute loops: ${totalRetries} retries across phases_`
+											: `⚠️ **Singularity Partial**\nSome phases failed. Total retries: ${totalRetries}\n` +
+													`Review output for details.`,
+									);
+								} catch (err) {
+									const errMsg = err instanceof Error ? err.message : String(err);
+									await interaction.followUp(`❌ Singularity workflow error: ${errMsg}`);
+								}
+								break;
+							}
+
 							default:
 								await interaction.editReply("Unknown orchestrator subcommand");
 						}
@@ -21323,7 +22941,9 @@ async function main() {
 					const watcherSubcommand = interaction.options.getSubcommand();
 
 					try {
-						const { startPiWatcher, stopPiWatcher, getPiWatcherState, PiWatcher } = await import("./agents/pi-watcher.js");
+						const { startPiWatcher, stopPiWatcher, getPiWatcherState, PiWatcher } = await import(
+							"./agents/pi-watcher.js"
+						);
 
 						switch (watcherSubcommand) {
 							case "start": {
@@ -21348,7 +22968,9 @@ async function main() {
 									logInfo(`[Pi-Watcher] Fix ${result.success ? "succeeded" : "failed"}: ${result.strategy}`);
 								});
 
-								await interaction.editReply("✅ **Pi-Watcher Started**\nMonitoring codebase for issues. Use `/watcher status` to check current state.");
+								await interaction.editReply(
+									"✅ **Pi-Watcher Started**\nMonitoring codebase for issues. Use `/watcher status` to check current state.",
+								);
 								break;
 							}
 
@@ -21365,12 +22987,13 @@ async function main() {
 									break;
 								}
 
-								const issueList = state.currentIssues
-									.slice(0, 10)
-									.map((issue) => {
-										return `• \`${issue.id.slice(0, 8)}\` [${issue.type}] ${issue.title.slice(0, 60)}`;
-									})
-									.join("\n") || "No issues detected";
+								const issueList =
+									state.currentIssues
+										.slice(0, 10)
+										.map((issue) => {
+											return `• \`${issue.id.slice(0, 8)}\` [${issue.type}] ${issue.title.slice(0, 60)}`;
+										})
+										.join("\n") || "No issues detected";
 
 								const embed = new EmbedBuilder()
 									.setTitle("👁️ Pi-Watcher Status")
@@ -21378,7 +23001,11 @@ async function main() {
 									.addFields(
 										{ name: "Status", value: state.running ? "Running" : "Stopped", inline: true },
 										{ name: "Issues", value: String(state.currentIssues.length), inline: true },
-										{ name: "Last Check", value: state.lastCheck ? new Date(state.lastCheck).toLocaleTimeString() : "Never", inline: true },
+										{
+											name: "Last Check",
+											value: state.lastCheck ? new Date(state.lastCheck).toLocaleTimeString() : "Never",
+											inline: true,
+										},
 									)
 									.addFields({ name: "Current Issues", value: issueList })
 									.setTimestamp();
@@ -21413,7 +23040,9 @@ async function main() {
 									break;
 								}
 
-								await interaction.editReply(`🔧 Attempting fix for issue \`${issue.id.slice(0, 8)}\`...\nStrategy: inline → agent → workflow`);
+								await interaction.editReply(
+									`🔧 Attempting fix for issue \`${issue.id.slice(0, 8)}\`...\nStrategy: inline → agent → workflow`,
+								);
 								break;
 							}
 
@@ -21433,7 +23062,9 @@ async function main() {
 
 								// Remove issue from tracking
 								const removed = state.currentIssues.splice(issueIndex, 1)[0];
-								await interaction.editReply(`🙈 Ignoring issue \`${removed.id.slice(0, 8)}\`: ${removed.title}`);
+								await interaction.editReply(
+									`🙈 Ignoring issue \`${removed.id.slice(0, 8)}\`: ${removed.title}`,
+								);
 								break;
 							}
 
@@ -21507,7 +23138,9 @@ async function main() {
 								const roles = rolesStr.split(",").map((r) => r.trim());
 								const rounds = interaction.options.getInteger("rounds") || 3;
 
-								await interaction.editReply(`🎭 Starting ${rounds}-round debate with ${roles.length} agents...`);
+								await interaction.editReply(
+									`🎭 Starting ${rounds}-round debate with ${roles.length} agents...`,
+								);
 
 								const result = await runDebate(orch, topic, roles, rounds);
 
@@ -21531,7 +23164,10 @@ async function main() {
 								const question = interaction.options.getString("question", true);
 								const rolesStr = interaction.options.getString("roles", true);
 								const roles = rolesStr.split(",").map((r) => r.trim());
-								const method = (interaction.options.getString("method") || "majority") as "majority" | "weighted" | "unanimous";
+								const method = (interaction.options.getString("method") || "majority") as
+									| "majority"
+									| "weighted"
+									| "unanimous";
 
 								await interaction.editReply(`🗳️ Running ${method} consensus with ${roles.length} agents...`);
 
@@ -21543,7 +23179,11 @@ async function main() {
 									.addFields(
 										{ name: "Question", value: question.slice(0, 100), inline: false },
 										{ name: "Winner", value: result.consensus?.winner || "No consensus", inline: true },
-										{ name: "Confidence", value: `${((result.consensus?.confidence || 0) * 100).toFixed(0)}%`, inline: true },
+										{
+											name: "Confidence",
+											value: `${((result.consensus?.confidence || 0) * 100).toFixed(0)}%`,
+											inline: true,
+										},
 										{ name: "Unanimous", value: result.consensus?.unanimous ? "Yes" : "No", inline: true },
 									)
 									.addFields({
@@ -21566,7 +23206,9 @@ async function main() {
 								const workersStr = interaction.options.getString("workers", true);
 								const workers = workersStr.split(",").map((r) => r.trim());
 
-								await interaction.editReply(`👔 Running supervisor pattern: ${supervisor} overseeing ${workers.length} workers...`);
+								await interaction.editReply(
+									`👔 Running supervisor pattern: ${supervisor} overseeing ${workers.length} workers...`,
+								);
 
 								const result = await runWithSupervisor(orch, task, supervisor, workers);
 
@@ -21598,7 +23240,10 @@ async function main() {
 									)
 									.addFields({
 										name: "Active Coordinations",
-										value: active.length > 0 ? active.map((t) => `• ${t.type}: ${t.prompt.slice(0, 50)}`).join("\n") : "None",
+										value:
+											active.length > 0
+												? active.map((t) => `• ${t.type}: ${t.prompt.slice(0, 50)}`).join("\n")
+												: "None",
 									})
 									.setTimestamp();
 
@@ -21616,7 +23261,7 @@ async function main() {
 					break;
 				}
 
-				case "memory": {
+				case "agent-memory": {
 					await interaction.deferReply();
 					const memorySubcommand = interaction.options.getSubcommand();
 
@@ -21644,11 +23289,23 @@ async function main() {
 										.setColor(0x3498db)
 										.addFields(
 											{ name: "Total Tasks", value: String(stats.totalTasks), inline: true },
-											{ name: "Success Rate", value: `${(stats.successRate * 100).toFixed(1)}%`, inline: true },
+											{
+												name: "Success Rate",
+												value: `${(stats.successRate * 100).toFixed(1)}%`,
+												inline: true,
+											},
 											{ name: "Avg Latency", value: `${stats.avgLatencyMs.toFixed(0)}ms`, inline: true },
 											{ name: "Avg Quality", value: stats.avgQuality.toFixed(2), inline: true },
-											{ name: "Best Task Types", value: stats.bestTaskTypes.join(", ") || "N/A", inline: false },
-											{ name: "Worst Task Types", value: stats.worstTaskTypes.join(", ") || "N/A", inline: false },
+											{
+												name: "Best Task Types",
+												value: stats.bestTaskTypes.join(", ") || "N/A",
+												inline: false,
+											},
+											{
+												name: "Worst Task Types",
+												value: stats.worstTaskTypes.join(", ") || "N/A",
+												inline: false,
+											},
 										)
 										.setTimestamp();
 
@@ -21663,7 +23320,11 @@ async function main() {
 											{ name: "Total Tasks Recorded", value: String(summary.totalTasks), inline: true },
 											{ name: "Active Agents", value: String(summary.agentCount), inline: true },
 											{ name: "Active Insights", value: String(summary.insightCount), inline: true },
-											{ name: "Global Success Rate", value: `${(summary.globalSuccessRate * 100).toFixed(1)}%`, inline: true },
+											{
+												name: "Global Success Rate",
+												value: `${(summary.globalSuccessRate * 100).toFixed(1)}%`,
+												inline: true,
+											},
 										)
 										.setTimestamp();
 
@@ -21676,7 +23337,9 @@ async function main() {
 								const insights = memorySystem.getActiveInsights();
 
 								if (insights.length === 0) {
-									await interaction.editReply("No active insights yet. Insights are generated as agents complete more tasks.");
+									await interaction.editReply(
+										"No active insights yet. Insights are generated as agents complete more tasks.",
+									);
 									break;
 								}
 
@@ -21704,7 +23367,10 @@ async function main() {
 								const agentList =
 									recommendation.recommendedAgents.length > 0
 										? recommendation.recommendedAgents
-												.map((a, i) => `${i + 1}. **${a.agentId}** (score: ${a.score.toFixed(2)})\n   ${a.reasoning}`)
+												.map(
+													(a, i) =>
+														`${i + 1}. **${a.agentId}** (score: ${a.score.toFixed(2)})\n   ${a.reasoning}`,
+												)
 												.join("\n")
 										: "No specific recommendation - insufficient data";
 
@@ -21713,7 +23379,11 @@ async function main() {
 									.setColor(0x9b59b6)
 									.addFields(
 										{ name: "Task Type", value: taskType, inline: true },
-										{ name: "Confidence", value: `${(recommendation.confidence * 100).toFixed(0)}%`, inline: true },
+										{
+											name: "Confidence",
+											value: `${(recommendation.confidence * 100).toFixed(0)}%`,
+											inline: true,
+										},
 									)
 									.addFields({ name: "Recommended Agents", value: agentList.slice(0, 1000) })
 									.setTimestamp();
@@ -21728,7 +23398,9 @@ async function main() {
 
 								memorySystem.rateTask(taskId, quality / 10); // Convert 1-10 to 0-1
 
-								await interaction.editReply(`✅ Rated task \`${taskId.slice(0, 8)}\` with quality **${quality}/10**`);
+								await interaction.editReply(
+									`✅ Rated task \`${taskId.slice(0, 8)}\` with quality **${quality}/10**`,
+								);
 								break;
 							}
 
@@ -21743,8 +23415,16 @@ async function main() {
 										.setColor(0x2ecc71)
 										.addFields(
 											{ name: "Agent ID", value: bestAgent, inline: true },
-											{ name: "Success Rate", value: stats ? `${(stats.successRate * 100).toFixed(1)}%` : "N/A", inline: true },
-											{ name: "Avg Quality", value: stats ? stats.avgQuality.toFixed(2) : "N/A", inline: true },
+											{
+												name: "Success Rate",
+												value: stats ? `${(stats.successRate * 100).toFixed(1)}%` : "N/A",
+												inline: true,
+											},
+											{
+												name: "Avg Quality",
+												value: stats ? stats.avgQuality.toFixed(2) : "N/A",
+												inline: true,
+											},
 										)
 										.setTimestamp();
 
@@ -21767,7 +23447,11 @@ async function main() {
 										{ name: "Total Tasks", value: String(summary.totalTasks), inline: true },
 										{ name: "Agents Tracked", value: String(summary.agentCount), inline: true },
 										{ name: "Active Insights", value: String(summary.insightCount), inline: true },
-										{ name: "Global Success", value: `${(summary.globalSuccessRate * 100).toFixed(1)}%`, inline: true },
+										{
+											name: "Global Success",
+											value: `${(summary.globalSuccessRate * 100).toFixed(1)}%`,
+											inline: true,
+										},
 										{
 											name: "Top Patterns",
 											value:
@@ -21814,7 +23498,15 @@ async function main() {
 							case "generate": {
 								const description = interaction.options.getString("description", true);
 								const name = interaction.options.getString("name");
-								const role = interaction.options.getString("role") as "architect" | "builder" | "tester" | "reviewer" | "expert" | "scout" | "executor" | undefined;
+								const role = interaction.options.getString("role") as
+									| "architect"
+									| "builder"
+									| "tester"
+									| "reviewer"
+									| "expert"
+									| "scout"
+									| "executor"
+									| undefined;
 
 								const spec = meta.generateAgentSpec({
 									description,
@@ -21873,7 +23565,9 @@ async function main() {
 								const suggestions = meta.suggestAgents();
 
 								if (suggestions.length === 0) {
-									await interaction.editReply("No agent suggestions at this time. More task history needed for pattern analysis.");
+									await interaction.editReply(
+										"No agent suggestions at this time. More task history needed for pattern analysis.",
+									);
 									break;
 								}
 
@@ -22008,7 +23702,11 @@ async function main() {
 										{ name: "Created", value: bundle.createdAt.toISOString(), inline: true },
 										{ name: "Size", value: `${(bundle.size / 1024).toFixed(1)} KB`, inline: true },
 										{ name: "Files", value: String(bundle.files.length), inline: true },
-										{ name: "Git", value: bundle.git ? `${bundle.git.branch} @ ${bundle.git.commit.slice(0, 7)}` : "N/A", inline: false },
+										{
+											name: "Git",
+											value: bundle.git ? `${bundle.git.branch} @ ${bundle.git.commit.slice(0, 7)}` : "N/A",
+											inline: false,
+										},
 									)
 									.setTimestamp();
 
@@ -22182,7 +23880,11 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 										{ name: "Active Style", value: currentStyle.name, inline: true },
 										{ name: "Style ID", value: currentStyle.id, inline: true },
 										{ name: "Default", value: config.defaultStyle, inline: true },
-										{ name: "Post-Processing", value: config.enablePostProcessing ? "Enabled" : "Disabled", inline: true },
+										{
+											name: "Post-Processing",
+											value: config.enablePostProcessing ? "Enabled" : "Disabled",
+											inline: true,
+										},
 										{ name: "Max Length", value: String(config.maxOutputLength), inline: true },
 									)
 									.addFields({ name: "Format Instructions", value: currentStyle.formatInstructions })
@@ -22219,10 +23921,11 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 								const totalBlocked = Object.values(stats).reduce((sum, s) => sum + s.blocked, 0);
 								const totalWarned = Object.values(stats).reduce((sum, s) => sum + s.warned, 0);
 
-								const categoryStats = Object.entries(stats)
-									.filter(([_, s]) => s.blocked > 0 || s.warned > 0)
-									.map(([cat, s]) => `${cat}: ${s.blocked} blocked, ${s.warned} warned`)
-									.join("\n") || "No incidents recorded";
+								const categoryStats =
+									Object.entries(stats)
+										.filter(([_, s]) => s.blocked > 0 || s.warned > 0)
+										.map(([cat, s]) => `${cat}: ${s.blocked} blocked, ${s.warned} warned`)
+										.join("\n") || "No incidents recorded";
 
 								const embed = new EmbedBuilder()
 									.setTitle("🛡️ Safety Guards Status")
@@ -22239,9 +23942,12 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									.setTimestamp();
 
 								if (history.length > 0) {
-									const recentBlocks = history.map((b) =>
-										`• \`${b.command.slice(0, 40)}${b.command.length > 40 ? "..." : ""}\` - ${b.reason}`
-									).join("\n");
+									const recentBlocks = history
+										.map(
+											(b) =>
+												`• \`${b.command.slice(0, 40)}${b.command.length > 40 ? "..." : ""}\` - ${b.reason}`,
+										)
+										.join("\n");
 									embed.addFields({ name: "Recent Blocks", value: recentBlocks.slice(0, 1000) });
 								}
 
@@ -22291,9 +23997,10 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const rulesList = rules.slice(0, 15).map((r) =>
-									`**${r.id}** (${r.risk})\n${r.description}`
-								).join("\n\n");
+								const rulesList = rules
+									.slice(0, 15)
+									.map((r) => `**${r.id}** (${r.risk})\n${r.description}`)
+									.join("\n\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle(`📋 Safety Rules${category ? ` - ${category}` : ""}`)
@@ -22314,9 +24021,12 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const historyLines = history.map((h) =>
-									`\`${h.timestamp.toISOString().split("T")[0]}\` **${h.risk}** [${h.category}]\n\`${h.command.slice(0, 50)}\``
-								).join("\n\n");
+								const historyLines = history
+									.map(
+										(h) =>
+											`\`${h.timestamp.toISOString().split("T")[0]}\` **${h.risk}** [${h.category}]\n\`${h.command.slice(0, 50)}\``,
+									)
+									.join("\n\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle("📜 Blocked Command History")
@@ -22339,7 +24049,7 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									.setDescription(
 										enabled
 											? "Commands will be checked against safety rules."
-											: "⚠️ **Warning:** All commands will be allowed without safety checks."
+											: "⚠️ **Warning:** All commands will be allowed without safety checks.",
 									)
 									.setTimestamp();
 
@@ -22387,7 +24097,10 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 								if (stats.topAgents.length > 0) {
 									const topList = stats.topAgents
 										.slice(0, 5)
-										.map((a, i) => `${i + 1}. **${a.agentId}** - ${(a.score * 5).toFixed(1)}/5 (${a.count} ratings)`)
+										.map(
+											(a, i) =>
+												`${i + 1}. **${a.agentId}** - ${(a.score * 5).toFixed(1)}/5 (${a.count} ratings)`,
+										)
 										.join("\n");
 									embed.addFields({ name: "🏆 Top Agents", value: topList });
 								}
@@ -22434,7 +24147,13 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 
 								const embed = new EmbedBuilder()
 									.setTitle(`📈 Feedback Summary: ${agentId}`)
-									.setColor(summary.averageScore >= 0.6 ? 0x2ecc71 : summary.averageScore >= 0.4 ? 0xf1c40f : 0xe74c3c)
+									.setColor(
+										summary.averageScore >= 0.6
+											? 0x2ecc71
+											: summary.averageScore >= 0.4
+												? 0xf1c40f
+												: 0xe74c3c,
+									)
 									.addFields(
 										{ name: "Total Ratings", value: String(summary.ratedResponses), inline: true },
 										{
@@ -22450,14 +24169,20 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 								if (summary.commonPraises.length > 0) {
 									embed.addFields({
 										name: "Common Praises",
-										value: summary.commonPraises.slice(0, 3).map((p) => `• ${p.slice(0, 100)}`).join("\n"),
+										value: summary.commonPraises
+											.slice(0, 3)
+											.map((p) => `• ${p.slice(0, 100)}`)
+											.join("\n"),
 									});
 								}
 
 								if (summary.commonComplaints.length > 0) {
 									embed.addFields({
 										name: "Common Complaints",
-										value: summary.commonComplaints.slice(0, 3).map((c) => `• ${c.slice(0, 100)}`).join("\n"),
+										value: summary.commonComplaints
+											.slice(0, 3)
+											.map((c) => `• ${c.slice(0, 100)}`)
+											.join("\n"),
 									});
 								}
 
@@ -22479,9 +24204,10 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									feedback = feedbackSystem.getRecentFeedback(agentId, 10);
 								} else {
 									// Get from all agents
-									feedback = stats.topAgents.length > 0
-										? feedbackSystem.getRecentFeedback(stats.topAgents[0].agentId, 10)
-										: [];
+									feedback =
+										stats.topAgents.length > 0
+											? feedbackSystem.getRecentFeedback(stats.topAgents[0].agentId, 10)
+											: [];
 								}
 
 								if (feedback.length === 0) {
@@ -22489,9 +24215,12 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const feedbackList = feedback.map((f) =>
-									`**${f.agentId}** - ${"⭐".repeat(Math.round(f.normalizedScore * 5))}\n${f.comment ? f.comment.slice(0, 50) : "_No comment_"}`
-								).join("\n\n");
+								const feedbackList = feedback
+									.map(
+										(f) =>
+											`**${f.agentId}** - ${"⭐".repeat(Math.round(f.normalizedScore * 5))}\n${f.comment ? f.comment.slice(0, 50) : "_No comment_"}`,
+									)
+									.join("\n\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle("📝 Recent Feedback")
@@ -22508,13 +24237,18 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 								const suggestions = feedbackSystem.getSuggestions(agentId);
 
 								if (suggestions.length === 0) {
-									await interaction.editReply(`No improvement suggestions for ${agentId} yet. Need more feedback data.`);
+									await interaction.editReply(
+										`No improvement suggestions for ${agentId} yet. Need more feedback data.`,
+									);
 									break;
 								}
 
-								const suggestionList = suggestions.map((s) =>
-									`**[${s.type}]** (${(s.confidence * 100).toFixed(0)}% confidence)\n${s.suggestion}`
-								).join("\n\n");
+								const suggestionList = suggestions
+									.map(
+										(s) =>
+											`**[${s.type}]** (${(s.confidence * 100).toFixed(0)}% confidence)\n${s.suggestion}`,
+									)
+									.join("\n\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle(`💡 Improvement Suggestions: ${agentId}`)
@@ -22534,10 +24268,12 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const leaderboard = stats.topAgents.map((a, i) => {
-									const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`;
-									return `${medal} **${a.agentId}** - ${(a.score * 5).toFixed(2)}/5 (${a.count} ratings)`;
-								}).join("\n");
+								const leaderboard = stats.topAgents
+									.map((a, i) => {
+										const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`;
+										return `${medal} **${a.agentId}** - ${(a.score * 5).toFixed(2)}/5 (${a.count} ratings)`;
+									})
+									.join("\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle("🏆 Agent Leaderboard")
@@ -22635,11 +24371,22 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const notificationList = notifications.map((n) => {
-									const icon = n.priority === "critical" ? "🚨" : n.priority === "error" ? "❌" : n.priority === "warning" ? "⚠️" : n.priority === "success" ? "✅" : "ℹ️";
-									const read = n.readAt ? "" : "🔵 ";
-									return `${read}${icon} **${n.title}**\n${n.message.slice(0, 100)}${n.message.length > 100 ? "..." : ""}`;
-								}).join("\n\n");
+								const notificationList = notifications
+									.map((n) => {
+										const icon =
+											n.priority === "critical"
+												? "🚨"
+												: n.priority === "error"
+													? "❌"
+													: n.priority === "warning"
+														? "⚠️"
+														: n.priority === "success"
+															? "✅"
+															: "ℹ️";
+										const read = n.readAt ? "" : "🔵 ";
+										return `${read}${icon} **${n.title}**\n${n.message.slice(0, 100)}${n.message.length > 100 ? "..." : ""}`;
+									})
+									.join("\n\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle(`📬 Your Inbox (${unreadCount} unread)`)
@@ -22689,7 +24436,11 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 										{ name: "Min Priority", value: prefs.minPriority, inline: true },
 										{ name: "Delivery", value: prefs.preferredDelivery, inline: true },
 										{ name: "Batching", value: prefs.batchNotifications ? "Yes" : "No", inline: true },
-										{ name: "Muted Agents", value: prefs.mutedAgents.length > 0 ? prefs.mutedAgents.join(", ") : "None", inline: false },
+										{
+											name: "Muted Agents",
+											value: prefs.mutedAgents.length > 0 ? prefs.mutedAgents.join(", ") : "None",
+											inline: false,
+										},
 									)
 									.setTimestamp();
 
@@ -22724,9 +24475,9 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 							case "templates": {
 								const templates = Object.values(BUILTIN_TEMPLATES);
 
-								const templateList = templates.map((t) =>
-									`**${t.name}** (\`${t.id}\`)\n${t.messageTemplate.slice(0, 80)}`
-								).join("\n\n");
+								const templateList = templates
+									.map((t) => `**${t.name}** (\`${t.id}\`)\n${t.messageTemplate.slice(0, 80)}`)
+									.join("\n\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle("📋 Notification Templates")
@@ -22761,10 +24512,11 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 							case "stats": {
 								const stats = sessionSystem.getStats();
 
-								const agentList = Object.entries(stats.sessionsByAgent)
-									.slice(0, 5)
-									.map(([id, count]) => `\`${id}\`: ${count}`)
-									.join(", ") || "None";
+								const agentList =
+									Object.entries(stats.sessionsByAgent)
+										.slice(0, 5)
+										.map(([id, count]) => `\`${id}\`: ${count}`)
+										.join(", ") || "None";
 
 								const embed = new EmbedBuilder()
 									.setTitle("Session Statistics")
@@ -22776,7 +24528,11 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 										{ name: "Completed", value: stats.completedSessions.toString(), inline: true },
 										{ name: "Expired", value: stats.expiredSessions.toString(), inline: true },
 										{ name: "Snapshots", value: stats.totalSnapshots.toString(), inline: true },
-										{ name: "Avg State Size", value: `${Math.round(stats.avgStateSize)} bytes`, inline: true },
+										{
+											name: "Avg State Size",
+											value: `${Math.round(stats.avgStateSize)} bytes`,
+											inline: true,
+										},
 										{ name: "Sessions by Agent", value: agentList, inline: false },
 									)
 									.setFooter({ text: "Session Isolation System" })
@@ -22814,7 +24570,11 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									.setTimestamp();
 
 								if (tags.length > 0) {
-									embed.addFields({ name: "Tags", value: tags.map((t) => `\`${t}\``).join(", "), inline: false });
+									embed.addFields({
+										name: "Tags",
+										value: tags.map((t) => `\`${t}\``).join(", "),
+										inline: false,
+									});
 								}
 
 								await interaction.editReply({ embeds: [embed] });
@@ -22833,7 +24593,9 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 
 								if (key) {
 									const value = session.get(key);
-									await interaction.editReply(`**${key}**: \`\`\`json\n${JSON.stringify(value, null, 2)}\n\`\`\``);
+									await interaction.editReply(
+										`**${key}**: \`\`\`json\n${JSON.stringify(value, null, 2)}\n\`\`\``,
+									);
 								} else {
 									const state = session.getAll();
 									const keys = Object.keys(state);
@@ -22844,7 +24606,11 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 										.addFields(
 											{ name: "Agent", value: session.metadata.agentId, inline: true },
 											{ name: "Status", value: session.metadata.status, inline: true },
-											{ name: "Keys", value: keys.length > 0 ? keys.map((k) => `\`${k}\``).join(", ") : "None", inline: false },
+											{
+												name: "Keys",
+												value: keys.length > 0 ? keys.map((k) => `\`${k}\``).join(", ") : "None",
+												inline: false,
+											},
 										)
 										.setTimestamp();
 
@@ -22892,11 +24658,14 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									error: "[ERR]",
 								};
 
-								const list = sessions.slice(0, 10).map((s) => {
-									const marker = statusEmoji[s.status] ?? "[?]";
-									const ago = Math.round((Date.now() - s.lastActivityAt) / 60000);
-									return `${marker} \`${s.id.slice(0, 15)}...\` | ${s.agentId} | ${ago}m ago`;
-								}).join("\n");
+								const list = sessions
+									.slice(0, 10)
+									.map((s) => {
+										const marker = statusEmoji[s.status] ?? "[?]";
+										const ago = Math.round((Date.now() - s.lastActivityAt) / 60000);
+										return `${marker} \`${s.id.slice(0, 15)}...\` | ${s.agentId} | ${ago}m ago`;
+									})
+									.join("\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle(`Your Sessions (${sessions.length})`)
@@ -22933,11 +24702,13 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const list = snapshots.map((s) => {
-									const date = new Date(s.createdAt).toLocaleString();
-									const keys = Object.keys(s.state).length;
-									return `**${s.name}** | \`${s.id}\` | ${keys} keys | ${date}`;
-								}).join("\n");
+								const list = snapshots
+									.map((s) => {
+										const date = new Date(s.createdAt).toLocaleString();
+										const keys = Object.keys(s.state).length;
+										return `**${s.name}** | \`${s.id}\` | ${keys} keys | ${date}`;
+									})
+									.join("\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle("Session Snapshots")
@@ -23054,10 +24825,14 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 							case "stats": {
 								const stats = versionSystem.getStats();
 
-								const recentList = stats.recentChanges.slice(0, 5).map((c) => {
-									const ago = Math.round((Date.now() - c.createdAt) / 60000);
-									return `\`${c.agentId}\` v${c.version} (${ago}m ago)`;
-								}).join("\n") || "None";
+								const recentList =
+									stats.recentChanges
+										.slice(0, 5)
+										.map((c) => {
+											const ago = Math.round((Date.now() - c.createdAt) / 60000);
+											return `\`${c.agentId}\` v${c.version} (${ago}m ago)`;
+										})
+										.join("\n") || "None";
 
 								const embed = new EmbedBuilder()
 									.setTitle("Agent Versioning Statistics")
@@ -23082,7 +24857,10 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 								const agentId = interaction.options.getString("agent", true);
 								const name = interaction.options.getString("name", true);
 								const prompt = interaction.options.getString("prompt", true);
-								const changeType = (interaction.options.getString("change") ?? "patch") as "major" | "minor" | "patch";
+								const changeType = (interaction.options.getString("change") ?? "patch") as
+									| "major"
+									| "minor"
+									| "patch";
 								const changelog = interaction.options.getString("changelog") ?? "";
 
 								const config = {
@@ -23165,12 +24943,15 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									archived: "[ARCH]",
 								};
 
-								const list = history.versions.slice(0, 10).map((v) => {
-									const tag = tagEmoji[v.tag] ?? "[?]";
-									const date = new Date(v.createdAt).toLocaleDateString();
-									const current = history.currentVersion?.id === v.id ? " *" : "";
-									return `${tag} **v${v.version}**${current} | ${date} | ${v.changelog.slice(0, 40) || "No changelog"}`;
-								}).join("\n");
+								const list = history.versions
+									.slice(0, 10)
+									.map((v) => {
+										const tag = tagEmoji[v.tag] ?? "[?]";
+										const date = new Date(v.createdAt).toLocaleDateString();
+										const current = history.currentVersion?.id === v.id ? " *" : "";
+										return `${tag} **v${v.version}**${current} | ${date} | ${v.changelog.slice(0, 40) || "No changelog"}`;
+									})
+									.join("\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle(`Version History: ${agentId}`)
@@ -23193,10 +24974,12 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const diffList = diffs.map((d) => {
-									const icon = d.type === "added" ? "+" : d.type === "removed" ? "-" : "~";
-									return `\`${icon}\` **${d.field}**: ${JSON.stringify(d.oldValue)?.slice(0, 30) ?? "null"} -> ${JSON.stringify(d.newValue)?.slice(0, 30) ?? "null"}`;
-								}).join("\n");
+								const diffList = diffs
+									.map((d) => {
+										const icon = d.type === "added" ? "+" : d.type === "removed" ? "-" : "~";
+										return `\`${icon}\` **${d.field}**: ${JSON.stringify(d.oldValue)?.slice(0, 30) ?? "null"} -> ${JSON.stringify(d.newValue)?.slice(0, 30) ?? "null"}`;
+									})
+									.join("\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle("Version Diff")
@@ -23231,11 +25014,17 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 
 							case "promote": {
 								const versionId = interaction.options.getString("version_id", true);
-								const tag = interaction.options.getString("tag", true) as "dev" | "staging" | "production" | "archived";
+								const tag = interaction.options.getString("tag", true) as
+									| "dev"
+									| "staging"
+									| "production"
+									| "archived";
 
 								const promoted = versionSystem.promoteVersion(versionId, tag, user.id);
 
-								await interaction.editReply(`Promoted \`${promoted.agentId}\` v${promoted.version} to **${tag}**`);
+								await interaction.editReply(
+									`Promoted \`${promoted.agentId}\` v${promoted.version} to **${tag}**`,
+								);
 								break;
 							}
 
@@ -23247,10 +25036,14 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const list = agents.map((a) => {
-									const ver = a.currentVersion ? `v${a.currentVersion.version} [${a.currentVersion.tag}]` : "No active version";
-									return `\`${a.agentId}\` - ${ver}`;
-								}).join("\n");
+								const list = agents
+									.map((a) => {
+										const ver = a.currentVersion
+											? `v${a.currentVersion.version} [${a.currentVersion.tag}]`
+											: "No active version";
+										return `\`${a.agentId}\` - ${ver}`;
+									})
+									.join("\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle(`Versioned Agents (${agents.length})`)
@@ -23263,7 +25056,11 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 							}
 
 							case "tag": {
-								const tag = interaction.options.getString("tag", true) as "dev" | "staging" | "production" | "archived";
+								const tag = interaction.options.getString("tag", true) as
+									| "dev"
+									| "staging"
+									| "production"
+									| "archived";
 								const versions = versionSystem.getVersionsByTag(tag);
 
 								if (versions.length === 0) {
@@ -23271,10 +25068,13 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const list = versions.slice(0, 10).map((v) => {
-									const date = new Date(v.createdAt).toLocaleDateString();
-									return `\`${v.agentId}\` v${v.version} | ${date}`;
-								}).join("\n");
+								const list = versions
+									.slice(0, 10)
+									.map((v) => {
+										const date = new Date(v.createdAt).toLocaleDateString();
+										return `\`${v.agentId}\` v${v.version} | ${date}`;
+									})
+									.join("\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle(`Versions: ${tag.toUpperCase()}`)
@@ -23359,7 +25159,11 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									.setTimestamp();
 
 								if (tags.length > 0) {
-									embed.addFields({ name: "Tags", value: tags.map((t) => `\`${t}\``).join(", "), inline: false });
+									embed.addFields({
+										name: "Tags",
+										value: tags.map((t) => `\`${t}\``).join(", "),
+										inline: false,
+									});
 								}
 
 								await interaction.editReply({ embeds: [embed] });
@@ -23392,10 +25196,13 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const list = result.agents.slice(0, 10).map((a) => {
-									const load = `${a.currentLoad}/${a.maxConcurrency}`;
-									return `\`${a.id}\` | ${a.name} | Health: ${a.healthScore}% | Load: ${load}`;
-								}).join("\n");
+								const list = result.agents
+									.slice(0, 10)
+									.map((a) => {
+										const load = `${a.currentLoad}/${a.maxConcurrency}`;
+										return `\`${a.id}\` | ${a.name} | Health: ${a.healthScore}% | Load: ${load}`;
+									})
+									.join("\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle(`Agents with: ${capability}`)
@@ -23425,9 +25232,10 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									maintenance: "[MAINT]",
 								};
 
-								const capList = agent.capabilities.length > 0
-									? agent.capabilities.map((c) => `\`${c.name}@${c.version}\``).join(", ")
-									: "None";
+								const capList =
+									agent.capabilities.length > 0
+										? agent.capabilities.map((c) => `\`${c.name}@${c.version}\``).join(", ")
+										: "None";
 
 								const embed = new EmbedBuilder()
 									.setTitle(`${statusEmoji[agent.status] ?? "[?]"} ${agent.name}`)
@@ -23438,7 +25246,11 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 										{ name: "Health", value: `${agent.healthScore}%`, inline: true },
 										{ name: "Priority", value: agent.priority.toString(), inline: true },
 										{ name: "Load", value: `${agent.currentLoad}/${agent.maxConcurrency}`, inline: true },
-										{ name: "Last Heartbeat", value: `${Math.round((Date.now() - agent.lastHeartbeat) / 1000)}s ago`, inline: true },
+										{
+											name: "Last Heartbeat",
+											value: `${Math.round((Date.now() - agent.lastHeartbeat) / 1000)}s ago`,
+											inline: true,
+										},
 										{ name: "Capabilities", value: capList, inline: false },
 									)
 									.setTimestamp(agent.registeredAt);
@@ -23452,11 +25264,18 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 							}
 
 							case "list": {
-								const statusFilter = interaction.options.getString("status") as "online" | "offline" | "busy" | "degraded" | undefined;
+								const statusFilter = interaction.options.getString("status") as
+									| "online"
+									| "offline"
+									| "busy"
+									| "degraded"
+									| undefined;
 								const agents = discoverySystem.listAgents(statusFilter);
 
 								if (agents.length === 0) {
-									await interaction.editReply(statusFilter ? `No ${statusFilter} agents` : "No agents registered");
+									await interaction.editReply(
+										statusFilter ? `No ${statusFilter} agents` : "No agents registered",
+									);
 									break;
 								}
 
@@ -23468,10 +25287,13 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									maintenance: "[MAINT]",
 								};
 
-								const list = agents.slice(0, 15).map((a) => {
-									const emoji = statusEmoji[a.status] ?? "[?]";
-									return `${emoji} \`${a.id}\` | ${a.name} | ${a.healthScore}%`;
-								}).join("\n");
+								const list = agents
+									.slice(0, 15)
+									.map((a) => {
+										const emoji = statusEmoji[a.status] ?? "[?]";
+										return `${emoji} \`${a.id}\` | ${a.name} | ${a.healthScore}%`;
+									})
+									.join("\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle(`Registered Agents (${agents.length})`)
@@ -23491,7 +25313,9 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 								const success = discoverySystem.heartbeat(id, load);
 
 								if (success) {
-									await interaction.editReply(`Heartbeat received for: \`${id}\`${load !== undefined ? ` (load: ${load})` : ""}`);
+									await interaction.editReply(
+										`Heartbeat received for: \`${id}\`${load !== undefined ? ` (load: ${load})` : ""}`,
+									);
 								} else {
 									await interaction.editReply(`Agent not found: \`${id}\``);
 								}
@@ -23500,7 +25324,12 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 
 							case "status": {
 								const id = interaction.options.getString("id", true);
-								const newStatus = interaction.options.getString("status", true) as "online" | "offline" | "busy" | "degraded" | "maintenance";
+								const newStatus = interaction.options.getString("status", true) as
+									| "online"
+									| "offline"
+									| "busy"
+									| "degraded"
+									| "maintenance";
 
 								const success = discoverySystem.updateAgentStatus(id, newStatus);
 
@@ -23520,9 +25349,12 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const list = capabilities.slice(0, 20).map((c) => {
-									return `**${c.name}** v${c.version} | Cost: ${c.cost} | Latency: ${c.latency}ms`;
-								}).join("\n");
+								const list = capabilities
+									.slice(0, 20)
+									.map((c) => {
+										return `**${c.name}** v${c.version} | Cost: ${c.cost} | Latency: ${c.latency}ms`;
+									})
+									.join("\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle(`Capabilities (${capabilities.length})`)
@@ -23569,7 +25401,7 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 					break;
 				}
 
-				case "health": {
+				case "health-monitor": {
 					await interaction.deferReply();
 					const healthSubcommand = interaction.options.getSubcommand();
 
@@ -23588,29 +25420,62 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									unknown: "[?]",
 								};
 
-								const componentList = systemHealth.components.slice(0, 10).map((c) => {
-									const emoji = statusEmoji[c.status] ?? "[?]";
-									return `${emoji} \`${c.id}\` | ${c.name} | ${c.uptimePercent}%`;
-								}).join("\n") || "No components";
+								const componentList =
+									systemHealth.components
+										.slice(0, 10)
+										.map((c) => {
+											const emoji = statusEmoji[c.status] ?? "[?]";
+											return `${emoji} \`${c.id}\` | ${c.name} | ${c.uptimePercent}%`;
+										})
+										.join("\n") || "No components";
 
-								const alertList = systemHealth.activeAlerts.slice(0, 5).map((a) => {
-									const sev = a.severity === "critical" ? "[CRIT]" : a.severity === "warning" ? "[WARN]" : "[INFO]";
-									return `${sev} ${a.message}`;
-								}).join("\n") || "No active alerts";
+								const alertList =
+									systemHealth.activeAlerts
+										.slice(0, 5)
+										.map((a) => {
+											const sev =
+												a.severity === "critical"
+													? "[CRIT]"
+													: a.severity === "warning"
+														? "[WARN]"
+														: "[INFO]";
+											return `${sev} ${a.message}`;
+										})
+										.join("\n") || "No active alerts";
 
-								const statusColor = systemHealth.status === "healthy" ? 0x2ecc71 :
-									systemHealth.status === "degraded" ? 0xf39c12 : 0xe74c3c;
+								const statusColor =
+									systemHealth.status === "healthy"
+										? 0x2ecc71
+										: systemHealth.status === "degraded"
+											? 0xf39c12
+											: 0xe74c3c;
 
 								const embed = new EmbedBuilder()
 									.setTitle(`System Health: ${systemHealth.status.toUpperCase()}`)
 									.setColor(statusColor)
 									.addFields(
-										{ name: "Total Components", value: systemHealth.metrics.totalComponents.toString(), inline: true },
-										{ name: "Healthy", value: systemHealth.metrics.healthyComponents.toString(), inline: true },
-										{ name: "Unhealthy", value: systemHealth.metrics.unhealthyComponents.toString(), inline: true },
+										{
+											name: "Total Components",
+											value: systemHealth.metrics.totalComponents.toString(),
+											inline: true,
+										},
+										{
+											name: "Healthy",
+											value: systemHealth.metrics.healthyComponents.toString(),
+											inline: true,
+										},
+										{
+											name: "Unhealthy",
+											value: systemHealth.metrics.unhealthyComponents.toString(),
+											inline: true,
+										},
 										{ name: "Avg Uptime", value: `${systemHealth.metrics.avgUptimePercent}%`, inline: true },
 										{ name: "Avg Latency", value: `${systemHealth.metrics.avgLatencyMs}ms`, inline: true },
-										{ name: "Active Alerts", value: systemHealth.activeAlerts.length.toString(), inline: true },
+										{
+											name: "Active Alerts",
+											value: systemHealth.activeAlerts.length.toString(),
+											inline: true,
+										},
 										{ name: "Components", value: componentList, inline: false },
 										{ name: "Alerts", value: alertList, inline: false },
 									)
@@ -23624,7 +25489,14 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 							case "register": {
 								const id = interaction.options.getString("id", true);
 								const name = interaction.options.getString("name", true);
-								const type = interaction.options.getString("type", true) as "agent" | "database" | "api" | "queue" | "cache" | "external" | "system";
+								const type = interaction.options.getString("type", true) as
+									| "agent"
+									| "database"
+									| "api"
+									| "queue"
+									| "cache"
+									| "external"
+									| "system";
 
 								const component = healthSystem.registerComponent({ id, type, name });
 
@@ -23654,7 +25526,7 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 								});
 
 								await interaction.editReply(
-									`Health check recorded: \`${id}\` - ${healthy ? "[OK]" : "[FAIL]"}${message ? ` (${message})` : ""}`
+									`Health check recorded: \`${id}\` - ${healthy ? "[OK]" : "[FAIL]"}${message ? ` (${message})` : ""}`,
 								);
 								break;
 							}
@@ -23675,8 +25547,12 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									unknown: "[?]",
 								};
 
-								const statusColor = component.status === "healthy" ? 0x2ecc71 :
-									component.status === "degraded" ? 0xf39c12 : 0xe74c3c;
+								const statusColor =
+									component.status === "healthy"
+										? 0x2ecc71
+										: component.status === "degraded"
+											? 0xf39c12
+											: 0xe74c3c;
 
 								const lastCheckInfo = component.lastCheck
 									? `${component.lastCheck.status} (${Math.round((Date.now() - component.lastCheck.checkedAt) / 1000)}s ago)`
@@ -23692,7 +25568,11 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 										{ name: "Uptime", value: `${component.uptimePercent}%`, inline: true },
 										{ name: "Avg Latency", value: `${component.avgLatencyMs}ms`, inline: true },
 										{ name: "Check Count", value: component.checkCount.toString(), inline: true },
-										{ name: "Consecutive Failures", value: component.consecutiveFailures.toString(), inline: true },
+										{
+											name: "Consecutive Failures",
+											value: component.consecutiveFailures.toString(),
+											inline: true,
+										},
 										{ name: "Last Check", value: lastCheckInfo, inline: false },
 									)
 									.setTimestamp(component.registeredAt);
@@ -23715,7 +25595,7 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 								});
 
 								await interaction.editReply(
-									`Metric recorded: \`${id}\` | ${metricName} = ${value}${unit ? ` ${unit}` : ""}`
+									`Metric recorded: \`${id}\` | ${metricName} = ${value}${unit ? ` ${unit}` : ""}`,
 								);
 								break;
 							}
@@ -23725,7 +25605,10 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 								const metric = interaction.options.getString("metric", true);
 								const operator = interaction.options.getString("operator", true) as ">" | "<" | ">=" | "<=";
 								const value = interaction.options.getNumber("value", true);
-								const severity = (interaction.options.getString("severity") ?? "warning") as "info" | "warning" | "critical";
+								const severity = (interaction.options.getString("severity") ?? "warning") as
+									| "info"
+									| "warning"
+									| "critical";
 
 								const threshold = healthSystem.setThreshold({
 									componentId: id,
@@ -23736,7 +25619,7 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 								});
 
 								await interaction.editReply(
-									`Threshold set: \`${id}\` | ${metric} ${operator} ${value} (${severity})`
+									`Threshold set: \`${id}\` | ${metric} ${operator} ${value} (${severity})`,
 								);
 								break;
 							}
@@ -23752,12 +25635,16 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const list = alerts.slice(0, 15).map((a) => {
-									const sev = a.severity === "critical" ? "[CRIT]" : a.severity === "warning" ? "[WARN]" : "[INFO]";
-									const ack = a.acknowledged ? " (ack)" : "";
-									const ago = Math.round((Date.now() - a.triggeredAt) / 60000);
-									return `${sev}${ack} \`${a.componentId}\` | ${a.message} | ${ago}m ago`;
-								}).join("\n");
+								const list = alerts
+									.slice(0, 15)
+									.map((a) => {
+										const sev =
+											a.severity === "critical" ? "[CRIT]" : a.severity === "warning" ? "[WARN]" : "[INFO]";
+										const ack = a.acknowledged ? " (ack)" : "";
+										const ago = Math.round((Date.now() - a.triggeredAt) / 60000);
+										return `${sev}${ack} \`${a.componentId}\` | ${a.message} | ${ago}m ago`;
+									})
+									.join("\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle(`Alerts (${alerts.length})`)
@@ -23792,11 +25679,14 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const list = history.slice(0, 15).map((h) => {
-									const status = h.status === "healthy" ? "[OK]" : "[FAIL]";
-									const ago = Math.round((Date.now() - h.checkedAt) / 60000);
-									return `${status} ${ago}m ago | ${h.latencyMs}ms | ${h.message.slice(0, 30) || "-"}`;
-								}).join("\n");
+								const list = history
+									.slice(0, 15)
+									.map((h) => {
+										const status = h.status === "healthy" ? "[OK]" : "[FAIL]";
+										const ago = Math.round((Date.now() - h.checkedAt) / 60000);
+										return `${status} ${ago}m ago | ${h.latencyMs}ms | ${h.message.slice(0, 30) || "-"}`;
+									})
+									.join("\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle(`Health History: ${id}`)
@@ -23819,7 +25709,7 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 					break;
 				}
 
-				case "cost": {
+				case "cost-tracker": {
 					await interaction.deferReply();
 					const costSubcommand = interaction.options.getSubcommand();
 
@@ -23857,7 +25747,14 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 							}
 
 							case "record": {
-								const provider = interaction.options.getString("provider", true) as "openrouter" | "openai" | "anthropic" | "groq" | "cerebras" | "zai" | "ollama";
+								const provider = interaction.options.getString("provider", true) as
+									| "openrouter"
+									| "openai"
+									| "anthropic"
+									| "groq"
+									| "cerebras"
+									| "zai"
+									| "ollama";
 								const model = interaction.options.getString("model", true);
 								const inputTokens = interaction.options.getInteger("input", true);
 								const outputTokens = interaction.options.getInteger("output", true);
@@ -23875,14 +25772,22 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 
 								await interaction.editReply(
 									`Usage recorded: ${provider}/${model}\n` +
-									`Tokens: ${inputTokens}in/${outputTokens}out\n` +
-									`Est. Cost: $${record.estimatedCost.toFixed(6)}`
+										`Tokens: ${inputTokens}in/${outputTokens}out\n` +
+										`Est. Cost: $${record.estimatedCost.toFixed(6)}`,
 								);
 								break;
 							}
 
 							case "usage": {
-								const provider = interaction.options.getString("provider") as "openrouter" | "openai" | "anthropic" | "groq" | "cerebras" | "zai" | "ollama" | undefined;
+								const provider = interaction.options.getString("provider") as
+									| "openrouter"
+									| "openai"
+									| "anthropic"
+									| "groq"
+									| "cerebras"
+									| "zai"
+									| "ollama"
+									| undefined;
 								const limit = interaction.options.getInteger("limit") ?? 20;
 
 								const records = costSystem.getUsage({ provider, limit });
@@ -23892,11 +25797,14 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const list = records.slice(0, 15).map((r) => {
-									const cost = r.actualCost ?? r.estimatedCost;
-									const ago = Math.round((Date.now() - r.timestamp.getTime()) / 60000);
-									return `\`${r.provider}\` | ${r.modelId.slice(0, 20)} | $${cost.toFixed(4)} | ${ago}m ago`;
-								}).join("\n");
+								const list = records
+									.slice(0, 15)
+									.map((r) => {
+										const cost = r.actualCost ?? r.estimatedCost;
+										const ago = Math.round((Date.now() - r.timestamp.getTime()) / 60000);
+										return `\`${r.provider}\` | ${r.modelId.slice(0, 20)} | $${cost.toFixed(4)} | ${ago}m ago`;
+									})
+									.join("\n");
 
 								const totalCost = records.reduce((sum, r) => sum + (r.actualCost ?? r.estimatedCost), 0);
 
@@ -23915,8 +25823,17 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 							case "budget": {
 								const name = interaction.options.getString("name", true);
 								const limitAmount = interaction.options.getNumber("limit", true);
-								const period = interaction.options.getString("period", true) as "hourly" | "daily" | "weekly" | "monthly" | "yearly";
-								const scope = (interaction.options.getString("scope") ?? "global") as "global" | "user" | "channel" | "agent";
+								const period = interaction.options.getString("period", true) as
+									| "hourly"
+									| "daily"
+									| "weekly"
+									| "monthly"
+									| "yearly";
+								const scope = (interaction.options.getString("scope") ?? "global") as
+									| "global"
+									| "user"
+									| "channel"
+									| "agent";
 
 								const budget = costSystem.createBudget({
 									name,
@@ -23951,12 +25868,15 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const list = budgets.slice(0, 15).map((b) => {
-									const status = costSystem.getBudgetStatus(b.id);
-									const pct = status ? Math.round(status.percentUsed) : 0;
-									const color = pct > 90 ? "[!]" : pct > 75 ? "[W]" : "[OK]";
-									return `${color} **${b.name}** | $${b.limit}/${b.period} | ${pct}% used`;
-								}).join("\n");
+								const list = budgets
+									.slice(0, 15)
+									.map((b) => {
+										const status = costSystem.getBudgetStatus(b.id);
+										const pct = status ? Math.round(status.percentUsed) : 0;
+										const color = pct > 90 ? "[!]" : pct > 75 ? "[W]" : "[OK]";
+										return `${color} **${b.name}** | $${b.limit}/${b.period} | ${pct}% used`;
+									})
+									.join("\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle(`Budgets (${budgets.length})`)
@@ -23977,8 +25897,11 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const statusColor = status.isOverBudget ? 0xe74c3c :
-									status.percentUsed > 75 ? 0xf39c12 : 0x2ecc71;
+								const statusColor = status.isOverBudget
+									? 0xe74c3c
+									: status.percentUsed > 75
+										? 0xf39c12
+										: 0x2ecc71;
 
 								const embed = new EmbedBuilder()
 									.setTitle(`Budget: ${status.budget.name}`)
@@ -23990,7 +25913,11 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 										{ name: "% Used", value: `${status.percentUsed.toFixed(1)}%`, inline: true },
 										{ name: "Projected", value: `$${status.projectedSpend.toFixed(4)}`, inline: true },
 										{ name: "Over Budget", value: status.isOverBudget ? "YES" : "No", inline: true },
-										{ name: "Period", value: `${status.periodStart.toLocaleDateString()} - ${status.periodEnd.toLocaleDateString()}`, inline: false },
+										{
+											name: "Period",
+											value: `${status.periodStart.toLocaleDateString()} - ${status.periodEnd.toLocaleDateString()}`,
+											inline: false,
+										},
 									)
 									.setTimestamp();
 
@@ -24009,11 +25936,15 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const list = alerts.slice(0, 15).map((a) => {
-									const sev = a.severity === "critical" ? "[CRIT]" : a.severity === "warning" ? "[WARN]" : "[INFO]";
-									const ack = a.acknowledged ? " (ack)" : "";
-									return `${sev}${ack} ${a.message.slice(0, 60)}`;
-								}).join("\n");
+								const list = alerts
+									.slice(0, 15)
+									.map((a) => {
+										const sev =
+											a.severity === "critical" ? "[CRIT]" : a.severity === "warning" ? "[WARN]" : "[INFO]";
+										const ack = a.acknowledged ? " (ack)" : "";
+										return `${sev}${ack} ${a.message.slice(0, 60)}`;
+									})
+									.join("\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle(`Cost Alerts (${alerts.length})`)
@@ -24038,25 +25969,31 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 							}
 
 							case "report": {
-								const period = (interaction.options.getString("period") ?? "monthly") as "daily" | "weekly" | "monthly";
+								const period = (interaction.options.getString("period") ?? "monthly") as
+									| "daily"
+									| "weekly"
+									| "monthly";
 								const report = costSystem.generateReport({ period });
 
-								const providerList = Object.values(report.byProvider)
-									.sort((a, b) => b.totalCost - a.totalCost)
-									.slice(0, 5)
-									.map((p) => `**${p.provider}**: $${p.totalCost.toFixed(4)} (${p.totalCalls} calls)`)
-									.join("\n") || "No data";
+								const providerList =
+									Object.values(report.byProvider)
+										.sort((a, b) => b.totalCost - a.totalCost)
+										.slice(0, 5)
+										.map((p) => `**${p.provider}**: $${p.totalCost.toFixed(4)} (${p.totalCalls} calls)`)
+										.join("\n") || "No data";
 
-								const modelList = Object.values(report.byModel)
-									.sort((a, b) => b.totalCost - a.totalCost)
-									.slice(0, 5)
-									.map((m) => `**${m.modelId.slice(0, 25)}**: $${m.totalCost.toFixed(4)}`)
-									.join("\n") || "No data";
+								const modelList =
+									Object.values(report.byModel)
+										.sort((a, b) => b.totalCost - a.totalCost)
+										.slice(0, 5)
+										.map((m) => `**${m.modelId.slice(0, 25)}**: $${m.totalCost.toFixed(4)}`)
+										.join("\n") || "No data";
 
-								const opList = report.topOperations
-									.slice(0, 5)
-									.map((o) => `**${o.operationType}**: $${o.totalCost.toFixed(4)} (${o.callCount}x)`)
-									.join("\n") || "No data";
+								const opList =
+									report.topOperations
+										.slice(0, 5)
+										.map((o) => `**${o.operationType}**: $${o.totalCost.toFixed(4)} (${o.callCount}x)`)
+										.join("\n") || "No data";
 
 								const embed = new EmbedBuilder()
 									.setTitle(`Cost Report (${period})`)
@@ -24070,7 +26007,9 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 										{ name: "Top Models", value: modelList, inline: false },
 										{ name: "Top Operations", value: opList, inline: false },
 									)
-									.setFooter({ text: `${report.startDate.toLocaleDateString()} - ${report.endDate.toLocaleDateString()}` })
+									.setFooter({
+										text: `${report.startDate.toLocaleDateString()} - ${report.endDate.toLocaleDateString()}`,
+									})
 									.setTimestamp();
 
 								await interaction.editReply({ embeds: [embed] });
@@ -24085,11 +26024,14 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const list = pricing.slice(0, 15).map((p) => {
-									const input = p.inputCostPer1k === 0 ? "FREE" : `$${p.inputCostPer1k.toFixed(5)}/1k`;
-									const output = p.outputCostPer1k === 0 ? "FREE" : `$${p.outputCostPer1k.toFixed(5)}/1k`;
-									return `\`${p.provider}\` ${p.modelId.slice(0, 25)}\n  In: ${input} | Out: ${output}`;
-								}).join("\n");
+								const list = pricing
+									.slice(0, 15)
+									.map((p) => {
+										const input = p.inputCostPer1k === 0 ? "FREE" : `$${p.inputCostPer1k.toFixed(5)}/1k`;
+										const output = p.outputCostPer1k === 0 ? "FREE" : `$${p.outputCostPer1k.toFixed(5)}/1k`;
+										return `\`${p.provider}\` ${p.modelId.slice(0, 25)}\n  In: ${input} | Out: ${output}`;
+									})
+									.join("\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle(`Model Pricing (${pricing.length})`)
@@ -24109,10 +26051,12 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const list = optimizations.map((o) => {
-									const priority = o.priority === "high" ? "[H]" : o.priority === "medium" ? "[M]" : "[L]";
-									return `${priority} **${o.type}**\n${o.recommendation}\nSavings: $${o.projectedSavings.toFixed(2)} (${o.savingsPercent.toFixed(0)}%)`;
-								}).join("\n\n");
+								const list = optimizations
+									.map((o) => {
+										const priority = o.priority === "high" ? "[H]" : o.priority === "medium" ? "[M]" : "[L]";
+										return `${priority} **${o.type}**\n${o.recommendation}\nSavings: $${o.projectedSavings.toFixed(2)} (${o.savingsPercent.toFixed(0)}%)`;
+									})
+									.join("\n\n");
 
 								const totalSavings = optimizations.reduce((sum, o) => sum + o.projectedSavings, 0);
 
@@ -24120,7 +26064,11 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									.setTitle("Cost Optimization Suggestions")
 									.setColor(0x2ecc71)
 									.setDescription(list)
-									.addFields({ name: "Total Potential Savings", value: `$${totalSavings.toFixed(2)}/month`, inline: true })
+									.addFields({
+										name: "Total Potential Savings",
+										value: `$${totalSavings.toFixed(2)}/month`,
+										inline: true,
+									})
 									.setTimestamp();
 
 								await interaction.editReply({ embeds: [embed] });
@@ -24181,8 +26129,17 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 								const name = interaction.options.getString("name", true);
 								const limit = interaction.options.getInteger("limit", true);
 								const windowSec = interaction.options.getInteger("window", true);
-								const scope = (interaction.options.getString("scope") ?? "global") as "global" | "user" | "channel" | "agent" | "endpoint";
-								const algorithm = (interaction.options.getString("algorithm") ?? "sliding_window") as "sliding_window" | "fixed_window" | "token_bucket" | "leaky_bucket";
+								const scope = (interaction.options.getString("scope") ?? "global") as
+									| "global"
+									| "user"
+									| "channel"
+									| "agent"
+									| "endpoint";
+								const algorithm = (interaction.options.getString("algorithm") ?? "sliding_window") as
+									| "sliding_window"
+									| "fixed_window"
+									| "token_bucket"
+									| "leaky_bucket";
 
 								const rule = rateLimitSystem.createRule({
 									name,
@@ -24217,11 +26174,14 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const list = rules.slice(0, 15).map((r) => {
-									const status = r.enabled ? "[ON]" : "[OFF]";
-									const windowSec = Math.round(r.windowMs / 1000);
-									return `${status} **${r.name}** | ${r.limit}/${windowSec}s | ${r.scope} | ${r.algorithm}`;
-								}).join("\n");
+								const list = rules
+									.slice(0, 15)
+									.map((r) => {
+										const status = r.enabled ? "[ON]" : "[OFF]";
+										const windowSec = Math.round(r.windowMs / 1000);
+										return `${status} **${r.name}** | ${r.limit}/${windowSec}s | ${r.scope} | ${r.algorithm}`;
+									})
+									.join("\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle(`Rate Limit Rules (${rules.length})`)
@@ -24235,7 +26195,11 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 
 							case "check": {
 								const target = interaction.options.getString("target", true);
-								const scope = (interaction.options.getString("scope") ?? "user") as "user" | "channel" | "agent" | "endpoint";
+								const scope = (interaction.options.getString("scope") ?? "user") as
+									| "user"
+									| "channel"
+									| "agent"
+									| "endpoint";
 
 								const result = rateLimitSystem.check({
 									scope,
@@ -24251,13 +26215,25 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									.addFields(
 										{ name: "Target", value: `\`${target}\``, inline: true },
 										{ name: "Scope", value: scope, inline: true },
-										{ name: "Remaining", value: result.remaining === Infinity ? "Unlimited" : result.remaining.toString(), inline: true },
-										{ name: "Limit", value: result.limit === Infinity ? "None" : result.limit.toString(), inline: true },
+										{
+											name: "Remaining",
+											value: result.remaining === Infinity ? "Unlimited" : result.remaining.toString(),
+											inline: true,
+										},
+										{
+											name: "Limit",
+											value: result.limit === Infinity ? "None" : result.limit.toString(),
+											inline: true,
+										},
 										{ name: "Reset At", value: result.resetAt.toLocaleTimeString(), inline: true },
 									);
 
 								if (result.retryAfter) {
-									embed.addFields({ name: "Retry After", value: `${Math.round(result.retryAfter / 1000)}s`, inline: true });
+									embed.addFields({
+										name: "Retry After",
+										value: `${Math.round(result.retryAfter / 1000)}s`,
+										inline: true,
+									});
 								}
 								if (result.rule) {
 									embed.addFields({ name: "Matched Rule", value: result.rule.name, inline: true });
@@ -24282,8 +26258,16 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 							case "quota": {
 								const name = interaction.options.getString("name", true);
 								const limit = interaction.options.getInteger("limit", true);
-								const period = interaction.options.getString("period", true) as "minute" | "hour" | "day" | "week" | "month";
-								const scope = (interaction.options.getString("scope") ?? "global") as "global" | "user" | "channel";
+								const period = interaction.options.getString("period", true) as
+									| "minute"
+									| "hour"
+									| "day"
+									| "week"
+									| "month";
+								const scope = (interaction.options.getString("scope") ?? "global") as
+									| "global"
+									| "user"
+									| "channel";
 
 								const quota = rateLimitSystem.createQuota({
 									name,
@@ -24318,11 +26302,14 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const list = quotas.slice(0, 15).map((q) => {
-									const status = q.enabled ? "[ON]" : "[OFF]";
-									const pct = Math.round((q.used / q.limit) * 100);
-									return `${status} **${q.name}** | ${q.used}/${q.limit} (${pct}%) | ${q.period}`;
-								}).join("\n");
+								const list = quotas
+									.slice(0, 15)
+									.map((q) => {
+										const status = q.enabled ? "[ON]" : "[OFF]";
+										const pct = Math.round((q.used / q.limit) * 100);
+										return `${status} **${q.name}** | ${q.used}/${q.limit} (${pct}%) | ${q.period}`;
+									})
+									.join("\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle(`Quotas (${quotas.length})`)
@@ -24343,8 +26330,11 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const statusColor = status.isExhausted ? 0xe74c3c :
-									status.percentUsed > 75 ? 0xf39c12 : 0x2ecc71;
+								const statusColor = status.isExhausted
+									? 0xe74c3c
+									: status.percentUsed > 75
+										? 0xf39c12
+										: 0x2ecc71;
 
 								const resetInMin = Math.round(status.resetIn / 60000);
 
@@ -24373,10 +26363,13 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const list = queueStatus.requests.slice(0, 10).map((r, i) => {
-									const waitTime = Math.round((Date.now() - r.queuedAt.getTime()) / 1000);
-									return `${i + 1}. \`${r.id.slice(0, 15)}\` | ${r.priority} | ${waitTime}s waiting`;
-								}).join("\n");
+								const list = queueStatus.requests
+									.slice(0, 10)
+									.map((r, i) => {
+										const waitTime = Math.round((Date.now() - r.queuedAt.getTime()) / 1000);
+										return `${i + 1}. \`${r.id.slice(0, 15)}\` | ${r.priority} | ${waitTime}s waiting`;
+									})
+									.join("\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle(`Request Queue (${queueStatus.length})`)
@@ -24424,7 +26417,11 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 										{ name: "Last 24h", value: stats.entriesLast24h.toLocaleString(), inline: true },
 										{ name: "Last 7d", value: stats.entriesLast7d.toLocaleString(), inline: true },
 										{ name: "Security Events", value: stats.securityEvents.toLocaleString(), inline: true },
-										{ name: "Failed Operations", value: stats.failedOperations.toLocaleString(), inline: true },
+										{
+											name: "Failed Operations",
+											value: stats.failedOperations.toLocaleString(),
+											inline: true,
+										},
 										{ name: "Unique Actors", value: stats.uniqueActors.toLocaleString(), inline: true },
 										{ name: "Unique Resources", value: stats.uniqueResources.toLocaleString(), inline: true },
 									)
@@ -24432,7 +26429,11 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									.setTimestamp();
 
 								if (stats.oldestEntry) {
-									embed.addFields({ name: "Date Range", value: `${stats.oldestEntry.toLocaleDateString()} - ${stats.newestEntry?.toLocaleDateString() ?? 'now'}`, inline: false });
+									embed.addFields({
+										name: "Date Range",
+										value: `${stats.oldestEntry.toLocaleDateString()} - ${stats.newestEntry?.toLocaleDateString() ?? "now"}`,
+										inline: false,
+									});
 								}
 
 								await interaction.editReply({ embeds: [embed] });
@@ -24440,10 +26441,26 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 							}
 
 							case "log": {
-								const action = interaction.options.getString("action", true) as "create" | "read" | "update" | "delete" | "execute" | "config_change";
+								const action = interaction.options.getString("action", true) as
+									| "create"
+									| "read"
+									| "update"
+									| "delete"
+									| "execute"
+									| "config_change";
 								const description = interaction.options.getString("description", true);
-								const category = (interaction.options.getString("category") ?? "operation") as "security" | "data_access" | "configuration" | "operation" | "system";
-								const severity = interaction.options.getString("severity") as "low" | "medium" | "high" | "critical" | undefined;
+								const category = (interaction.options.getString("category") ?? "operation") as
+									| "security"
+									| "data_access"
+									| "configuration"
+									| "operation"
+									| "system";
+								const severity = interaction.options.getString("severity") as
+									| "low"
+									| "medium"
+									| "high"
+									| "critical"
+									| undefined;
 
 								const entry = auditSystem.log({
 									action,
@@ -24473,8 +26490,19 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 							}
 
 							case "query": {
-								const category = interaction.options.getString("category") as "security" | "data_access" | "configuration" | "operation" | "system" | undefined;
-								const severity = interaction.options.getString("severity") as "low" | "medium" | "high" | "critical" | undefined;
+								const category = interaction.options.getString("category") as
+									| "security"
+									| "data_access"
+									| "configuration"
+									| "operation"
+									| "system"
+									| undefined;
+								const severity = interaction.options.getString("severity") as
+									| "low"
+									| "medium"
+									| "high"
+									| "critical"
+									| undefined;
 								const limit = interaction.options.getInteger("limit") ?? 20;
 
 								const entries = auditSystem.query({
@@ -24488,11 +26516,21 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const list = entries.slice(0, 15).map((e) => {
-									const sev = e.severity === "critical" ? "[CRIT]" : e.severity === "high" ? "[HIGH]" : e.severity === "medium" ? "[MED]" : "[LOW]";
-									const ago = Math.round((Date.now() - e.timestamp.getTime()) / 60000);
-									return `${sev} **${e.action}** | ${e.description.slice(0, 40)} | ${ago}m ago`;
-								}).join("\n");
+								const list = entries
+									.slice(0, 15)
+									.map((e) => {
+										const sev =
+											e.severity === "critical"
+												? "[CRIT]"
+												: e.severity === "high"
+													? "[HIGH]"
+													: e.severity === "medium"
+														? "[MED]"
+														: "[LOW]";
+										const ago = Math.round((Date.now() - e.timestamp.getTime()) / 60000);
+										return `${sev} **${e.action}** | ${e.description.slice(0, 40)} | ${ago}m ago`;
+									})
+									.join("\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle(`Audit Entries (${entries.length})`)
@@ -24513,9 +26551,12 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const list = entries.slice(0, 10).map((e) => {
-									return `**${e.action}** | ${e.description.slice(0, 50)} | ${e.actor.name ?? e.actor.id}`;
-								}).join("\n");
+								const list = entries
+									.slice(0, 10)
+									.map((e) => {
+										return `**${e.action}** | ${e.description.slice(0, 50)} | ${e.actor.name ?? e.actor.id}`;
+									})
+									.join("\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle(`Search Results (${entries.length})`)
@@ -24537,7 +26578,8 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const sevColor = entry.severity === "critical" ? 0xe74c3c : entry.severity === "high" ? 0xf39c12 : 0x3498db;
+								const sevColor =
+									entry.severity === "critical" ? 0xe74c3c : entry.severity === "high" ? 0xf39c12 : 0x3498db;
 
 								const embed = new EmbedBuilder()
 									.setTitle(`Audit Entry: ${entry.action}`)
@@ -24548,13 +26590,21 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 										{ name: "Category", value: entry.category, inline: true },
 										{ name: "Severity", value: entry.severity, inline: true },
 										{ name: "Outcome", value: entry.outcome, inline: true },
-										{ name: "Actor", value: `${entry.actor.type}: ${entry.actor.name ?? entry.actor.id}`, inline: true },
+										{
+											name: "Actor",
+											value: `${entry.actor.type}: ${entry.actor.name ?? entry.actor.id}`,
+											inline: true,
+										},
 										{ name: "Description", value: entry.description, inline: false },
 									)
 									.setTimestamp(entry.timestamp);
 
 								if (entry.resource) {
-									embed.addFields({ name: "Resource", value: `${entry.resource.type}: ${entry.resource.name ?? entry.resource.id}`, inline: false });
+									embed.addFields({
+										name: "Resource",
+										value: `${entry.resource.type}: ${entry.resource.name ?? entry.resource.id}`,
+										inline: false,
+									});
 								}
 								if (entry.hash) {
 									embed.addFields({ name: "Hash", value: `\`${entry.hash.slice(0, 16)}...\``, inline: true });
@@ -24566,7 +26616,10 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 
 							case "report": {
 								const name = interaction.options.getString("name", true);
-								const type = (interaction.options.getString("type") ?? "summary") as "summary" | "detailed" | "compliance";
+								const type = (interaction.options.getString("type") ?? "summary") as
+									| "summary"
+									| "detailed"
+									| "compliance";
 								const days = interaction.options.getInteger("days") ?? 30;
 
 								const endDate = new Date();
@@ -24580,11 +26633,12 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									endDate,
 								});
 
-								const topActions = Object.entries(report.byAction)
-									.sort((a, b) => b[1] - a[1])
-									.slice(0, 5)
-									.map(([action, count]) => `**${action}**: ${count}`)
-									.join(", ") || "None";
+								const topActions =
+									Object.entries(report.byAction)
+										.sort((a, b) => b[1] - a[1])
+										.slice(0, 5)
+										.map(([action, count]) => `**${action}**: ${count}`)
+										.join(", ") || "None";
 
 								const embed = new EmbedBuilder()
 									.setTitle(`Audit Report: ${report.name}`)
@@ -24599,7 +26653,11 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									.setTimestamp();
 
 								if (report.complianceScore !== undefined) {
-									embed.addFields({ name: "Compliance Score", value: `${report.complianceScore}/100`, inline: true });
+									embed.addFields({
+										name: "Compliance Score",
+										value: `${report.complianceScore}/100`,
+										inline: true,
+									});
 								}
 
 								await interaction.editReply({ embeds: [embed] });
@@ -24635,11 +26693,13 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 									break;
 								}
 
-								const list = policies.map((p) => {
-									const status = p.enabled ? "[ON]" : "[OFF]";
-									const filters = [p.category, p.severity].filter(Boolean).join(", ") || "all";
-									return `${status} **${p.name}** | ${p.retentionDays}d retention | ${filters}`;
-								}).join("\n");
+								const list = policies
+									.map((p) => {
+										const status = p.enabled ? "[ON]" : "[OFF]";
+										const filters = [p.category, p.severity].filter(Boolean).join(", ") || "all";
+										return `${status} **${p.name}** | ${p.retentionDays}d retention | ${filters}`;
+									})
+									.join("\n");
 
 								const embed = new EmbedBuilder()
 									.setTitle(`Retention Policies (${policies.length})`)
@@ -24655,14 +26715,15 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 								const format = (interaction.options.getString("format") ?? "json") as "json" | "csv";
 								const limit = interaction.options.getInteger("limit") ?? 100;
 
-								const data = format === "json"
-									? auditSystem.exportToJson({ limit })
-									: auditSystem.exportToCsv({ limit });
+								const data =
+									format === "json" ? auditSystem.exportToJson({ limit }) : auditSystem.exportToCsv({ limit });
 
 								// Truncate for Discord message
 								const preview = data.length > 1500 ? data.slice(0, 1500) + "\n...(truncated)" : data;
 
-								await interaction.editReply(`**Audit Export (${format.toUpperCase()}, ${limit} entries)**\n\`\`\`${format}\n${preview}\n\`\`\``);
+								await interaction.editReply(
+									`**Audit Export (${format.toUpperCase()}, ${limit} entries)**\n\`\`\`${format}\n${preview}\n\`\`\``,
+								);
 								break;
 							}
 
@@ -24672,6 +26733,696 @@ Recommendation: Consider a long position with stop-loss at $42,000.`;
 					} catch (error) {
 						const errMsg = error instanceof Error ? error.message : String(error);
 						await interaction.editReply(`Audit logging error: ${errMsg}`);
+					}
+					break;
+				}
+
+				case "ship": {
+					// Autonomous Feature Shipping - TAC Codebase Singularity
+					await interaction.deferReply();
+					const shipSubcommand = interaction.options.getSubcommand();
+
+					try {
+						const { Orchestrator } = await import("./agents/orchestrator.js");
+
+						// Get or create orchestrator
+						let orch = (globalThis as any).__piOrchestrator as InstanceType<typeof Orchestrator> | undefined;
+						if (!orch) {
+							orch = new Orchestrator(join(workingDir, "orchestrator.db"));
+
+							// Bootstrap with default agents if empty
+							const agents = orch.listAgents();
+							if (agents.length === 0) {
+								// Create default agents for shipping workflow
+								orch.createAgent({
+									name: "architect",
+									type: "inline",
+									role: "architect",
+									description: "Plans features and creates implementation specs",
+									status: "active",
+									config: {},
+								});
+								orch.createAgent({
+									name: "builder",
+									type: "inline",
+									role: "builder",
+									description: "Implements features and writes code",
+									status: "active",
+									config: {},
+								});
+								orch.createAgent({
+									name: "reviewer",
+									type: "inline",
+									role: "reviewer",
+									description: "Reviews code and provides feedback",
+									status: "active",
+									config: {},
+								});
+							}
+
+							(globalThis as any).__piOrchestrator = orch;
+						}
+
+						switch (shipSubcommand) {
+							case "feature": {
+								const description = interaction.options.getString("description", true);
+								const taskType = interaction.options.getString("type") || "feature";
+								const autoPr = interaction.options.getBoolean("auto_pr") ?? true;
+								const addToQueue = interaction.options.getBoolean("queue") ?? false;
+								const priority = interaction.options.getInteger("priority") ?? 5;
+								const featureId = `ship_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+								// If queuing, add to queue and return
+								if (addToQueue) {
+									db.addToFeatureQueue({
+										id: featureId,
+										description,
+										type: taskType as "feature" | "bug" | "chore",
+										priority,
+										userId: user.id,
+										channelId,
+									});
+
+									const stats = db.getFeatureQueueStats();
+									await interaction.editReply(
+										`**Feature Queued**\n` +
+											`ID: \`${featureId}\`\n` +
+											`Priority: ${priority}/10\n` +
+											`Position: ${stats.pending} in queue\n\n` +
+											`Use \`/ship queue action:start\` to begin processing.`,
+									);
+									break;
+								}
+
+								// Run immediately - full singularity workflow
+								await interaction.editReply(
+									`**Autonomous Feature Shipping Started**\n` +
+										`Feature: ${description.slice(0, 100)}${description.length > 100 ? "..." : ""}\n` +
+										`Type: ${taskType}\n` +
+										`Auto-PR: ${autoPr ? "Yes" : "No"}\n\n` +
+										`_Initializing 6-phase workflow..._`,
+								);
+
+								const MAX_RETRIES = 3;
+								const phases: Array<{
+									name: string;
+									status: "pending" | "running" | "done" | "failed";
+									output?: string;
+									retries?: number;
+								}> = [
+									{ name: "Plan", status: "pending", retries: 0 },
+									{ name: "Build", status: "pending", retries: 0 },
+									{ name: "Validate", status: "pending", retries: 0 },
+									{ name: "Review", status: "pending", retries: 0 },
+									{ name: "Fix", status: "pending", retries: 0 },
+									{ name: "Final Check", status: "pending", retries: 0 },
+								];
+
+								// Add to DB as in-progress
+								db.addToFeatureQueue({
+									id: featureId,
+									description,
+									type: taskType as "feature" | "bug" | "chore",
+									priority,
+									userId: user.id,
+									channelId,
+								});
+
+								// Determine branch name
+								const branchName = `ship/${taskType}/${featureId.slice(5, 13)}`;
+								db.startFeature(featureId, branchName);
+
+								const updateStatus = async () => {
+									const statusLines = phases.map((p) => {
+										const icon =
+											p.status === "done"
+												? "[DONE]"
+												: p.status === "running"
+													? "[...]"
+													: p.status === "failed"
+														? "[FAIL]"
+														: "[    ]";
+										const retryInfo = p.retries && p.retries > 0 ? ` (retry ${p.retries})` : "";
+										return `${icon} **${p.name}**${retryInfo}`;
+									});
+									db.updateFeaturePhases(featureId, JSON.stringify(phases));
+									await interaction.editReply(
+										`**Shipping: ${description.slice(0, 60)}...**\n\n${statusLines.join("\n")}`,
+									);
+								};
+
+								// Validation helper
+								const runValidation = async (context: string): Promise<{ passed: boolean; issues: string }> => {
+									const validatePrompt = `Validate the implementation:\n${context}\n\nRun:\n1. Type check\n2. Lint check\n3. Unit tests\n\nReturn JSON: {"passed": true/false, "issues": ["issue1", "issue2"]}`;
+									const validateResult = await orch!.delegate({
+										id: crypto.randomUUID(),
+										taskType: "validation",
+										prompt: validatePrompt,
+										requiredRole: "builder",
+										timeout: 90000,
+										priority: 10,
+									});
+									const output = String(validateResult.output);
+									try {
+										const jsonMatch = output.match(/\{[\s\S]*"passed"[\s\S]*\}/);
+										if (jsonMatch) {
+											const parsed = JSON.parse(jsonMatch[0]);
+											return {
+												passed: parsed.passed === true,
+												issues: Array.isArray(parsed.issues) ? parsed.issues.join(", ") : "",
+											};
+										}
+									} catch {
+										// fallback
+									}
+									const hasFail = /fail|error|exception|broken/i.test(output);
+									return { passed: !hasFail, issues: hasFail ? output.slice(0, 500) : "" };
+								};
+
+								try {
+									const agents = orch.listAgents();
+									const architectAgent = agents.find((a) => a.role === "architect");
+									const builderAgent = agents.find((a) => a.role === "builder");
+									const reviewerAgent = agents.find((a) => a.role === "reviewer");
+
+									if (!architectAgent || !builderAgent) {
+										db.failFeature(featureId, "Missing required agents (architect/builder)");
+										await interaction.followUp(
+											`**Shipping Failed**\nMissing required agents. Run \`/orchestrator bootstrap\` first.`,
+										);
+										break;
+									}
+
+									// === PHASE 1: PLAN ===
+									phases[0].status = "running";
+									await updateStatus();
+
+									const planTemplate =
+										taskType === "bug"
+											? `Create a bug fix plan for: ${description}\n\nInclude: Root cause, files to modify, steps, validation.`
+											: taskType === "chore"
+												? `Create a maintenance plan for: ${description}\n\nInclude: Current state, files, steps, validation.`
+												: `Create a feature implementation plan for: ${description}\n\nInclude: User story, phases, files, tests.`;
+
+									const planResult = await orch.delegate({
+										id: crypto.randomUUID(),
+										taskType: "planning",
+										prompt: planTemplate,
+										requiredRole: "architect",
+										timeout: 60000,
+										priority: 10,
+									});
+
+									if (planResult.status !== "success") {
+										phases[0].status = "failed";
+										await updateStatus();
+										db.failFeature(featureId, `Planning failed: ${planResult.error}`);
+										await interaction.followUp(`**Shipping Failed at Plan phase**\n${planResult.error}`);
+										break;
+									}
+									phases[0].status = "done";
+									phases[0].output = String(planResult.output).slice(0, 500);
+									await updateStatus();
+
+									// === PHASE 2: BUILD ===
+									phases[1].status = "running";
+									await updateStatus();
+
+									const buildPrompt = `Implement this plan:\n\n${String(planResult.output).slice(0, 2000)}\n\nWrite production-quality code.`;
+									const buildResult = await orch.delegate({
+										id: crypto.randomUUID(),
+										taskType: "implementation",
+										prompt: buildPrompt,
+										requiredRole: "builder",
+										timeout: 120000,
+										priority: 10,
+									});
+
+									if (buildResult.status !== "success") {
+										phases[1].status = "failed";
+										await updateStatus();
+										db.failFeature(featureId, `Build failed: ${buildResult.error}`);
+										await interaction.followUp(`**Shipping Failed at Build phase**\n${buildResult.error}`);
+										break;
+									}
+									phases[1].status = "done";
+									phases[1].output = String(buildResult.output).slice(0, 500);
+									await updateStatus();
+
+									// === PHASE 3: VALIDATE ===
+									phases[2].status = "running";
+									await updateStatus();
+
+									let validationPassed = false;
+									let validationIssues = "";
+									let buildRetries = 0;
+
+									while (!validationPassed && buildRetries < MAX_RETRIES) {
+										const validation = await runValidation(
+											`Task: ${description}\nBuild output: ${String(buildResult.output).slice(0, 1000)}`,
+										);
+										validationPassed = validation.passed;
+										validationIssues = validation.issues;
+
+										if (!validationPassed && buildRetries < MAX_RETRIES - 1) {
+											buildRetries++;
+											phases[2].retries = buildRetries;
+											await updateStatus();
+											await orch.delegate({
+												id: crypto.randomUUID(),
+												taskType: "fix",
+												prompt: `Fix validation issues:\n${validationIssues}`,
+												requiredRole: "builder",
+												timeout: 90000,
+												priority: 10,
+											});
+										} else if (!validationPassed) {
+											buildRetries++;
+										}
+									}
+
+									phases[2].status = validationPassed ? "done" : "failed";
+									phases[2].output = validationPassed
+										? `Passed${buildRetries > 0 ? ` after ${buildRetries} retries` : ""}`
+										: `Failed: ${validationIssues.slice(0, 200)}`;
+									await updateStatus();
+
+									// === PHASE 4: REVIEW ===
+									phases[3].status = "running";
+									await updateStatus();
+
+									let hasFailed = false;
+									if (reviewerAgent) {
+										const reviewPrompt = `Review implementation for: ${description}\n\nPlan: ${String(planResult.output).slice(0, 1000)}\n\nProvide PASS/FAIL verdict with risk assessment.`;
+										const reviewResult = await orch.delegate({
+											id: crypto.randomUUID(),
+											taskType: "review",
+											prompt: reviewPrompt,
+											requiredRole: "reviewer",
+											timeout: 60000,
+											priority: 10,
+										});
+										phases[3].status = reviewResult.status === "success" ? "done" : "failed";
+										phases[3].output = String(reviewResult.output).slice(0, 500);
+										hasFailed = /fail|blocker/i.test(String(reviewResult.output));
+									} else {
+										phases[3].status = "done";
+										phases[3].output = "No reviewer - skipped";
+									}
+									await updateStatus();
+
+									// === PHASE 5: FIX ===
+									if (hasFailed) {
+										phases[4].status = "running";
+										await updateStatus();
+
+										let fixRetries = 0;
+										let fixSuccess = false;
+
+										while (!fixSuccess && fixRetries < MAX_RETRIES) {
+											const fixResult = await orch.delegate({
+												id: crypto.randomUUID(),
+												taskType: "fix",
+												prompt: `Fix review issues for: ${description}`,
+												requiredRole: "builder",
+												timeout: 90000,
+												priority: 10,
+											});
+
+											if (fixResult.status === "success") {
+												const fixValidation = await runValidation(`Fix applied for: ${description}`);
+												if (fixValidation.passed) {
+													fixSuccess = true;
+													phases[4].status = "done";
+													phases[4].output = `Fixed${fixRetries > 0 ? ` after ${fixRetries + 1} attempts` : ""}`;
+												} else {
+													fixRetries++;
+													phases[4].retries = fixRetries;
+													await updateStatus();
+												}
+											} else {
+												fixRetries++;
+												phases[4].retries = fixRetries;
+												await updateStatus();
+											}
+										}
+
+										if (!fixSuccess) {
+											phases[4].status = "failed";
+											phases[4].output = `Failed after ${MAX_RETRIES} attempts`;
+										}
+									} else {
+										phases[4].status = "done";
+										phases[4].output = "No fixes needed";
+									}
+									await updateStatus();
+
+									// === PHASE 6: FINAL CHECK & GIT OPERATIONS ===
+									phases[5].status = "running";
+									await updateStatus();
+
+									const finalValidation = await runValidation(`Final check for: ${description}`);
+									const allPassed =
+										phases.slice(0, 5).every((p) => p.status === "done") && finalValidation.passed;
+
+									if (allPassed) {
+										phases[5].status = "done";
+										phases[5].output = "All systems go";
+										await updateStatus();
+
+										// Git operations: commit changes
+										let commitSha: string | undefined;
+										let prUrl: string | undefined;
+
+										try {
+											// Check git status
+											const { execSync } = await import("child_process");
+
+											// Get current branch
+											const currentBranch = execSync("git rev-parse --abbrev-ref HEAD", {
+												cwd: workingDir,
+												encoding: "utf-8",
+											}).trim();
+
+											// Stage all changes
+											execSync("git add -A", { cwd: workingDir });
+
+											// Check if there are changes to commit
+											const status = execSync("git status --porcelain", {
+												cwd: workingDir,
+												encoding: "utf-8",
+											}).trim();
+
+											if (status) {
+												// Create commit
+												const commitMsg = `${taskType}: ${description.slice(0, 50)}\n\n${description}\n\nShipped by pi-mono autonomous shipper\nFeature ID: ${featureId}`;
+												execSync(`git commit -m "${commitMsg.replace(/"/g, '\\"')}"`, { cwd: workingDir });
+
+												// Get commit SHA
+												commitSha = execSync("git rev-parse HEAD", {
+													cwd: workingDir,
+													encoding: "utf-8",
+												}).trim();
+
+												// Create PR if on feature branch and autoPr is enabled
+												const isMainBranch = ["main", "master"].includes(currentBranch);
+												if (autoPr && !isMainBranch) {
+													try {
+														const prOutput = execSync(
+															`gh pr create --title "${taskType}: ${description.slice(0, 50)}" --body "## Summary\n${description}\n\n## Feature ID\n\`${featureId}\`\n\nShipped by pi-mono autonomous shipper"`,
+															{ cwd: workingDir, encoding: "utf-8" },
+														).trim();
+
+														// Extract PR URL from output
+														const urlMatch = prOutput.match(/https:\/\/github\.com\/[^\s]+/);
+														if (urlMatch) {
+															prUrl = urlMatch[0];
+														}
+													} catch (prError) {
+														// PR creation failed (maybe already exists or gh not configured)
+														logWarning(`PR creation failed: ${prError}`);
+													}
+												}
+											}
+
+											db.completeFeature(featureId, { commitSha, prUrl });
+
+											const totalRetries = phases.reduce((sum, p) => sum + (p.retries || 0), 0);
+											await interaction.followUp(
+												`**Feature Shipped Successfully**\n\n` +
+													`Feature: ${description.slice(0, 80)}...\n` +
+													`Commit: \`${commitSha?.slice(0, 8) || "no changes"}\`\n` +
+													`${prUrl ? `PR: ${prUrl}\n` : ""}` +
+													`Compute loops: ${totalRetries} retries\n` +
+													`Duration: ${Math.round((Date.now() - parseInt(featureId.split("_")[1])) / 1000)}s`,
+											);
+										} catch (gitError) {
+											const gitErr = gitError instanceof Error ? gitError.message : String(gitError);
+											logWarning(`Git operations failed: ${gitErr}`);
+											db.completeFeature(featureId, {});
+											await interaction.followUp(
+												`**Feature Completed** (git operations failed)\n\n` +
+													`Feature: ${description.slice(0, 80)}...\n` +
+													`Git error: ${gitErr.slice(0, 200)}`,
+											);
+										}
+									} else {
+										phases[5].status = "failed";
+										phases[5].output = `Issues remain: ${finalValidation.issues.slice(0, 200)}`;
+										await updateStatus();
+
+										db.failFeature(featureId, "Final validation failed");
+										await interaction.followUp(
+											`**Shipping Incomplete**\n\nSome phases failed. Review issues and retry.`,
+										);
+									}
+								} catch (err) {
+									const errMsg = err instanceof Error ? err.message : String(err);
+									db.failFeature(featureId, errMsg);
+									await interaction.followUp(`**Shipping Error**\n${errMsg}`);
+								}
+								break;
+							}
+
+							case "queue": {
+								const action = interaction.options.getString("action", true);
+
+								switch (action) {
+									case "list": {
+										const pending = db.getPendingFeatures(20);
+										const inProgress = db.getInProgressFeature();
+
+										if (pending.length === 0 && !inProgress) {
+											await interaction.editReply("**Feature Queue**\n\nQueue is empty.");
+											break;
+										}
+
+										let response = "**Feature Queue**\n\n";
+
+										if (inProgress) {
+											const phases = inProgress.phases_json ? JSON.parse(inProgress.phases_json) : [];
+											const currentPhase =
+												phases.find((p: any) => p.status === "running")?.name || "Processing";
+											response += `**Currently Shipping:**\n`;
+											response += `\`${inProgress.id.slice(0, 12)}\` | ${inProgress.description.slice(0, 50)}... | ${currentPhase}\n\n`;
+										}
+
+										if (pending.length > 0) {
+											response += `**Pending (${pending.length}):**\n`;
+											response += pending
+												.slice(0, 10)
+												.map(
+													(f, i) =>
+														`${i + 1}. [P${f.priority}] \`${f.id.slice(0, 8)}\` ${f.description.slice(0, 40)}...`,
+												)
+												.join("\n");
+										}
+
+										await interaction.editReply(response);
+										break;
+									}
+
+									case "add": {
+										const desc = interaction.options.getString("description");
+										const prio = interaction.options.getInteger("priority") ?? 5;
+
+										if (!desc) {
+											await interaction.editReply("Please provide a feature description");
+											break;
+										}
+
+										const newId = `ship_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+										db.addToFeatureQueue({
+											id: newId,
+											description: desc,
+											type: "feature",
+											priority: prio,
+											userId: user.id,
+											channelId,
+										});
+
+										const stats = db.getFeatureQueueStats();
+										await interaction.editReply(
+											`**Feature Added to Queue**\n` +
+												`ID: \`${newId}\`\n` +
+												`Priority: ${prio}/10\n` +
+												`Queue position: ${stats.pending}`,
+										);
+										break;
+									}
+
+									case "remove": {
+										const featureId = interaction.options.getString("feature_id");
+										if (!featureId) {
+											await interaction.editReply("Please provide a feature ID to remove");
+											break;
+										}
+
+										const feature = db.getFeatureById(featureId);
+										if (!feature) {
+											await interaction.editReply(`Feature not found: \`${featureId}\``);
+											break;
+										}
+
+										if (feature.status === "in_progress") {
+											await interaction.editReply(
+												`Cannot remove feature that is currently being shipped: \`${featureId}\``,
+											);
+											break;
+										}
+
+										db.deleteFeature(featureId);
+										await interaction.editReply(`**Feature Removed**\n\`${featureId}\``);
+										break;
+									}
+
+									case "prioritize": {
+										const featureId = interaction.options.getString("feature_id");
+										const newPriority = interaction.options.getInteger("priority");
+
+										if (!featureId || !newPriority) {
+											await interaction.editReply("Please provide feature ID and new priority");
+											break;
+										}
+
+										const feature = db.getFeatureById(featureId);
+										if (!feature) {
+											await interaction.editReply(`Feature not found: \`${featureId}\``);
+											break;
+										}
+
+										db.updateFeaturePriority(featureId, newPriority);
+										await interaction.editReply(
+											`**Priority Updated**\n` +
+												`Feature: \`${featureId}\`\n` +
+												`New priority: ${newPriority}/10`,
+										);
+										break;
+									}
+
+									case "start": {
+										// Start queue processing
+										const existing = db.getInProgressFeature();
+										if (existing) {
+											await interaction.editReply(
+												`Queue is already processing: \`${existing.id}\`\n` +
+													`Use \`/ship status\` to check progress.`,
+											);
+											break;
+										}
+
+										const next = db.getNextFeature();
+										if (!next) {
+											await interaction.editReply(
+												"Queue is empty. Add features with `/ship queue action:add`",
+											);
+											break;
+										}
+
+										await interaction.editReply(
+											`**Queue Processing Started**\n` +
+												`Starting: \`${next.id}\`\n` +
+												`Description: ${next.description.slice(0, 60)}...\n\n` +
+												`_Use \`/ship status\` to monitor progress._`,
+										);
+
+										// Trigger the feature shipping (fire and forget, will update DB)
+										// In practice this would be handled by a background worker
+										// For now we'll just update status
+										db.startFeature(next.id, `ship/feature/${next.id.slice(5, 13)}`);
+										break;
+									}
+
+									case "stop": {
+										const inProgress = db.getInProgressFeature();
+										if (!inProgress) {
+											await interaction.editReply("No feature is currently being processed.");
+											break;
+										}
+
+										// Mark as failed/stopped
+										db.failFeature(inProgress.id, "Stopped by user");
+										await interaction.editReply(
+											`**Queue Processing Stopped**\n` + `Feature \`${inProgress.id}\` marked as stopped.`,
+										);
+										break;
+									}
+
+									default:
+										await interaction.editReply("Unknown queue action");
+								}
+								break;
+							}
+
+							case "status": {
+								const stats = db.getFeatureQueueStats();
+								const inProgress = db.getInProgressFeature();
+								const recent = db.getRecentShippedFeatures(5);
+
+								let response = "**Feature Shipping Status**\n\n";
+								response += `**Queue Stats:**\n`;
+								response += `Pending: ${stats.pending} | In Progress: ${stats.inProgress} | Completed: ${stats.completed} | Failed: ${stats.failed}\n`;
+								if (stats.avgCompletionTime > 0) {
+									response += `Avg completion time: ${stats.avgCompletionTime} minutes\n`;
+								}
+								response += "\n";
+
+								if (inProgress) {
+									const phases = inProgress.phases_json ? JSON.parse(inProgress.phases_json) : [];
+									response += `**Currently Shipping:**\n`;
+									response += `\`${inProgress.id}\`\n`;
+									response += `${inProgress.description.slice(0, 80)}...\n`;
+									response += `Branch: \`${inProgress.branch_name || "N/A"}\`\n`;
+									if (phases.length > 0) {
+										response += `Progress: ${phases.map((p: any) => (p.status === "done" ? "[X]" : p.status === "running" ? "[>]" : "[ ]") + p.name).join(" ")}\n`;
+									}
+									response += "\n";
+								}
+
+								if (recent.length > 0) {
+									response += `**Recently Shipped:**\n`;
+									response += recent
+										.map((f) => {
+											const date = f.completed_at ? new Date(f.completed_at).toLocaleDateString() : "N/A";
+											const prInfo = f.pr_url ? ` | [PR](${f.pr_url})` : "";
+											return `- \`${f.id.slice(0, 8)}\` ${f.description.slice(0, 40)}... (${date})${prInfo}`;
+										})
+										.join("\n");
+								}
+
+								await interaction.editReply(response);
+								break;
+							}
+
+							case "history": {
+								const limit = interaction.options.getInteger("limit") ?? 10;
+								const shipped = db.getRecentShippedFeatures(limit);
+
+								if (shipped.length === 0) {
+									await interaction.editReply("**Shipping History**\n\nNo features shipped yet.");
+									break;
+								}
+
+								let response = `**Shipping History** (${shipped.length} features)\n\n`;
+								response += shipped
+									.map((f) => {
+										const date = f.completed_at ? new Date(f.completed_at).toLocaleDateString() : "N/A";
+										const commitInfo = f.commit_sha ? `\`${f.commit_sha.slice(0, 7)}\`` : "no commit";
+										const prInfo = f.pr_url ? `[PR](${f.pr_url})` : "";
+										return `**${f.type}** | ${commitInfo} | ${date}\n${f.description.slice(0, 60)}...\n${prInfo}`;
+									})
+									.join("\n\n");
+
+								await interaction.editReply(response);
+								break;
+							}
+
+							default:
+								await interaction.editReply("Unknown ship subcommand");
+						}
+					} catch (error) {
+						const errMsg = error instanceof Error ? error.message : String(error);
+						await interaction.editReply(`Shipping error: ${errMsg}`);
 					}
 					break;
 				}

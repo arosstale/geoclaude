@@ -7,38 +7,30 @@
  */
 
 import {
-	Client,
-	Message,
-	TextChannel,
+	type ActionRowBuilder,
+	type ButtonBuilder,
+	type Client,
 	EmbedBuilder,
-	ActionRowBuilder,
-	ButtonBuilder,
-	StringSelectMenuBuilder,
+	type Message,
+	type TextChannel,
 } from "discord.js";
 import {
-	getCodingSessionDB,
-	type CodingSessionDB,
-	type SessionCreateInput,
-	type SuggestionCreateInput,
-} from "./coding-session-db.js";
-import {
-	setupButtonCollectors,
+	type ButtonHandlerContext,
 	createCodeReviewButtons,
-	createSessionControlButtons,
+	createCodeSuggestionEmbed,
+	createDiffButtons,
+	createEditCodeModal,
+	createGitHubButtons,
 	createModelSelector,
 	createQuickActionButtons,
-	createGitHubButtons,
-	createDiffButtons,
-	createCodeSuggestionEmbed,
+	createSessionControlButtons,
 	createSessionEmbed,
 	createStreamingEmbed,
-	createEditCodeModal,
 	type InteractionHandlers,
-	type ButtonHandlerContext,
-	type SelectHandlerContext,
-	type ModalHandlerContext,
+	setupButtonCollectors,
 } from "./button-collectors.js";
-import { AVAILABLE_MODELS, type CodeSuggestion, type CodingSession } from "./reacord-components.js";
+import { type CodingSessionDB, getCodingSessionDB } from "./coding-session-db.js";
+import type { CodeSuggestion, CodingSession } from "./reacord-components.js";
 
 // ============================================================================
 // Types
@@ -132,11 +124,12 @@ export interface CodingAgentCallbacks {
 
 export class CodingAgentUI {
 	private client: Client;
-	private reacord: unknown | null = null; // Optional Reacord instance
 	private db: CodingSessionDB;
 	private config: Required<CodingAgentConfig>;
 	private callbacks: CodingAgentCallbacks;
 	private streamingMessages: Map<string, { message: Message; lastUpdate: number }> = new Map();
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	private reacord: any;
 
 	constructor(client: Client, callbacks: CodingAgentCallbacks = {}, config: CodingAgentConfig = {}) {
 		this.client = client;
@@ -189,8 +182,13 @@ export class CodingAgentUI {
 					if (result.success) {
 						await ctx.interaction.editReply({
 							embeds: [
-								createCodeSuggestionEmbed(suggestion.code, suggestion.language, suggestion.explanation, suggestion.filePath, "accepted")
-									.setFooter({ text: `Committed: ${result.commitSha?.slice(0, 7)}` }),
+								createCodeSuggestionEmbed(
+									suggestion.code,
+									suggestion.language,
+									suggestion.explanation,
+									suggestion.filePath,
+									"accepted",
+								).setFooter({ text: `Committed: ${result.commitSha?.slice(0, 7)}` }),
 							],
 							components: [],
 						});
@@ -199,7 +197,15 @@ export class CodingAgentUI {
 					}
 				} else {
 					await ctx.interaction.editReply({
-						embeds: [createCodeSuggestionEmbed(suggestion.code, suggestion.language, suggestion.explanation, suggestion.filePath, "accepted")],
+						embeds: [
+							createCodeSuggestionEmbed(
+								suggestion.code,
+								suggestion.language,
+								suggestion.explanation,
+								suggestion.filePath,
+								"accepted",
+							),
+						],
 						components: [],
 					});
 				}
@@ -224,7 +230,15 @@ export class CodingAgentUI {
 				const suggestion = ctx.suggestionId ? this.db.getSuggestion(ctx.suggestionId) : null;
 				if (suggestion) {
 					await ctx.interaction.editReply({
-						embeds: [createCodeSuggestionEmbed(suggestion.code, suggestion.language, suggestion.explanation, suggestion.filePath, "rejected")],
+						embeds: [
+							createCodeSuggestionEmbed(
+								suggestion.code,
+								suggestion.language,
+								suggestion.explanation,
+								suggestion.filePath,
+								"rejected",
+							),
+						],
 						components: [],
 					});
 				}
@@ -245,7 +259,15 @@ export class CodingAgentUI {
 
 				// Update embed to show running state
 				await ctx.interaction.editReply({
-					embeds: [createCodeSuggestionEmbed(suggestion.code, suggestion.language, suggestion.explanation, suggestion.filePath, "running")],
+					embeds: [
+						createCodeSuggestionEmbed(
+							suggestion.code,
+							suggestion.language,
+							suggestion.explanation,
+							suggestion.filePath,
+							"running",
+						),
+					],
 					components: [createCodeReviewButtons(suggestion.id, true)],
 				});
 
@@ -261,7 +283,15 @@ export class CodingAgentUI {
 
 				// Restore buttons
 				await ctx.interaction.editReply({
-					embeds: [createCodeSuggestionEmbed(suggestion.code, suggestion.language, suggestion.explanation, suggestion.filePath, "pending")],
+					embeds: [
+						createCodeSuggestionEmbed(
+							suggestion.code,
+							suggestion.language,
+							suggestion.explanation,
+							suggestion.filePath,
+							"pending",
+						),
+					],
 					components: [createCodeReviewButtons(suggestion.id)],
 				});
 			},
@@ -272,7 +302,15 @@ export class CodingAgentUI {
 				const session = this.db.getSession(ctx.sessionId);
 				if (session) {
 					await ctx.interaction.editReply({
-						embeds: [createSessionEmbed(session.id, session.model, session.status, session.suggestions.length, session.context.length)],
+						embeds: [
+							createSessionEmbed(
+								session.id,
+								session.model,
+								session.status,
+								session.suggestions.length,
+								session.context.length,
+							),
+						],
 						components: [createSessionControlButtons(session.id, true)],
 					});
 				}
@@ -284,7 +322,15 @@ export class CodingAgentUI {
 				const session = this.db.getSession(ctx.sessionId);
 				if (session) {
 					await ctx.interaction.editReply({
-						embeds: [createSessionEmbed(session.id, session.model, session.status, session.suggestions.length, session.context.length)],
+						embeds: [
+							createSessionEmbed(
+								session.id,
+								session.model,
+								session.status,
+								session.suggestions.length,
+								session.context.length,
+							),
+						],
 						components: [createSessionControlButtons(session.id, false)],
 					});
 				}
@@ -296,7 +342,15 @@ export class CodingAgentUI {
 				const session = this.db.getSession(ctx.sessionId);
 				if (session) {
 					await ctx.interaction.editReply({
-						embeds: [createSessionEmbed(session.id, session.model, "completed", session.suggestions.length, session.context.length)],
+						embeds: [
+							createSessionEmbed(
+								session.id,
+								session.model,
+								"completed",
+								session.suggestions.length,
+								session.context.length,
+							),
+						],
 						components: [],
 					});
 				}
@@ -314,7 +368,15 @@ export class CodingAgentUI {
 				const session = this.db.getSession(ctx.sessionId);
 				if (session) {
 					await ctx.interaction.editReply({
-						embeds: [createSessionEmbed(session.id, session.model, session.status, session.suggestions.length, session.context.length)],
+						embeds: [
+							createSessionEmbed(
+								session.id,
+								session.model,
+								session.status,
+								session.suggestions.length,
+								session.context.length,
+							),
+						],
 						components: [
 							createModelSelector(session.id, session.model),
 							createSessionControlButtons(session.id, session.status === "paused"),
@@ -466,7 +528,10 @@ export class CodingAgentUI {
 		setupButtonCollectors(this.client, handlers);
 	}
 
-	private async handleQuickAction(ctx: ButtonHandlerContext, action: "explain" | "refactor" | "tests" | "document"): Promise<void> {
+	private async handleQuickAction(
+		ctx: ButtonHandlerContext,
+		action: "explain" | "refactor" | "tests" | "document",
+	): Promise<void> {
 		await ctx.interaction.deferReply();
 
 		if (!this.callbacks.generateAIResponse) {
@@ -488,7 +553,9 @@ export class CodingAgentUI {
 		};
 
 		const latestSuggestion = session.suggestions[session.suggestions.length - 1];
-		const codeContext = latestSuggestion ? `\`\`\`${latestSuggestion.language}\n${latestSuggestion.code}\n\`\`\`` : "";
+		const codeContext = latestSuggestion
+			? `\`\`\`${latestSuggestion.language}\n${latestSuggestion.code}\n\`\`\``
+			: "";
 
 		let content = "";
 		const response = await this.callbacks.generateAIResponse(
@@ -507,7 +574,12 @@ export class CodingAgentUI {
 		});
 	}
 
-	private async updateStreamingMessage(id: string, content: string, model: string, isStreaming: boolean): Promise<void> {
+	private async updateStreamingMessage(
+		id: string,
+		content: string,
+		model: string,
+		isStreaming: boolean,
+	): Promise<void> {
 		const cached = this.streamingMessages.get(id);
 		if (!cached) return;
 
@@ -565,11 +637,7 @@ export class CodingAgentUI {
 	/**
 	 * Send a code suggestion with interactive buttons
 	 */
-	async sendCodeSuggestion(
-		channel: TextChannel,
-		suggestion: CodeSuggestion,
-		sessionId: string,
-	): Promise<Message> {
+	async sendCodeSuggestion(channel: TextChannel, suggestion: CodeSuggestion, sessionId: string): Promise<Message> {
 		// Store suggestion in DB
 		const storedSuggestion = this.db.createSuggestion({
 			sessionId,
@@ -607,12 +675,7 @@ export class CodingAgentUI {
 	/**
 	 * Send a diff view with apply/discard buttons
 	 */
-	async sendDiffView(
-		channel: TextChannel,
-		diff: string,
-		filePath: string,
-		sessionId: string,
-	): Promise<Message> {
+	async sendDiffView(channel: TextChannel, diff: string, filePath: string, sessionId: string): Promise<Message> {
 		const suggestion = this.db.createSuggestion({
 			sessionId,
 			language: "diff",
@@ -685,25 +748,20 @@ export class CodingAgentUI {
 		let fullContent = "";
 
 		try {
-			const response = await this.callbacks.generateAIResponse(
-				prompt,
-				session.context,
-				session.model,
-				(chunk) => {
-					fullContent += chunk;
-					options.onChunk?.(chunk, fullContent);
+			const response = await this.callbacks.generateAIResponse(prompt, session.context, session.model, (chunk) => {
+				fullContent += chunk;
+				options.onChunk?.(chunk, fullContent);
 
-					// Rate-limited update
-					const cached = this.streamingMessages.get(message.id);
-					if (cached) {
-						const now = Date.now();
-						if (now - cached.lastUpdate >= (options.updateIntervalMs || this.config.streamingUpdateInterval)) {
-							cached.lastUpdate = now;
-							message.edit({ embeds: [createStreamingEmbed(fullContent, session.model, true)] }).catch(() => {});
-						}
+				// Rate-limited update
+				const cached = this.streamingMessages.get(message.id);
+				if (cached) {
+					const now = Date.now();
+					if (now - cached.lastUpdate >= (options.updateIntervalMs || this.config.streamingUpdateInterval)) {
+						cached.lastUpdate = now;
+						message.edit({ embeds: [createStreamingEmbed(fullContent, session.model, true)] }).catch(() => {});
 					}
-				},
-			);
+				}
+			});
 
 			// Final update
 			await message.edit({ embeds: [createStreamingEmbed(response, session.model, false)] });
@@ -717,12 +775,7 @@ export class CodingAgentUI {
 		} catch (error) {
 			options.onError?.(error as Error);
 			await message.edit({
-				embeds: [
-					new EmbedBuilder()
-						.setTitle("Error")
-						.setDescription(String(error))
-						.setColor(0xff0000),
-				],
+				embeds: [new EmbedBuilder().setTitle("Error").setDescription(String(error)).setColor(0xff0000)],
 			});
 			throw error;
 		} finally {
@@ -760,27 +813,25 @@ export function getCodingAgentUI(
 // ============================================================================
 
 export {
+	CUSTOM_IDS,
+	createCodeReviewButtons,
+	createCodeSuggestionEmbed,
+	createDiffButtons,
+	createGitHubButtons,
+	createModelSelector,
+	createQuickActionButtons,
+	createSessionControlButtons,
+	createSessionEmbed,
+	createStreamingEmbed,
+} from "./button-collectors.js";
+export {
 	CodingSessionDB,
-	getCodingSessionDB,
 	closeCodingSessionDB,
+	getCodingSessionDB,
 } from "./coding-session-db.js";
-
 export {
 	AVAILABLE_MODELS,
 	type CodeSuggestion,
 	type CodingSession,
 	type ModelOption,
 } from "./reacord-components.js";
-
-export {
-	CUSTOM_IDS,
-	createCodeReviewButtons,
-	createSessionControlButtons,
-	createModelSelector,
-	createQuickActionButtons,
-	createGitHubButtons,
-	createDiffButtons,
-	createCodeSuggestionEmbed,
-	createSessionEmbed,
-	createStreamingEmbed,
-} from "./button-collectors.js";

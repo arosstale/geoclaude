@@ -101,42 +101,18 @@ const CATEGORY_PATTERNS: Record<TaskCategory, RegExp[]> = {
 		/\b(crash|fail|broken|not working)\b/i,
 		/\b(stack trace|exception|undefined)\b/i,
 	],
-	refactoring: [
-		/\b(refactor|clean|improve|optimize|restructure)\b/i,
-		/\b(technical debt|code smell|simplify)\b/i,
-	],
-	documentation: [
-		/\b(document|docs|readme|comment|explain)\b/i,
-		/\b(jsdoc|markdown|wiki)\b/i,
-	],
+	refactoring: [/\b(refactor|clean|improve|optimize|restructure)\b/i, /\b(technical debt|code smell|simplify)\b/i],
+	documentation: [/\b(document|docs|readme|comment|explain)\b/i, /\b(jsdoc|markdown|wiki)\b/i],
 	research: [
 		/\b(research|investigate|explore|find out|look into)\b/i,
 		/\b(compare|evaluate|assess|analyze options)\b/i,
 	],
-	analysis: [
-		/\b(analyze|examine|review|assess|audit)\b/i,
-		/\b(performance|metrics|statistics)\b/i,
-	],
-	planning: [
-		/\b(plan|design|architect|structure)\b/i,
-		/\b(strategy|roadmap|timeline)\b/i,
-	],
-	review: [
-		/\b(review|check|verify|validate)\b/i,
-		/\b(code review|pr review|pull request)\b/i,
-	],
-	testing: [
-		/\b(test|spec|unit test|integration test)\b/i,
-		/\b(coverage|jest|vitest|mocha)\b/i,
-	],
-	security: [
-		/\b(security|vulnerability|exploit|auth)\b/i,
-		/\b(permissions|access control|encryption)\b/i,
-	],
-	trading: [
-		/\b(trade|trading|market|price|position)\b/i,
-		/\b(buy|sell|order|portfolio|strategy)\b/i,
-	],
+	analysis: [/\b(analyze|examine|review|assess|audit)\b/i, /\b(performance|metrics|statistics)\b/i],
+	planning: [/\b(plan|design|architect|structure)\b/i, /\b(strategy|roadmap|timeline)\b/i],
+	review: [/\b(review|check|verify|validate)\b/i, /\b(code review|pr review|pull request)\b/i],
+	testing: [/\b(test|spec|unit test|integration test)\b/i, /\b(coverage|jest|vitest|mocha)\b/i],
+	security: [/\b(security|vulnerability|exploit|auth)\b/i, /\b(permissions|access control|encryption)\b/i],
+	trading: [/\b(trade|trading|market|price|position)\b/i, /\b(buy|sell|order|portfolio|strategy)\b/i],
 	general: [],
 };
 
@@ -272,7 +248,10 @@ export class DelegationRouter extends EventEmitter {
 		let complexity: TaskComplexity = "simple";
 		let complexityConfidence = 0;
 
-		for (const [level, indicators] of Object.entries(COMPLEXITY_INDICATORS) as [TaskComplexity, typeof COMPLEXITY_INDICATORS[TaskComplexity]][]) {
+		for (const [level, indicators] of Object.entries(COMPLEXITY_INDICATORS) as [
+			TaskComplexity,
+			(typeof COMPLEXITY_INDICATORS)[TaskComplexity],
+		][]) {
 			let score = 0;
 
 			// Check patterns

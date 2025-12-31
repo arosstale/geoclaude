@@ -12,8 +12,8 @@
  * - Persist learnings for future sessions
  */
 
-import { EventEmitter } from "events";
 import Database from "better-sqlite3";
+import { EventEmitter } from "events";
 import { join } from "path";
 
 // =============================================================================
@@ -130,7 +130,7 @@ function normalizeRating(rating: FeedbackRating): number {
 	return (rating - 1) / 4;
 }
 
-function denormalizeRating(score: number): FeedbackRating {
+function _denormalizeRating(score: number): FeedbackRating {
 	if (score >= 0.9) return 5;
 	if (score >= 0.7) return 4;
 	if (score >= 0.5) return 3;
@@ -285,11 +285,12 @@ export class AgentFeedbackSystem extends EventEmitter {
 				FROM feedback
 				WHERE agent_id = ?`,
 			)
-			.get(
-				this.config.positiveThreshold,
-				this.config.negativeThreshold,
-				agentId,
-			) as { total: number; avg_score: number; positive: number; negative: number };
+			.get(this.config.positiveThreshold, this.config.negativeThreshold, agentId) as {
+			total: number;
+			avg_score: number;
+			positive: number;
+			negative: number;
+		};
 
 		// Get common comments from positive feedback
 		const positiveComments = this.db
@@ -350,7 +351,7 @@ export class AgentFeedbackSystem extends EventEmitter {
 			channelId: row.channel_id,
 			prompt: row.prompt,
 			response: row.response,
-			rating: row.rating.includes("thumbs") ? row.rating : parseInt(row.rating),
+			rating: row.rating.includes("thumbs") ? row.rating : parseInt(row.rating, 10),
 			normalizedScore: row.normalized_score,
 			comment: row.comment,
 			latencyMs: row.latency_ms,
@@ -360,10 +361,7 @@ export class AgentFeedbackSystem extends EventEmitter {
 	}
 
 	/** Get best and worst responses */
-	getExtremeResponses(
-		agentId: string,
-		limit = 5,
-	): { best: FeedbackEntry[]; worst: FeedbackEntry[] } {
+	getExtremeResponses(agentId: string, limit = 5): { best: FeedbackEntry[]; worst: FeedbackEntry[] } {
 		const best = this.db
 			.prepare(
 				`SELECT * FROM feedback
@@ -390,7 +388,7 @@ export class AgentFeedbackSystem extends EventEmitter {
 			channelId: row.channel_id,
 			prompt: row.prompt,
 			response: row.response,
-			rating: row.rating.includes("thumbs") ? row.rating : parseInt(row.rating),
+			rating: row.rating.includes("thumbs") ? row.rating : parseInt(row.rating, 10),
 			normalizedScore: row.normalized_score,
 			comment: row.comment,
 			latencyMs: row.latency_ms,
@@ -410,9 +408,9 @@ export class AgentFeedbackSystem extends EventEmitter {
 
 	/** Generate improvement suggestions based on feedback patterns */
 	private checkAndGenerateSuggestions(agentId: string): void {
-		const count = this.db
-			.prepare(`SELECT COUNT(*) as count FROM feedback WHERE agent_id = ?`)
-			.get(agentId) as { count: number };
+		const count = this.db.prepare(`SELECT COUNT(*) as count FROM feedback WHERE agent_id = ?`).get(agentId) as {
+			count: number;
+		};
 
 		if (count.count < this.config.minResponsesForSuggestions) {
 			return;
@@ -428,8 +426,7 @@ export class AgentFeedbackSystem extends EventEmitter {
 			.get(agentId) as { created_at: string } | undefined;
 
 		if (lastSuggestion) {
-			const hoursSinceLast =
-				(Date.now() - new Date(lastSuggestion.created_at).getTime()) / (1000 * 60 * 60);
+			const hoursSinceLast = (Date.now() - new Date(lastSuggestion.created_at).getTime()) / (1000 * 60 * 60);
 			if (hoursSinceLast < 24) return; // Max once per day
 		}
 
@@ -457,8 +454,7 @@ export class AgentFeedbackSystem extends EventEmitter {
 			suggestions.push({
 				agentId,
 				type: "behavior",
-				suggestion:
-					"High negative feedback ratio detected. Review recent complaints and adjust response style.",
+				suggestion: "High negative feedback ratio detected. Review recent complaints and adjust response style.",
 				confidence: Math.min(0.9, summary.negativeCount / summary.totalResponses),
 				basedOnFeedbackCount: summary.negativeCount,
 				applied: false,
@@ -514,9 +510,7 @@ export class AgentFeedbackSystem extends EventEmitter {
 
 	/** Mark a suggestion as applied */
 	applySuggestion(suggestionId: string): void {
-		this.db
-			.prepare(`UPDATE improvement_suggestions SET applied = 1 WHERE id = ?`)
-			.run(suggestionId);
+		this.db.prepare(`UPDATE improvement_suggestions SET applied = 1 WHERE id = ?`).run(suggestionId);
 		this.emit("suggestionApplied", { id: suggestionId });
 	}
 
@@ -600,15 +594,12 @@ export class AgentFeedbackSystem extends EventEmitter {
 
 	/** Record A/B test result */
 	recordVariantResult(variantId: string, score: number): void {
-		const variant = this.db
-			.prepare(`SELECT * FROM prompt_variants WHERE id = ?`)
-			.get(variantId) as any;
+		const variant = this.db.prepare(`SELECT * FROM prompt_variants WHERE id = ?`).get(variantId) as any;
 
 		if (!variant) return;
 
 		const newCount = variant.responses_count + 1;
-		const newAvg =
-			(variant.average_score * variant.responses_count + score) / newCount;
+		const newAvg = (variant.average_score * variant.responses_count + score) / newCount;
 
 		this.db
 			.prepare(

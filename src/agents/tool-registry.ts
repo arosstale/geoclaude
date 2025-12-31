@@ -234,7 +234,7 @@ export class ToolRegistry extends EventEmitter {
 	async call(
 		toolId: string,
 		params: Record<string, unknown>,
-		grantedPermissions: ToolPermission[] = []
+		grantedPermissions: ToolPermission[] = [],
 	): Promise<unknown> {
 		// Resolve alias
 		const resolvedId = this.aliases.get(toolId) || toolId;
@@ -250,18 +250,14 @@ export class ToolRegistry extends EventEmitter {
 
 		// Check permissions
 		if (this.config.enablePermissionChecks) {
-			const missingPermissions = tool.permissions.filter(
-				(p) => !grantedPermissions.includes(p)
-			);
+			const missingPermissions = tool.permissions.filter((p) => !grantedPermissions.includes(p));
 			if (missingPermissions.length > 0) {
 				this.emit("permission:denied", {
 					toolId: resolvedId,
 					required: tool.permissions,
 					granted: grantedPermissions,
 				});
-				throw new Error(
-					`Permission denied: missing ${missingPermissions.join(", ")}`
-				);
+				throw new Error(`Permission denied: missing ${missingPermissions.join(", ")}`);
 			}
 		}
 
@@ -272,10 +268,7 @@ export class ToolRegistry extends EventEmitter {
 		const startTime = Date.now();
 
 		try {
-			const result = await this.withTimeout(
-				tool.handler(params),
-				this.config.defaultTimeout
-			);
+			const result = await this.withTimeout(tool.handler(params), this.config.defaultTimeout);
 			const latencyMs = Date.now() - startTime;
 
 			// Update usage stats
@@ -307,15 +300,11 @@ export class ToolRegistry extends EventEmitter {
 				const actualType = Array.isArray(value) ? "array" : typeof value;
 
 				if (actualType !== param.type && value !== null && value !== undefined) {
-					throw new Error(
-						`Invalid type for ${param.name}: expected ${param.type}, got ${actualType}`
-					);
+					throw new Error(`Invalid type for ${param.name}: expected ${param.type}, got ${actualType}`);
 				}
 
 				if (param.enum && !param.enum.includes(value)) {
-					throw new Error(
-						`Invalid value for ${param.name}: must be one of ${param.enum.join(", ")}`
-					);
+					throw new Error(`Invalid value for ${param.name}: must be one of ${param.enum.join(", ")}`);
 				}
 			}
 		}
@@ -324,9 +313,7 @@ export class ToolRegistry extends EventEmitter {
 	private async withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 		return Promise.race([
 			promise,
-			new Promise<T>((_, reject) =>
-				setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms)
-			),
+			new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms)),
 		]);
 	}
 
@@ -343,8 +330,7 @@ export class ToolRegistry extends EventEmitter {
 		stats.lastUsed = Date.now();
 
 		// Update rolling average
-		stats.avgLatencyMs =
-			(stats.avgLatencyMs * (stats.successCalls - 1) + latencyMs) / stats.successCalls;
+		stats.avgLatencyMs = (stats.avgLatencyMs * (stats.successCalls - 1) + latencyMs) / stats.successCalls;
 	}
 
 	private recordError(toolId: string, error: Error): void {
@@ -389,9 +375,7 @@ export class ToolRegistry extends EventEmitter {
 	}
 
 	getToolsByPermission(permission: ToolPermission): RegisteredTool[] {
-		return Array.from(this.tools.values()).filter((t) =>
-			t.permissions.includes(permission)
-		);
+		return Array.from(this.tools.values()).filter((t) => t.permissions.includes(permission));
 	}
 
 	search(query: ToolSearchQuery): RegisteredTool[] {
@@ -407,9 +391,7 @@ export class ToolRegistry extends EventEmitter {
 		}
 
 		if (query.permissions && query.permissions.length > 0) {
-			results = results.filter((t) =>
-				query.permissions!.every((p) => t.permissions.includes(p))
-			);
+			results = results.filter((t) => query.permissions!.every((p) => t.permissions.includes(p)));
 		}
 
 		if (query.enabled !== undefined) {
@@ -419,9 +401,7 @@ export class ToolRegistry extends EventEmitter {
 		if (query.keyword) {
 			const keyword = query.keyword.toLowerCase();
 			results = results.filter(
-				(t) =>
-					t.name.toLowerCase().includes(keyword) ||
-					t.description.toLowerCase().includes(keyword)
+				(t) => t.name.toLowerCase().includes(keyword) || t.description.toLowerCase().includes(keyword),
 			);
 		}
 
@@ -448,10 +428,7 @@ export class ToolRegistry extends EventEmitter {
 				case "calls":
 					return b.totalCalls - a.totalCalls;
 				case "success":
-					return (
-						(b.successCalls / (b.totalCalls || 1)) -
-						(a.successCalls / (a.totalCalls || 1))
-					);
+					return b.successCalls / (b.totalCalls || 1) - a.successCalls / (a.totalCalls || 1);
 				case "latency":
 					return a.avgLatencyMs - b.avgLatencyMs;
 				default:
@@ -510,11 +487,9 @@ export class ToolRegistry extends EventEmitter {
 												enum: p.enum,
 												default: p.default,
 											},
-										])
+										]),
 									),
-									required: tool.schema.parameters
-										.filter((p) => p.required)
-										.map((p) => p.name),
+									required: tool.schema.parameters.filter((p) => p.required).map((p) => p.name),
 								},
 							},
 						},

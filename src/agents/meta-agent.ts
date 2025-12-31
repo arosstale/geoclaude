@@ -12,8 +12,8 @@
  */
 
 import { EventEmitter } from "events";
-import type { Orchestrator, AgentDefinition } from "./orchestrator.js";
 import type { AgentMemorySystem, Insight } from "./agent-memory-system.js";
+import type { AgentDefinition, Orchestrator } from "./orchestrator.js";
 
 // =============================================================================
 // Types
@@ -76,7 +76,8 @@ const ROLE_TEMPLATES: Record<AgentRole, { description: string; capabilities: str
 	architect: {
 		description: "Designs systems, plans implementations, makes architectural decisions",
 		capabilities: ["system design", "architecture", "planning", "trade-off analysis"],
-		systemPromptPrefix: "You are an expert software architect. Focus on clean design, scalability, and maintainability.",
+		systemPromptPrefix:
+			"You are an expert software architect. Focus on clean design, scalability, and maintainability.",
 	},
 	builder: {
 		description: "Implements features, writes code, executes development tasks",
@@ -101,7 +102,8 @@ const ROLE_TEMPLATES: Record<AgentRole, { description: string; capabilities: str
 	scout: {
 		description: "Explores codebases, gathers information, researches solutions",
 		capabilities: ["exploration", "research", "information gathering", "analysis"],
-		systemPromptPrefix: "You are a research specialist. Explore, gather information, and provide comprehensive analysis.",
+		systemPromptPrefix:
+			"You are a research specialist. Explore, gather information, and provide comprehensive analysis.",
 	},
 	executor: {
 		description: "Executes tasks, runs commands, handles DevOps operations",

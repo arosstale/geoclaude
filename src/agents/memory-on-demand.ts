@@ -12,8 +12,8 @@
  * @module memory-on-demand
  */
 
-import { EventEmitter } from "events";
 import Database from "better-sqlite3";
+import { EventEmitter } from "events";
 
 // =============================================================================
 // Types
@@ -33,15 +33,7 @@ export interface Memory {
 	expiresAt?: number;
 }
 
-export type MemoryType =
-	| "fact"
-	| "episode"
-	| "procedure"
-	| "preference"
-	| "context"
-	| "skill"
-	| "error"
-	| "success";
+export type MemoryType = "fact" | "episode" | "procedure" | "preference" | "context" | "skill" | "error" | "success";
 
 export interface MemoryQuery {
 	text?: string;
@@ -197,7 +189,7 @@ export class MemoryOnDemand extends EventEmitter {
 			memory.accessCount,
 			memory.lastAccessed,
 			memory.createdAt,
-			memory.expiresAt || null
+			memory.expiresAt || null,
 		);
 
 		this.emit("memory:stored", { memory });
@@ -281,7 +273,7 @@ export class MemoryOnDemand extends EventEmitter {
 			currentSource?: string;
 			recentMemoryIds?: string[];
 			preferredTypes?: MemoryType[];
-		}
+		},
 	): Promise<Memory[]> {
 		const result = await this.query({
 			text: task,
@@ -329,7 +321,7 @@ export class MemoryOnDemand extends EventEmitter {
 	// Search Methods
 	// ---------------------------------------------------------------------------
 
-	private searchByText(text: string, query: MemoryQuery, limit: number): Memory[] {
+	private searchByText(text: string, _query: MemoryQuery, limit: number): Memory[] {
 		// Prepare search terms
 		const terms = text
 			.toLowerCase()
@@ -353,7 +345,7 @@ export class MemoryOnDemand extends EventEmitter {
 		return rows.map((row) => this.rowToMemory(row));
 	}
 
-	private async searchBySemantic(text: string, query: MemoryQuery, limit: number): Promise<Memory[]> {
+	private async searchBySemantic(_text: string, _query: MemoryQuery, _limit: number): Promise<Memory[]> {
 		// Placeholder for semantic search
 		// Would use embeddings if enabled
 		return [];

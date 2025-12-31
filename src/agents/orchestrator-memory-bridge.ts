@@ -10,8 +10,8 @@
  */
 
 import { EventEmitter } from "events";
-import type { Orchestrator, DelegationRequest, DelegationResult, AgentDefinition } from "./orchestrator.js";
-import type { AgentMemorySystem, TaskRecord, RoutingRecommendation } from "./agent-memory-system.js";
+import type { AgentMemorySystem, RoutingRecommendation, TaskRecord } from "./agent-memory-system.js";
+import type { AgentDefinition, DelegationRequest, DelegationResult, Orchestrator } from "./orchestrator.js";
 
 // =============================================================================
 // Types
@@ -61,11 +61,7 @@ export class OrchestratorMemoryBridge extends EventEmitter {
 	private config: BridgeConfig;
 	private pendingRatings: Map<string, { taskId: string; agentId: string; startTime: number }> = new Map();
 
-	constructor(
-		orchestrator: Orchestrator,
-		memory: AgentMemorySystem,
-		config: Partial<BridgeConfig> = {},
-	) {
+	constructor(orchestrator: Orchestrator, memory: AgentMemorySystem, config: Partial<BridgeConfig> = {}) {
 		super();
 		this.orchestrator = orchestrator;
 		this.memory = memory;

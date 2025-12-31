@@ -11,9 +11,9 @@
  * Based on: Google ADK patterns, Multi-Agent Debate, Generator-Critic
  */
 
-import { EventEmitter } from "events";
 import { randomUUID } from "crypto";
-import { Orchestrator, type DelegationResult } from "./orchestrator.js";
+import { EventEmitter } from "events";
+import type { DelegationResult, Orchestrator } from "./orchestrator.js";
 
 // =============================================================================
 // Types
@@ -181,7 +181,7 @@ export class MultiAgentCoordinator extends EventEmitter {
 				id: randomUUID(),
 				taskType: "parallel_coordination",
 				prompt: task.prompt,
-				requiredRole: this.isRole(agentIdOrRole) ? agentIdOrRole as any : undefined,
+				requiredRole: this.isRole(agentIdOrRole) ? (agentIdOrRole as any) : undefined,
 				timeout: task.timeout,
 				priority: task.priority,
 			});
@@ -226,7 +226,7 @@ export class MultiAgentCoordinator extends EventEmitter {
 	private async runSequential(task: CoordinationTask): Promise<CoordinationResult> {
 		const agentResults = new Map<string, DelegationResult>();
 		const messages: AgentMessage[] = [];
-		let currentPrompt = task.prompt;
+		const currentPrompt = task.prompt;
 		let lastOutput = "";
 
 		for (const agentIdOrRole of task.agents) {
@@ -243,7 +243,7 @@ export class MultiAgentCoordinator extends EventEmitter {
 				id: randomUUID(),
 				taskType: "sequential_coordination",
 				prompt: enhancedPrompt,
-				requiredRole: this.isRole(agentIdOrRole) ? agentIdOrRole as any : undefined,
+				requiredRole: this.isRole(agentIdOrRole) ? (agentIdOrRole as any) : undefined,
 				timeout: task.timeout,
 				priority: task.priority,
 			});
@@ -251,12 +251,7 @@ export class MultiAgentCoordinator extends EventEmitter {
 			agentResults.set(result.agentId || agentIdOrRole, result);
 			lastOutput = String(result.output);
 
-			const responseMsg = this.createMessage(
-				result.agentId || agentIdOrRole,
-				"coordinator",
-				"response",
-				lastOutput,
-			);
+			const responseMsg = this.createMessage(result.agentId || agentIdOrRole, "coordinator", "response", lastOutput);
 			messages.push(responseMsg);
 
 			if (result.status !== "success") {
@@ -308,7 +303,7 @@ export class MultiAgentCoordinator extends EventEmitter {
 				id: randomUUID(),
 				taskType: "debate_initial",
 				prompt: msg.content,
-				requiredRole: this.isRole(agent) ? agent as any : undefined,
+				requiredRole: this.isRole(agent) ? (agent as any) : undefined,
 				timeout: task.timeout,
 				priority: task.priority,
 			});
@@ -346,7 +341,7 @@ Respond to the other positions. You may refine your position, counter arguments,
 					id: randomUUID(),
 					taskType: `debate_round_${round}`,
 					prompt: debatePrompt,
-					requiredRole: this.isRole(agent) ? agent as any : undefined,
+					requiredRole: this.isRole(agent) ? (agent as any) : undefined,
 					timeout: task.timeout,
 					priority: task.priority,
 				});
@@ -411,7 +406,7 @@ REASONING: [your reasoning]`;
 				id: randomUUID(),
 				taskType: "consensus_vote",
 				prompt: votePrompt,
-				requiredRole: this.isRole(agent) ? agent as any : undefined,
+				requiredRole: this.isRole(agent) ? (agent as any) : undefined,
 				timeout: task.timeout,
 				priority: task.priority,
 			});
@@ -493,7 +488,7 @@ SUBTASK: [subtask description]
 			id: randomUUID(),
 			taskType: "supervisor_plan",
 			prompt: planPrompt,
-			requiredRole: this.isRole(supervisorId) ? supervisorId as any : undefined,
+			requiredRole: this.isRole(supervisorId) ? (supervisorId as any) : undefined,
 			timeout: task.timeout,
 			priority: task.priority,
 		});
@@ -512,7 +507,7 @@ SUBTASK: [subtask description]
 				id: randomUUID(),
 				taskType: "supervisor_worker",
 				prompt: subtask,
-				requiredRole: this.isRole(worker) ? worker as any : undefined,
+				requiredRole: this.isRole(worker) ? (worker as any) : undefined,
 				timeout: task.timeout,
 				priority: task.priority,
 			});
@@ -541,7 +536,7 @@ Synthesize these outputs into a final, coherent result.`;
 			id: randomUUID(),
 			taskType: "supervisor_synthesize",
 			prompt: synthesizePrompt,
-			requiredRole: this.isRole(supervisorId) ? supervisorId as any : undefined,
+			requiredRole: this.isRole(supervisorId) ? (supervisorId as any) : undefined,
 			timeout: task.timeout,
 			priority: task.priority,
 		});
@@ -592,12 +587,17 @@ Synthesize these outputs into a final, coherent result.`;
 		switch (strategy) {
 			case "merge":
 				return results.map((r, i) => `[Agent ${i + 1}]:\n${r.output}`).join("\n\n");
-			case "best":
+			case "best": {
 				// Return result with highest success rate (simplified: first success)
 				const success = results.find((r) => r.status === "success");
 				return success ? String(success.output) : String(results[0]?.output || "No results");
+			}
 			case "all":
-				return JSON.stringify(results.map((r) => ({ agent: r.agentId, output: r.output })), null, 2);
+				return JSON.stringify(
+					results.map((r) => ({ agent: r.agentId, output: r.output })),
+					null,
+					2,
+				);
 			default:
 				return results.map((r) => r.output).join("\n\n---\n\n");
 		}
@@ -611,7 +611,7 @@ Synthesize these outputs into a final, coherent result.`;
 		return {
 			agentId,
 			choice: choiceMatch?.[1]?.trim() || output.slice(0, 100),
-			confidence: confidenceMatch ? parseInt(confidenceMatch[1]) / 100 : 0.5,
+			confidence: confidenceMatch ? parseInt(confidenceMatch[1], 10) / 100 : 0.5,
 			reasoning: reasoningMatch?.[1]?.trim() || "No reasoning provided",
 			timestamp: new Date(),
 		};
@@ -637,7 +637,7 @@ Synthesize these outputs into a final, coherent result.`;
 		let confidence: number;
 
 		switch (method) {
-			case "weighted":
+			case "weighted": {
 				// Weighted by confidence
 				let maxWeighted = 0;
 				winner = "";
@@ -649,6 +649,7 @@ Synthesize these outputs into a final, coherent result.`;
 				}
 				confidence = maxWeighted / votes.length;
 				break;
+			}
 
 			case "unanimous":
 				// All must agree
@@ -660,9 +661,7 @@ Synthesize these outputs into a final, coherent result.`;
 					confidence = 0;
 				}
 				break;
-
-			case "majority":
-			default:
+			default: {
 				// Simple majority
 				let maxCount = 0;
 				winner = "";
@@ -674,6 +673,7 @@ Synthesize these outputs into a final, coherent result.`;
 				}
 				confidence = maxCount / votes.length;
 				break;
+			}
 		}
 
 		return {

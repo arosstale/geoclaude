@@ -293,7 +293,7 @@ export class SmartToolSelection extends EventEmitter {
 	async execute<T>(
 		name: string,
 		executor: () => Promise<T>,
-		context?: ToolSelectionContext
+		context?: ToolSelectionContext,
 	): Promise<{ result: T; selection: ToolSelection }> {
 		const ctx = context || {
 			task: "unknown",
@@ -446,9 +446,7 @@ export class SmartToolSelection extends EventEmitter {
 
 	private countRecentFailures(name: string): number {
 		const cutoff = Date.now() - this.config.circuitBreakerResetMs;
-		return this.recentExecutions.filter(
-			(e) => e.tool === name && !e.success && e.timestamp >= cutoff
-		).length;
+		return this.recentExecutions.filter((e) => e.tool === name && !e.success && e.timestamp >= cutoff).length;
 	}
 
 	// ---------------------------------------------------------------------------
@@ -462,7 +460,7 @@ export class SmartToolSelection extends EventEmitter {
 		return Array.from(this.stats.values());
 	}
 
-	getRecommendations(context?: ToolSelectionContext): ToolRecommendation[] {
+	getRecommendations(_context?: ToolSelectionContext): ToolRecommendation[] {
 		const recommendations: ToolRecommendation[] = [];
 
 		for (const [name, stats] of this.stats) {

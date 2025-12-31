@@ -6,23 +6,22 @@
  */
 
 import {
-	Client,
-	ButtonInteraction,
-	StringSelectMenuInteraction,
-	ModalSubmitInteraction,
 	ActionRowBuilder,
 	ButtonBuilder,
+	type ButtonInteraction,
 	ButtonStyle,
-	StringSelectMenuBuilder,
+	type Client,
+	EmbedBuilder,
+	type Interaction,
+	type Message,
 	ModalBuilder,
+	type ModalSubmitInteraction,
+	StringSelectMenuBuilder,
+	type StringSelectMenuInteraction,
 	TextInputBuilder,
 	TextInputStyle,
-	EmbedBuilder,
-	Message,
-	TextChannel,
-	type Interaction,
 } from "discord.js";
-import { getCodingSessionDB, type CodingSessionDB } from "./coding-session-db.js";
+import { type CodingSessionDB, getCodingSessionDB } from "./coding-session-db.js";
 import { AVAILABLE_MODELS } from "./reacord-components.js";
 
 // ============================================================================
@@ -212,7 +211,10 @@ export function createSessionControlButtons(sessionId: string, isPaused = false)
 	);
 }
 
-export function createModelSelector(sessionId: string, currentModel: string): ActionRowBuilder<StringSelectMenuBuilder> {
+export function createModelSelector(
+	sessionId: string,
+	currentModel: string,
+): ActionRowBuilder<StringSelectMenuBuilder> {
 	return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
 		new StringSelectMenuBuilder()
 			.setCustomId(`${CUSTOM_IDS.SELECT_MODEL}:${sessionId}`)
@@ -424,7 +426,9 @@ export function createSystemPromptModal(sessionId: string, currentPrompt?: strin
 
 // Overload: accept either individual params or an object
 export function createCodeSuggestionEmbed(
-	suggestionOrCode: { id: string; language: string; code: string; explanation?: string; filePath?: string; status?: string } | string,
+	suggestionOrCode:
+		| { id: string; language: string; code: string; explanation?: string; filePath?: string; status?: string }
+		| string,
 	languageOrModel?: string,
 	explanation?: string,
 	filePath?: string,
@@ -467,7 +471,10 @@ export function createCodeSuggestionEmbed(
 		.setTitle(file ? `Code for ${file}` : "Code Suggestion")
 		.setDescription(`${explText ? `${explText}\n\n` : ""}\`\`\`${language}\n${truncatedCode}\n\`\`\``)
 		.setColor(colors[statusVal])
-		.addFields({ name: "Language", value: language, inline: true }, { name: "Status", value: statusVal.toUpperCase(), inline: true });
+		.addFields(
+			{ name: "Language", value: language, inline: true },
+			{ name: "Status", value: statusVal.toUpperCase(), inline: true },
+		);
 
 	return embed;
 }
@@ -520,7 +527,12 @@ export function createSessionEmbed(
 		);
 }
 
-export function createStreamingEmbed(content: string, model: string, isStreaming: boolean, tokensUsed?: number): EmbedBuilder {
+export function createStreamingEmbed(
+	content: string,
+	model: string,
+	isStreaming: boolean,
+	tokensUsed?: number,
+): EmbedBuilder {
 	return new EmbedBuilder()
 		.setTitle("AI Coding Agent")
 		.setDescription(content + (isStreaming ? "\n\n_Generating..._" : ""))
@@ -581,7 +593,7 @@ export function createEnhancedStreamingEmbed(state: StreamingState): EmbedBuilde
 
 	// Truncate if too long
 	if (description.length > 4000) {
-		description = description.slice(0, 3990) + "\n...[truncated]";
+		description = `${description.slice(0, 3990)}\n...[truncated]`;
 	}
 
 	const embed = new EmbedBuilder()
@@ -804,7 +816,9 @@ export function setupButtonCollectors(client: Client, handlers: InteractionHandl
 		} catch (error) {
 			console.error("[ButtonCollector] Error handling interaction:", error);
 			if (interaction.isRepliable() && !interaction.replied && !interaction.deferred) {
-				await interaction.reply({ content: "An error occurred processing your request.", ephemeral: true }).catch(() => {});
+				await interaction
+					.reply({ content: "An error occurred processing your request.", ephemeral: true })
+					.catch(() => {});
 			}
 		}
 	});
@@ -844,7 +858,9 @@ export async function disableAllButtons(message: Message): Promise<void> {
 				newRow.addComponents(btn);
 			} else if (component.type === 3) {
 				// ComponentType.StringSelect = 3
-				const select = StringSelectMenuBuilder.from(component as unknown as Parameters<typeof StringSelectMenuBuilder.from>[0]);
+				const select = StringSelectMenuBuilder.from(
+					component as unknown as Parameters<typeof StringSelectMenuBuilder.from>[0],
+				);
 				select.setDisabled(true);
 				newRow.addComponents(select);
 			}

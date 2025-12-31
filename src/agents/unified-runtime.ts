@@ -173,11 +173,7 @@ export class UnifiedRuntime extends EventEmitter {
 	// Main Execution
 	// ---------------------------------------------------------------------------
 
-	async run(
-		task: RuntimeTask,
-		llm: LLMExecutor,
-		tools?: Map<string, ToolExecutor>
-	): Promise<RuntimeResult> {
+	async run(task: RuntimeTask, llm: LLMExecutor, tools?: Map<string, ToolExecutor>): Promise<RuntimeResult> {
 		const startTime = Date.now();
 		const options = { ...this.getDefaultOptions(), ...task.options };
 
@@ -252,7 +248,7 @@ export class UnifiedRuntime extends EventEmitter {
 					tools,
 					options,
 					phases,
-					toolCalls
+					toolCalls,
 				);
 				output = oodaResult.output;
 				tokensUsed = oodaResult.tokensUsed;
@@ -287,14 +283,7 @@ export class UnifiedRuntime extends EventEmitter {
 			let qualityScore = 0.8; // Default
 			if (options.useReflection && this.config.enableReflection && output) {
 				patternsUsed.push("reflection");
-				const reflectionResult = await this.reflect(
-					task.id,
-					task.prompt,
-					output,
-					llm,
-					options,
-					phases
-				);
+				const reflectionResult = await this.reflect(task.id, task.prompt, output, llm, options, phases);
 				qualityScore = reflectionResult.score;
 
 				// Retry if quality is low
@@ -337,7 +326,6 @@ export class UnifiedRuntime extends EventEmitter {
 			this.emit("task:completed", { result });
 			this.taskHistory.set(task.id, result);
 			return result;
-
 		} catch (error) {
 			const err = error instanceof Error ? error : new Error(String(error));
 			this.emit("task:failed", { task, error: err });
@@ -373,7 +361,7 @@ export class UnifiedRuntime extends EventEmitter {
 		tools: Map<string, ToolExecutor> | undefined,
 		options: RuntimeOptions,
 		phases: RuntimePhase[],
-		toolCalls: ToolCallRecord[]
+		toolCalls: ToolCallRecord[],
 	): Promise<{ output: string; tokensUsed: number; iterations: number }> {
 		let tokensUsed = 0;
 		let iterations = 0;
@@ -434,7 +422,7 @@ export class UnifiedRuntime extends EventEmitter {
 		taskId: string,
 		output: string,
 		tools: Map<string, ToolExecutor>,
-		toolCalls: ToolCallRecord[]
+		toolCalls: ToolCallRecord[],
 	): Promise<string | null> {
 		// Simple tool extraction (look for tool calls in output)
 		const toolPattern = /\[TOOL:(\w+)\]\s*({[^}]+})/g;
@@ -464,7 +452,7 @@ export class UnifiedRuntime extends EventEmitter {
 				this.emit("tool:called", { taskId, record });
 
 				results.push(`${toolName}: ${JSON.stringify(result)}`);
-			} catch (error) {
+			} catch (_error) {
 				const record: ToolCallRecord = {
 					tool: toolName,
 					params: {},
@@ -488,7 +476,7 @@ export class UnifiedRuntime extends EventEmitter {
 		output: string,
 		llm: LLMExecutor,
 		options: RuntimeOptions,
-		phases: RuntimePhase[]
+		phases: RuntimePhase[],
 	): Promise<{ score: number; feedback: string }> {
 		const phaseStart = Date.now();
 		this.emit("phase:started", { taskId, phase: "reflect" });
@@ -538,7 +526,8 @@ FEEDBACK: [feedback]`;
 		const key = this.hashPrompt(prompt);
 		const cached = this.promptCache.get(key);
 
-		if (cached && Date.now() - cached.timestamp < 3600000) { // 1 hour TTL
+		if (cached && Date.now() - cached.timestamp < 3600000) {
+			// 1 hour TTL
 			return cached.response;
 		}
 
@@ -573,7 +562,7 @@ FEEDBACK: [feedback]`;
 		let hash = 0;
 		for (let i = 0; i < prompt.length; i++) {
 			const char = prompt.charCodeAt(i);
-			hash = ((hash << 5) - hash) + char;
+			hash = (hash << 5) - hash + char;
 			hash = hash & hash;
 		}
 		return hash.toString(36);

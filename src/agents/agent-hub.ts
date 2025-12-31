@@ -308,8 +308,8 @@ export class AgentHub extends EventEmitter {
 
 		// Sort by priority and success rate
 		return candidates.sort((a, b) => {
-			const aScore = a.priority + (a.stats.invocations > 0 ? a.stats.successes / a.stats.invocations * 100 : 50);
-			const bScore = b.priority + (b.stats.invocations > 0 ? b.stats.successes / b.stats.invocations * 100 : 50);
+			const aScore = a.priority + (a.stats.invocations > 0 ? (a.stats.successes / a.stats.invocations) * 100 : 50);
+			const bScore = b.priority + (b.stats.invocations > 0 ? (b.stats.successes / b.stats.invocations) * 100 : 50);
 			return bScore - aScore;
 		});
 	}
@@ -317,7 +317,7 @@ export class AgentHub extends EventEmitter {
 	private async executeWithAgents(
 		request: AgentRequest,
 		agents: RegisteredAgent[],
-		startTime: number
+		startTime: number,
 	): Promise<AgentResponse> {
 		const timeout = request.timeout || this.config.defaultTimeout;
 		const maxRetries = request.options?.maxRetries ?? 1;
@@ -336,7 +336,8 @@ export class AgentHub extends EventEmitter {
 				// Update stats
 				agent.stats.invocations++;
 				const duration = Date.now() - startTime;
-				agent.stats.avgDuration = (agent.stats.avgDuration * (agent.stats.invocations - 1) + duration) / agent.stats.invocations;
+				agent.stats.avgDuration =
+					(agent.stats.avgDuration * (agent.stats.invocations - 1) + duration) / agent.stats.invocations;
 
 				if (result.success) {
 					agent.stats.successes++;
@@ -369,7 +370,7 @@ export class AgentHub extends EventEmitter {
 				}
 
 				agent.stats.failures++;
-			} catch (error) {
+			} catch (_error) {
 				agent.stats.failures++;
 				agent.stats.invocations++;
 				// Try next agent
@@ -391,9 +392,7 @@ export class AgentHub extends EventEmitter {
 	private async withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 		return Promise.race([
 			promise,
-			new Promise<T>((_, reject) =>
-				setTimeout(() => reject(new Error(`Request timeout after ${ms}ms`)), ms)
-			),
+			new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Request timeout after ${ms}ms`)), ms)),
 		]);
 	}
 

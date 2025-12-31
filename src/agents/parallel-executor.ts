@@ -128,7 +128,7 @@ export class ParallelExecutor extends EventEmitter {
 				...batch.map((id) => {
 					const call = calls.find((c) => c.id === id);
 					return call?.timeout || this.config.defaultTimeout;
-				})
+				}),
 			);
 			return sum + maxTimeout;
 		}, 0);
@@ -190,18 +190,12 @@ export class ParallelExecutor extends EventEmitter {
 	// Execution
 	// ---------------------------------------------------------------------------
 
-	async execute(
-		calls: ToolCall[],
-		executor: ToolExecutor
-	): Promise<ParallelExecutionResult> {
+	async execute(calls: ToolCall[], executor: ToolExecutor): Promise<ParallelExecutionResult> {
 		const plan = this.createPlan(calls);
 		return this.executePlan(plan, executor);
 	}
 
-	async executePlan(
-		plan: ExecutionPlan,
-		executor: ToolExecutor
-	): Promise<ParallelExecutionResult> {
+	async executePlan(plan: ExecutionPlan, executor: ToolExecutor): Promise<ParallelExecutionResult> {
 		const startTime = Date.now();
 		const results = new Map<string, ToolResult>();
 		const batchResults: BatchResult[] = [];
@@ -212,9 +206,7 @@ export class ParallelExecutor extends EventEmitter {
 
 		for (let batchIndex = 0; batchIndex < plan.batches.length; batchIndex++) {
 			const batchIds = plan.batches[batchIndex];
-			const batchCalls = batchIds
-				.map((id) => plan.calls.find((c) => c.id === id)!)
-				.filter(Boolean);
+			const batchCalls = batchIds.map((id) => plan.calls.find((c) => c.id === id)!).filter(Boolean);
 
 			this.emit("batch:started", { planId: plan.id, batchIndex, calls: batchCalls });
 
@@ -256,8 +248,7 @@ export class ParallelExecutor extends EventEmitter {
 
 		// Calculate parallel efficiency
 		// Efficiency = (sum of individual durations) / (actual total duration * concurrency)
-		const parallelEfficiency =
-			totalDuration > 0 ? sequentialTime / (totalDuration * this.config.maxConcurrency) : 1;
+		const parallelEfficiency = totalDuration > 0 ? sequentialTime / (totalDuration * this.config.maxConcurrency) : 1;
 
 		const result: ParallelExecutionResult = {
 			planId: plan.id,
@@ -279,7 +270,7 @@ export class ParallelExecutor extends EventEmitter {
 		planId: string,
 		calls: ToolCall[],
 		executor: ToolExecutor,
-		previousResults: Map<string, ToolResult>
+		previousResults: Map<string, ToolResult>,
 	): Promise<ToolResult[]> {
 		// Chunk by concurrency limit
 		const chunks = this.chunk(calls, this.config.maxConcurrency);
@@ -287,7 +278,7 @@ export class ParallelExecutor extends EventEmitter {
 
 		for (const chunk of chunks) {
 			const chunkResults = await Promise.all(
-				chunk.map((call) => this.executeCall(planId, call, executor, previousResults))
+				chunk.map((call) => this.executeCall(planId, call, executor, previousResults)),
 			);
 			results.push(...chunkResults);
 		}
@@ -299,7 +290,7 @@ export class ParallelExecutor extends EventEmitter {
 		planId: string,
 		call: ToolCall,
 		executor: ToolExecutor,
-		previousResults: Map<string, ToolResult>
+		previousResults: Map<string, ToolResult>,
 	): Promise<ToolResult> {
 		const startedAt = Date.now();
 		const timeout = call.timeout || this.config.defaultTimeout;
@@ -367,7 +358,7 @@ export class ParallelExecutor extends EventEmitter {
 	private enrichParams(
 		params: Record<string, unknown>,
 		dependencies: string[] | undefined,
-		previousResults: Map<string, ToolResult>
+		previousResults: Map<string, ToolResult>,
 	): Record<string, unknown> {
 		if (!dependencies || dependencies.length === 0) {
 			return params;
@@ -398,9 +389,7 @@ export class ParallelExecutor extends EventEmitter {
 	private async withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 		return Promise.race([
 			promise,
-			new Promise<T>((_, reject) =>
-				setTimeout(() => reject(new Error(`Tool execution timeout after ${ms}ms`)), ms)
-			),
+			new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Tool execution timeout after ${ms}ms`)), ms)),
 		]);
 	}
 
@@ -421,7 +410,7 @@ export class ParallelExecutor extends EventEmitter {
 	 */
 	async executeParallel(
 		tools: Array<{ tool: string; params: Record<string, unknown> }>,
-		executor: ToolExecutor
+		executor: ToolExecutor,
 	): Promise<Map<string, unknown>> {
 		const calls: ToolCall[] = tools.map((t, i) => ({
 			id: `call_${i}`,
@@ -446,7 +435,7 @@ export class ParallelExecutor extends EventEmitter {
 	 */
 	async executeSequential(
 		tools: Array<{ tool: string; params: Record<string, unknown> }>,
-		executor: ToolExecutor
+		executor: ToolExecutor,
 	): Promise<Map<string, unknown>> {
 		const calls: ToolCall[] = tools.map((t, i) => ({
 			id: `call_${i}`,
@@ -472,7 +461,7 @@ export class ParallelExecutor extends EventEmitter {
 	 */
 	async executeWithAutoDetect(
 		tools: Array<{ id: string; tool: string; params: Record<string, unknown> }>,
-		executor: ToolExecutor
+		executor: ToolExecutor,
 	): Promise<Map<string, unknown>> {
 		// Detect dependencies from params that reference other tool IDs
 		const calls: ToolCall[] = tools.map((t) => {

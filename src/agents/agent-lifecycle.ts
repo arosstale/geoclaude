@@ -133,7 +133,10 @@ export class AgentLifecycleManager extends EventEmitter {
 	private config: LifecycleConfig;
 	private agents: Map<string, ManagedAgent> = new Map();
 	private factories: Map<string, AgentFactory> = new Map();
-	private instances: Map<string, { start: () => Promise<void>; stop: () => Promise<void>; health?: () => Promise<boolean> }> = new Map();
+	private instances: Map<
+		string,
+		{ start: () => Promise<void>; stop: () => Promise<void>; health?: () => Promise<boolean> }
+	> = new Map();
 	private eventLog: LifecycleEvent[] = [];
 	private healthCheckIntervals: Map<string, NodeJS.Timeout> = new Map();
 	private cleanupInterval: NodeJS.Timeout | null = null;
@@ -320,7 +323,7 @@ export class AgentLifecycleManager extends EventEmitter {
 		}
 
 		// Wait a bit before restarting (exponential backoff)
-		const delay = Math.min(1000 * Math.pow(2, agent.restartCount - 1), 30000);
+		const delay = Math.min(1000 * 2 ** (agent.restartCount - 1), 30000);
 		await new Promise((resolve) => setTimeout(resolve, delay));
 
 		// Start again
@@ -444,8 +447,8 @@ export class AgentLifecycleManager extends EventEmitter {
 				const healthy = config?.checker
 					? await config.checker()
 					: instance?.health
-					? await instance.health()
-					: true;
+						? await instance.health()
+						: true;
 
 				this.emit("health:check", { agentId: id, healthy });
 
@@ -508,7 +511,8 @@ export class AgentLifecycleManager extends EventEmitter {
 		for (const [id, agent] of this.agents) {
 			if (agent.state === "stopped" || agent.state === "terminated") {
 				const age = Date.now() - (agent.stoppedAt || agent.createdAt);
-				if (age > 300000) { // 5 minutes
+				if (age > 300000) {
+					// 5 minutes
 					this.agents.delete(id);
 					this.instances.delete(id);
 				}

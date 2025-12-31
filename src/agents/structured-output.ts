@@ -19,15 +19,7 @@ import { EventEmitter } from "events";
 // Types
 // =============================================================================
 
-export type FieldType =
-	| "string"
-	| "number"
-	| "boolean"
-	| "array"
-	| "object"
-	| "enum"
-	| "optional"
-	| "any";
+export type FieldType = "string" | "number" | "boolean" | "array" | "object" | "enum" | "optional" | "any";
 
 export interface FieldSchema {
 	type: FieldType;
@@ -360,7 +352,7 @@ export class StructuredOutputValidator extends EventEmitter {
 
 		// Number
 		const num = Number(value);
-		if (!isNaN(num)) return num;
+		if (!Number.isNaN(num)) return num;
 
 		// String
 		return value;
@@ -402,7 +394,7 @@ export class StructuredOutputValidator extends EventEmitter {
 		schema: OutputSchema,
 		errors: ValidationError[],
 		corrections: Correction[],
-		options: ParseOptions
+		options: ParseOptions,
 	): Record<string, unknown> {
 		const result: Record<string, unknown> = {};
 
@@ -448,7 +440,7 @@ export class StructuredOutputValidator extends EventEmitter {
 		schema: FieldSchema,
 		errors: ValidationError[],
 		corrections: Correction[],
-		options: ParseOptions
+		options: ParseOptions,
 	): unknown {
 		switch (schema.type) {
 			case "string":
@@ -483,7 +475,7 @@ export class StructuredOutputValidator extends EventEmitter {
 		schema: FieldSchema,
 		errors: ValidationError[],
 		corrections: Correction[],
-		options: ParseOptions
+		options: ParseOptions,
 	): string | undefined {
 		if (typeof value === "string") {
 			// Check constraints
@@ -545,13 +537,13 @@ export class StructuredOutputValidator extends EventEmitter {
 		schema: FieldSchema,
 		errors: ValidationError[],
 		corrections: Correction[],
-		options: ParseOptions
+		options: ParseOptions,
 	): number | undefined {
 		let num: number;
 
 		if (typeof value === "number") {
 			num = value;
-		} else if (typeof value === "string" && !isNaN(Number(value))) {
+		} else if (typeof value === "string" && !Number.isNaN(Number(value))) {
 			num = Number(value);
 			if (options.autoCorrect) {
 				corrections.push({
@@ -616,7 +608,7 @@ export class StructuredOutputValidator extends EventEmitter {
 		value: unknown,
 		errors: ValidationError[],
 		corrections: Correction[],
-		options: ParseOptions
+		options: ParseOptions,
 	): boolean | undefined {
 		if (typeof value === "boolean") {
 			return value;
@@ -659,7 +651,7 @@ export class StructuredOutputValidator extends EventEmitter {
 		schema: FieldSchema,
 		errors: ValidationError[],
 		corrections: Correction[],
-		options: ParseOptions
+		options: ParseOptions,
 	): unknown[] | undefined {
 		if (!Array.isArray(value)) {
 			// Try to coerce single value to array
@@ -685,7 +677,7 @@ export class StructuredOutputValidator extends EventEmitter {
 		// Validate items if schema provided
 		if (schema.items) {
 			return value.map((item, index) =>
-				this.validateField(`${fieldName}[${index}]`, item, schema.items!, errors, corrections, options)
+				this.validateField(`${fieldName}[${index}]`, item, schema.items!, errors, corrections, options),
 			);
 		}
 
@@ -698,7 +690,7 @@ export class StructuredOutputValidator extends EventEmitter {
 		schema: FieldSchema,
 		errors: ValidationError[],
 		corrections: Correction[],
-		options: ParseOptions
+		options: ParseOptions,
 	): Record<string, unknown> | undefined {
 		if (typeof value !== "object" || value === null || Array.isArray(value)) {
 			errors.push({
@@ -721,7 +713,7 @@ export class StructuredOutputValidator extends EventEmitter {
 					propSchema,
 					errors,
 					corrections,
-					options
+					options,
 				);
 				if (validated !== undefined) {
 					result[propName] = validated;
@@ -740,7 +732,7 @@ export class StructuredOutputValidator extends EventEmitter {
 		schema: FieldSchema,
 		errors: ValidationError[],
 		corrections: Correction[],
-		options: ParseOptions
+		options: ParseOptions,
 	): string | undefined {
 		const strValue = String(value).toLowerCase();
 		const enumValues = schema.enum || [];
@@ -865,7 +857,7 @@ export const CommonSchemas = {
 					params: Schema.object({}, "Tool parameters"),
 					result: Schema.optional(Schema.string("Result")),
 				}),
-				"Actions taken"
+				"Actions taken",
 			),
 			conclusion: Schema.string("Final conclusion"),
 			confidence: Schema.confidence(),
@@ -883,7 +875,7 @@ export const CommonSchemas = {
 					task: Schema.string("Task description"),
 					dependencies: Schema.array(Schema.number("Dependency ID"), "Dependencies"),
 				}),
-				"Ordered steps"
+				"Ordered steps",
 			),
 			estimatedComplexity: Schema.enum(["simple", "medium", "hard", "complex"]),
 		},
@@ -923,7 +915,7 @@ export function getStructuredValidator(options?: Partial<ParseOptions>): Structu
 	if (!validatorInstance) {
 		validatorInstance = new StructuredOutputValidator(options);
 		// Register common schemas
-		for (const [name, schemaFn] of Object.entries(CommonSchemas)) {
+		for (const [_name, schemaFn] of Object.entries(CommonSchemas)) {
 			validatorInstance.registerSchema(schemaFn());
 		}
 	}

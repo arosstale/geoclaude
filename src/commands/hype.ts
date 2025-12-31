@@ -5,7 +5,7 @@
  * Inspired by Replicate's Hype project - aggregates trending ML/AI content
  */
 
-import { EmbedBuilder, SlashCommandBuilder, SlashCommandStringOption } from "discord.js";
+import { EmbedBuilder, SlashCommandBuilder, type SlashCommandStringOption } from "discord.js";
 import { defineCommand } from "./registry.js";
 
 // Topic to subreddit mapping
@@ -43,13 +43,10 @@ export const hypeCommand = defineCommand({
 			option
 				.setName("topic")
 				.setDescription("Topic: ai, ml, crypto, solana, trading, security, gaming, llm, stable")
-				.setRequired(false)
+				.setRequired(false),
 		)
 		.addStringOption((option: SlashCommandStringOption) =>
-			option
-				.setName("limit")
-				.setDescription("Number of results (default: 10, max: 25)")
-				.setRequired(false)
+			option.setName("limit").setDescription("Number of results (default: 10, max: 25)").setRequired(false),
 		)
 		.addStringOption((option: SlashCommandStringOption) =>
 			option
@@ -59,16 +56,16 @@ export const hypeCommand = defineCommand({
 					{ name: "All", value: "all" },
 					{ name: "GitHub", value: "github" },
 					{ name: "Reddit", value: "reddit" },
-					{ name: "HuggingFace", value: "huggingface" }
+					{ name: "HuggingFace", value: "huggingface" },
 				)
-				.setRequired(false)
+				.setRequired(false),
 		),
 
 	execute: async (interaction, _context) => {
 		await interaction.deferReply();
 
 		const topic = interaction.options.getString("topic") || "ai";
-		const limit = Math.min(parseInt(interaction.options.getString("limit") || "10"), 25);
+		const limit = Math.min(parseInt(interaction.options.getString("limit") || "10", 10), 25);
 		const source = interaction.options.getString("source") || "all";
 
 		try {
@@ -155,7 +152,7 @@ async function fetchGitHub(topic: string, limit: number, posts: TrendingPost[]):
 		const query = getGitHubQuery(topic);
 		const response = await fetch(
 			`https://api.github.com/search/repositories?q=${encodeURIComponent(query)}&sort=stars&order=desc&per_page=${Math.min(limit, 30)}`,
-			{ headers: { "User-Agent": "pi-discord-hype" } }
+			{ headers: { "User-Agent": "pi-discord-hype" } },
 		);
 
 		if (response.ok) {
@@ -208,7 +205,7 @@ async function fetchHuggingFace(topic: string, limit: number, posts: TrendingPos
 		const searchQuery = getHuggingFaceQuery(topic);
 		const response = await fetch(
 			`https://huggingface.co/api/models?search=${encodeURIComponent(searchQuery)}&sort=likes&direction=-1&limit=${Math.min(limit, 20)}`,
-			{ headers: { "User-Agent": "pi-discord-hype" } }
+			{ headers: { "User-Agent": "pi-discord-hype" } },
 		);
 
 		if (response.ok) {
@@ -267,5 +264,5 @@ function formatPoints(points: number): string {
 
 function truncate(str: string, maxLength: number): string {
 	if (str.length <= maxLength) return str;
-	return str.substring(0, maxLength - 3) + "...";
+	return `${str.substring(0, maxLength - 3)}...`;
 }

@@ -1,0 +1,143 @@
+# AI Trading Agent - Docker Ignore
+# Prevents sensitive and unnecessary files from being included in Docker image
+
+#==============================================================================
+# SECURITY CRITICAL - Never include these
+#==============================================================================
+
+# Environment files with secrets
+.env
+.env.*
+!.env.example
+
+# Private keys and certificates
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+id_rsa*
+*.ppk
+
+# Credentials and tokens
+credentials.json
+secrets.json
+*_credentials*
+*_secret*
+token.json
+
+#==============================================================================
+# Build artifacts and dependencies
+#==============================================================================
+
+# Node modules (rebuilt in container)
+node_modules/
+
+# Build output (rebuilt in container)
+dist/
+
+# TypeScript cache
+*.tsbuildinfo
+.tsc-output/
+
+# Package manager caches
+.npm/
+.pnpm-store/
+.yarn/
+
+#==============================================================================
+# Development files
+#==============================================================================
+
+# IDE and editor configs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Testing
+coverage/
+.nyc_output/
+*.test.ts
+*.spec.ts
+__tests__/
+test/
+tests/
+
+# Documentation (not needed in runtime)
+docs/
+*.md
+!README.md
+
+#==============================================================================
+# Data and logs (use volumes instead)
+#==============================================================================
+
+# Local data
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+#==============================================================================
+# Docker-specific
+#==============================================================================
+
+# Docker files (prevent recursive includes)
+Dockerfile*
+docker-compose*.yml
+.docker/
+docker/
+
+# CI/CD configs
+.github/
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+azure-pipelines.yml
+
+#==============================================================================
+# Project-specific exclusions
+#==============================================================================
+
+# Backup files
+*.bak
+*.backup
+*.bak-*
+*.ts.backup*
+main.ts.bak*
+
+# Local config overrides
+*.local.json
+*.local.ts
+
+# Embedded git repos (from earlier)
+MetasploitMCP/
+hexstrike-ai/
+
+# Expertise files (copy explicitly in Dockerfile if needed)
+# src/agents/expertise/
+
+# Scripts not needed at runtime
+scripts/
+Makefile

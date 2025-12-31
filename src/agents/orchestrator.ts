@@ -14,9 +14,9 @@
  * Based on: Tactical Agentic Coding + Agentic Horizon frameworks
  */
 
-import { EventEmitter } from "events";
-import { randomUUID } from "crypto";
 import Database from "better-sqlite3";
+import { randomUUID } from "crypto";
+import { EventEmitter } from "events";
 
 // =============================================================================
 // Types
@@ -225,7 +225,12 @@ export class Orchestrator extends EventEmitter {
 	// =========================================================================
 
 	/** Create a new agent */
-	createAgent(input: Omit<AgentDefinition, "id" | "createdAt" | "updatedAt" | "runCount" | "successCount" | "failureCount" | "avgLatencyMs" | "totalCost">): AgentDefinition {
+	createAgent(
+		input: Omit<
+			AgentDefinition,
+			"id" | "createdAt" | "updatedAt" | "runCount" | "successCount" | "failureCount" | "avgLatencyMs" | "totalCost"
+		>,
+	): AgentDefinition {
 		const id = randomUUID();
 		const now = new Date();
 
@@ -264,7 +269,9 @@ export class Orchestrator extends EventEmitter {
 
 	/** Read an agent by ID */
 	getAgent(id: string): AgentDefinition | null {
-		const row = this.db.prepare("SELECT * FROM orchestrator_agents WHERE id = ?").get(id) as Record<string, unknown> | undefined;
+		const row = this.db.prepare("SELECT * FROM orchestrator_agents WHERE id = ?").get(id) as
+			| Record<string, unknown>
+			| undefined;
 		return row ? this.rowToAgent(row) : null;
 	}
 
@@ -353,7 +360,10 @@ export class Orchestrator extends EventEmitter {
 	// =========================================================================
 
 	/** Register an agent handler function */
-	registerHandler(agentId: string, handler: (prompt: string, context?: Record<string, unknown>) => Promise<unknown>): void {
+	registerHandler(
+		agentId: string,
+		handler: (prompt: string, context?: Record<string, unknown>) => Promise<unknown>,
+	): void {
 		this.agentHandlers.set(agentId, handler);
 	}
 
@@ -411,9 +421,7 @@ export class Orchestrator extends EventEmitter {
 
 			const result = await Promise.race([
 				handler(request.prompt, request.context),
-				new Promise((_, reject) =>
-					setTimeout(() => reject(new Error("Timeout")), request.timeout),
-				),
+				new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), request.timeout)),
 			]);
 
 			const latencyMs = Date.now() - startTime;
@@ -422,7 +430,16 @@ export class Orchestrator extends EventEmitter {
 			this.updateAgentStats(selectedAgent.id, true, latencyMs);
 
 			// Log delegation
-			this.logDelegation(request.id, selectedAgent.id, request.taskType, request.prompt, "success", result, undefined, latencyMs);
+			this.logDelegation(
+				request.id,
+				selectedAgent.id,
+				request.taskType,
+				request.prompt,
+				"success",
+				result,
+				undefined,
+				latencyMs,
+			);
 
 			this.emit("agent:completed", { agentId: selectedAgent.id, result });
 
@@ -441,7 +458,16 @@ export class Orchestrator extends EventEmitter {
 			this.updateAgentStats(selectedAgent.id, false, latencyMs);
 
 			// Log delegation
-			this.logDelegation(request.id, selectedAgent.id, request.taskType, request.prompt, "failure", undefined, errorMsg, latencyMs);
+			this.logDelegation(
+				request.id,
+				selectedAgent.id,
+				request.taskType,
+				request.prompt,
+				"failure",
+				undefined,
+				errorMsg,
+				latencyMs,
+			);
 
 			this.emit("agent:failed", { agentId: selectedAgent.id, error: errorMsg });
 
@@ -489,13 +515,18 @@ export class Orchestrator extends EventEmitter {
 
 	/** Get a workflow by ID */
 	getWorkflow(id: string): WorkflowDefinition | null {
-		const row = this.db.prepare("SELECT * FROM orchestrator_workflows WHERE id = ?").get(id) as Record<string, unknown> | undefined;
+		const row = this.db.prepare("SELECT * FROM orchestrator_workflows WHERE id = ?").get(id) as
+			| Record<string, unknown>
+			| undefined;
 		return row ? this.rowToWorkflow(row) : null;
 	}
 
 	/** List all workflows */
 	listWorkflows(): WorkflowDefinition[] {
-		const rows = this.db.prepare("SELECT * FROM orchestrator_workflows ORDER BY name").all() as Record<string, unknown>[];
+		const rows = this.db.prepare("SELECT * FROM orchestrator_workflows ORDER BY name").all() as Record<
+			string,
+			unknown
+		>[];
 		return rows.map((row) => this.rowToWorkflow(row));
 	}
 
@@ -531,9 +562,7 @@ export class Orchestrator extends EventEmitter {
 			while (completed.size < workflow.steps.length) {
 				// Find steps ready to execute
 				const readySteps = workflow.steps.filter(
-					(step) =>
-						!completed.has(step.id) &&
-						step.dependsOn.every((dep) => completed.has(dep)),
+					(step) => !completed.has(step.id) && step.dependsOn.every((dep) => completed.has(dep)),
 				);
 
 				if (readySteps.length === 0 && completed.size < workflow.steps.length) {
@@ -541,9 +570,7 @@ export class Orchestrator extends EventEmitter {
 				}
 
 				// Execute ready steps in parallel
-				const results = await Promise.all(
-					readySteps.map((step) => this.executeStep(step, stepOutputs, execution)),
-				);
+				const results = await Promise.all(readySteps.map((step) => this.executeStep(step, stepOutputs, execution)));
 
 				// Process results
 				for (let i = 0; i < readySteps.length; i++) {
@@ -804,8 +831,12 @@ export class Orchestrator extends EventEmitter {
 			byStatus[agent.status] = (byStatus[agent.status] || 0) + 1;
 		}
 
-		const workflowCount = (this.db.prepare("SELECT COUNT(*) as count FROM orchestrator_workflows").get() as { count: number }).count;
-		const executionCount = (this.db.prepare("SELECT COUNT(*) as count FROM orchestrator_executions").get() as { count: number }).count;
+		const workflowCount = (
+			this.db.prepare("SELECT COUNT(*) as count FROM orchestrator_workflows").get() as { count: number }
+		).count;
+		const executionCount = (
+			this.db.prepare("SELECT COUNT(*) as count FROM orchestrator_executions").get() as { count: number }
+		).count;
 
 		const delegationStats = this.db
 			.prepare(

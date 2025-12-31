@@ -23,21 +23,16 @@
  */
 
 import { EventEmitter } from "events";
-import type { AgentDomain } from "./agentic-properties.js";
 import {
-	type ConsensusProposal,
 	type ConsensusResult,
 	createConsensusProposal,
 	createSwarmAgent,
-	createTaskRequest,
 	getSwarmCoordinator,
 	type SwarmAgent,
-	SwarmCoordinator,
-	type SwarmMessage,
+	type SwarmCoordinator,
 	type SwarmRole,
-	type TaskRequest,
-	type TaskResponse,
 } from "./agent-swarm.js";
+import type { AgentDomain } from "./agentic-properties.js";
 import { checkAllSDKs, getBestSDK, runWithBestSDK, type SDKStatus, type UnifiedResult } from "./unified-sdk.js";
 
 // ============================================================================
@@ -198,7 +193,7 @@ export class CrossPlatformSwarm extends EventEmitter {
 
 		// Create default agents for each platform
 		const defaultAgents = createPlatformAgentSet();
-		for (const [platform, agent] of defaultAgents) {
+		for (const [_platform, agent] of defaultAgents) {
 			await this.registerAgent(agent);
 		}
 
@@ -262,7 +257,8 @@ export class CrossPlatformSwarm extends EventEmitter {
 
 		try {
 			// Determine target platforms
-			const targetPlatforms = task.targetPlatforms || (["discord", "slack", "telegram", "whatsapp"] as SwarmPlatform[]);
+			const targetPlatforms =
+				task.targetPlatforms || (["discord", "slack", "telegram", "whatsapp"] as SwarmPlatform[]);
 
 			// If consensus required, run consensus first
 			let consensus: ConsensusResult | undefined;
@@ -283,7 +279,7 @@ export class CrossPlatformSwarm extends EventEmitter {
 
 				try {
 					// Select SDK based on agent preference or auto-select
-					const sdk = agent.sdk === "auto" ? await this.selectBestSdk(task) : agent.sdk;
+					const _sdk = agent.sdk === "auto" ? await this.selectBestSdk(task) : agent.sdk;
 
 					// Build platform-specific prompt
 					const prompt = this.buildPlatformPrompt(task, platform, consensus);
@@ -396,7 +392,13 @@ export class CrossPlatformSwarm extends EventEmitter {
 		}
 
 		// Return by role priority: leader > coordinator > specialist > worker
-		const rolePriority: Record<SwarmRole, number> = { leader: 4, coordinator: 3, specialist: 2, worker: 1, observer: 0 };
+		const rolePriority: Record<SwarmRole, number> = {
+			leader: 4,
+			coordinator: 3,
+			specialist: 2,
+			worker: 1,
+			observer: 0,
+		};
 		return activeAgents.sort((a, b) => rolePriority[b.role] - rolePriority[a.role])[0];
 	}
 

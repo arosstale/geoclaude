@@ -244,10 +244,7 @@ function getStateDefinition<TContext>(
 /**
  * Check if state is a final state
  */
-function isFinalState<TContext>(
-	states: Record<string, StateDefinition<TContext>>,
-	value: StateValue,
-): boolean {
+function isFinalState<TContext>(states: Record<string, StateDefinition<TContext>>, value: StateValue): boolean {
 	if (typeof value === "string") {
 		const state = getStateDefinition(states, value);
 		return state?.type === "final";
@@ -603,7 +600,7 @@ export class StateMachine<TContext = Record<string, unknown>> extends EventEmitt
 		event: StateMachineEvent,
 	): { target: string; actions?: TransitionAction<TContext>[] } | null {
 		// Check global handlers first
-		if (this.config.on && this.config.on[event.type]) {
+		if (this.config.on?.[event.type]) {
 			const globalTransition = this.evaluateTransition(this.config.on[event.type], event);
 			if (globalTransition) {
 				return globalTransition;
@@ -633,7 +630,7 @@ export class StateMachine<TContext = Record<string, unknown>> extends EventEmitt
 			}
 
 			// Check state's own transitions
-			if (stateDef.on && stateDef.on[event.type]) {
+			if (stateDef.on?.[event.type]) {
 				return this.evaluateTransition(stateDef.on[event.type], event);
 			}
 		} else {
@@ -729,7 +726,7 @@ export class StateMachine<TContext = Record<string, unknown>> extends EventEmitt
 			const historyValue = this.stateHistory.get(parentPath);
 
 			if (historyValue) {
-				return isDeep ? historyValue : (typeof historyValue === "string" ? historyValue : parentPath);
+				return isDeep ? historyValue : typeof historyValue === "string" ? historyValue : parentPath;
 			}
 
 			// Fall back to initial state of parent
@@ -1104,20 +1101,18 @@ export function isStateMachine<TContext>(value: unknown): value is StateMachine<
 /**
  * Create a state machine from a simple definition object
  */
-export function defineStateMachine<TContext = Record<string, unknown>>(
-	definition: {
-		id: string;
-		initial: string;
-		states: Record<
-			string,
-			{
-				on?: Record<string, string>;
-				final?: boolean;
-			}
-		>;
-		context?: TContext;
-	},
-): StateMachine<TContext> {
+export function defineStateMachine<TContext = Record<string, unknown>>(definition: {
+	id: string;
+	initial: string;
+	states: Record<
+		string,
+		{
+			on?: Record<string, string>;
+			final?: boolean;
+		}
+	>;
+	context?: TContext;
+}): StateMachine<TContext> {
 	const states: Record<string, StateDefinition<TContext>> = {};
 
 	for (const [name, def] of Object.entries(definition.states)) {

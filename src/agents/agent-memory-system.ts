@@ -10,8 +10,8 @@
  * Uses SQLite for durability, enables agents to learn from experience.
  */
 
-import { EventEmitter } from "events";
 import Database from "better-sqlite3";
+import { EventEmitter } from "events";
 
 // =============================================================================
 // Types
@@ -216,9 +216,9 @@ export class AgentMemorySystem extends EventEmitter {
 	rateTask(taskId: string, quality: number): void {
 		this.db.prepare("UPDATE task_records SET output_quality = ? WHERE id = ?").run(quality, taskId);
 
-		const record = this.db
-			.prepare("SELECT agent_id FROM task_records WHERE id = ?")
-			.get(taskId) as { agent_id: string } | undefined;
+		const record = this.db.prepare("SELECT agent_id FROM task_records WHERE id = ?").get(taskId) as
+			| { agent_id: string }
+			| undefined;
 
 		if (record) {
 			// Update quality in performance cache
@@ -432,9 +432,7 @@ export class AgentMemorySystem extends EventEmitter {
 			.get() as { total: number; successes: number; avg_latency: number; avg_quality: number };
 
 		const agentCount = (
-			this.db
-				.prepare("SELECT COUNT(DISTINCT agent_id) as count FROM agent_performance")
-				.get() as { count: number }
+			this.db.prepare("SELECT COUNT(DISTINCT agent_id) as count FROM agent_performance").get() as { count: number }
 		).count;
 
 		const insightCount = (

@@ -22,14 +22,7 @@ import { EventEmitter } from "events";
 // Types
 // =============================================================================
 
-export type HookType =
-	| "beforeTool"
-	| "afterTool"
-	| "beforeLLM"
-	| "afterLLM"
-	| "beforeTask"
-	| "afterTask"
-	| "onError";
+export type HookType = "beforeTool" | "afterTool" | "beforeLLM" | "afterLLM" | "beforeTask" | "afterTask" | "onError";
 
 export type HookPriority = "first" | "high" | "normal" | "low" | "last";
 
@@ -80,8 +73,8 @@ export interface ErrorHookContext extends HookContext {
 export type AnyHookContext = ToolHookContext | LLMHookContext | TaskHookContext | ErrorHookContext;
 
 export type HookHandler<T extends AnyHookContext = AnyHookContext> = (
-	context: T
-) => Promise<T | void> | T | void;
+	context: T,
+) => Promise<T | undefined> | T | undefined;
 
 export interface Hook<T extends AnyHookContext = AnyHookContext> {
 	id: string;
@@ -297,11 +290,11 @@ export class HooksSystem extends EventEmitter {
 		return currentContext;
 	}
 
-	private async executeHook<T extends AnyHookContext>(hook: Hook<T>, context: T): Promise<T | void> {
+	private async executeHook<T extends AnyHookContext>(hook: Hook<T>, context: T): Promise<T | undefined> {
 		return Promise.race([
 			hook.handler(context),
 			new Promise<never>((_, reject) =>
-				setTimeout(() => reject(new Error(`Hook ${hook.name} timed out`)), hook.timeout)
+				setTimeout(() => reject(new Error(`Hook ${hook.name} timed out`)), hook.timeout),
 			),
 		]);
 	}
@@ -310,11 +303,7 @@ export class HooksSystem extends EventEmitter {
 	// Convenience Methods for Wrapping
 	// ---------------------------------------------------------------------------
 
-	async wrapTool<T>(
-		toolName: string,
-		params: Record<string, unknown>,
-		executor: () => Promise<T>
-	): Promise<T> {
+	async wrapTool<T>(toolName: string, params: Record<string, unknown>, executor: () => Promise<T>): Promise<T> {
 		// Before hook
 		const beforeContext = await this.run<ToolHookContext>("beforeTool", {
 			type: "beforeTool",
@@ -358,11 +347,7 @@ export class HooksSystem extends EventEmitter {
 		return result!;
 	}
 
-	async wrapLLM<T extends string>(
-		model: string,
-		prompt: string,
-		executor: () => Promise<T>
-	): Promise<T> {
+	async wrapLLM<T extends string>(model: string, prompt: string, executor: () => Promise<T>): Promise<T> {
 		// Before hook
 		const beforeContext = await this.run<LLMHookContext>("beforeLLM", {
 			type: "beforeLLM",
@@ -401,11 +386,7 @@ export class HooksSystem extends EventEmitter {
 		return response!;
 	}
 
-	async wrapTask<T>(
-		taskId: string,
-		task: string,
-		executor: () => Promise<T>
-	): Promise<T> {
+	async wrapTask<T>(taskId: string, task: string, executor: () => Promise<T>): Promise<T> {
 		// Before hook
 		const beforeContext = await this.run<TaskHookContext>("beforeTask", {
 			type: "beforeTask",
@@ -469,12 +450,13 @@ export class HooksSystem extends EventEmitter {
 	static createLoggingHook(type: HookType, logger: (msg: string) => void): HookHandler {
 		return (context) => {
 			logger(`[${type}] ${context.name} at ${new Date(context.timestamp).toISOString()}`);
+			return context;
 		};
 	}
 
 	static createValidationHook<T extends AnyHookContext>(
 		validator: (context: T) => boolean,
-		errorMessage: string
+		errorMessage: string,
 	): HookHandler<T> {
 		return (context) => {
 			if (!validator(context)) {
@@ -485,10 +467,7 @@ export class HooksSystem extends EventEmitter {
 		};
 	}
 
-	static createRateLimitHook(
-		maxCalls: number,
-		windowMs: number
-	): { handler: HookHandler; reset: () => void } {
+	static createRateLimitHook(maxCalls: number, windowMs: number): { handler: HookHandler; reset: () => void } {
 		const calls: number[] = [];
 
 		return {
@@ -516,10 +495,7 @@ export class HooksSystem extends EventEmitter {
 		};
 	}
 
-	static createRetryHook(
-		maxRetries: number,
-		delayMs: number
-	): HookHandler<ErrorHookContext> {
+	static createRetryHook(maxRetries: number, delayMs: number): HookHandler<ErrorHookContext> {
 		const retryCounts = new Map<string, number>();
 
 		return async (context) => {
@@ -541,7 +517,7 @@ export class HooksSystem extends EventEmitter {
 	}
 
 	static createTransformHook<T extends ToolHookContext>(
-		transformer: (params: Record<string, unknown>) => Record<string, unknown>
+		transformer: (params: Record<string, unknown>) => Record<string, unknown>,
 	): HookHandler<T> {
 		return (context) => {
 			context.params = transformer(context.params);
@@ -562,13 +538,7 @@ export class HooksSystem extends EventEmitter {
 		});
 	}
 
-	private updateStats(
-		hookId: string,
-		success: boolean,
-		failure: boolean,
-		abort: boolean,
-		duration: number
-	): void {
+	private updateStats(hookId: string, success: boolean, failure: boolean, abort: boolean, duration: number): void {
 		if (!this.config.enableStats) return;
 
 		const stats = this.stats.get(hookId);
@@ -578,8 +548,7 @@ export class HooksSystem extends EventEmitter {
 		if (success) stats.successes++;
 		if (failure) stats.failures++;
 		if (abort) stats.aborts++;
-		stats.avgDuration =
-			(stats.avgDuration * (stats.invocations - 1) + duration) / stats.invocations;
+		stats.avgDuration = (stats.avgDuration * (stats.invocations - 1) + duration) / stats.invocations;
 		stats.lastInvoked = Date.now();
 	}
 

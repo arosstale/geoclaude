@@ -314,9 +314,7 @@ export class ExperienceReplay extends EventEmitter {
 	}
 
 	private recalculateClusterStats(cluster: PatternCluster): void {
-		const experiences = cluster.experiences
-			.map((id) => this.experiences.get(id))
-			.filter((e): e is Experience => !!e);
+		const experiences = cluster.experiences.map((id) => this.experiences.get(id)).filter((e): e is Experience => !!e);
 
 		if (experiences.length === 0) return;
 
@@ -371,9 +369,7 @@ export class ExperienceReplay extends EventEmitter {
 			return Array.from(this.experiences.values());
 		}
 
-		return [...candidateIds]
-			.map((id) => this.experiences.get(id))
-			.filter((e): e is Experience => !!e);
+		return [...candidateIds].map((id) => this.experiences.get(id)).filter((e): e is Experience => !!e);
 	}
 
 	private indexExperience(experience: Experience): void {
@@ -410,7 +406,7 @@ export class ExperienceReplay extends EventEmitter {
 		if (experience.lastUsed) {
 			const recency = Date.now() - experience.lastUsed;
 			const daysSinceUse = recency / (1000 * 60 * 60 * 24);
-			relevance *= Math.pow(this.config.decayRate, daysSinceUse);
+			relevance *= this.config.decayRate ** daysSinceUse;
 		}
 
 		// Boost for high usage count
@@ -419,7 +415,7 @@ export class ExperienceReplay extends EventEmitter {
 		return Math.min(1, relevance);
 	}
 
-	private assessApplicability(experience: Experience, query: ExperienceQuery): string {
+	private assessApplicability(experience: Experience, _query: ExperienceQuery): string {
 		if (experience.score >= 0.9 && experience.success) {
 			return "Highly applicable - proven successful pattern";
 		} else if (experience.score >= 0.7) {
@@ -484,7 +480,7 @@ export class ExperienceReplay extends EventEmitter {
 		if (experience.lastUsed) {
 			const recency = Date.now() - experience.lastUsed;
 			const daysSinceUse = recency / (1000 * 60 * 60 * 24);
-			value *= Math.pow(this.config.decayRate, daysSinceUse);
+			value *= this.config.decayRate ** daysSinceUse;
 		}
 
 		return value;

@@ -301,7 +301,7 @@ export class ContextFusion extends EventEmitter {
 	private applyTokenBudget(
 		items: ContextItem[],
 		maxTokens: number,
-		options: Partial<FusionConfig>
+		_options: Partial<FusionConfig>,
 	): { items: ContextItem[]; truncated: boolean; totalTokens: number } {
 		const result: ContextItem[] = [];
 		let totalTokens = 0;
@@ -321,7 +321,7 @@ export class ContextFusion extends EventEmitter {
 					const truncatedContent = this.truncateToTokens(item.content, remainingTokens);
 					result.push({
 						...item,
-						content: truncatedContent + "...",
+						content: `${truncatedContent}...`,
 						tokens: remainingTokens,
 					});
 					totalTokens = maxTokens;
@@ -347,7 +347,7 @@ export class ContextFusion extends EventEmitter {
 
 			return {
 				...item,
-				content: item.content.slice(0, truncateAt) + "...",
+				content: `${item.content.slice(0, truncateAt)}...`,
 				tokens: this.estimateTokens(item.content.slice(0, truncateAt)),
 			};
 		});
@@ -369,9 +369,7 @@ export class ContextFusion extends EventEmitter {
 	private async withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 		return Promise.race([
 			promise,
-			new Promise<T>((_, reject) =>
-				setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms)
-			),
+			new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms)),
 		]);
 	}
 

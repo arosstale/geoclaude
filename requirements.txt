@@ -1,0 +1,12 @@
+# Python dependencies for Discord Bot agents
+# Install with: pip install -r requirements.txt
+
+# GEPA - Genetic-Pareto prompt optimization
+# Used by: src/agents/gepa-runner.py
+# Paper: https://arxiv.org/abs/2507.19457
+gepa>=0.1.0
+
+# Note: DGM and OpenEvolve runners use only Python standard library
+# No additional dependencies required for:
+# - src/agents/dgm-runner.py
+# - src/agents/openevolve-runner.py
