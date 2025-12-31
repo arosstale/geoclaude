@@ -30,6 +30,13 @@ export const KNOWLEDGE_PATHS = {
 	piMonoBot: "/opt/pi-mono/packages/discord-bot",
 	piMonoSrc: "/opt/pi-mono/packages/discord-bot/src",
 
+	// Local Knowledge Docs (architecture, patterns, research)
+	localKnowledge: new URL(".", import.meta.url).pathname,
+	piMonoArchitecture: new URL("./pi-mono-architecture.md", import.meta.url).pathname,
+
+	// Agent Expertise
+	expertise: new URL("../agents/expertise", import.meta.url).pathname,
+
 	// Skills
 	skills: "/opt/discord-bot-data/skills",
 
@@ -236,6 +243,50 @@ export class KnowledgeBase {
 			return "Moon Dev architecture document not found";
 		}
 		return this.readFile(moonDevPath);
+	}
+
+	/**
+	 * Get Pi-Mono architecture documentation
+	 */
+	async getPiMonoArchitecture(): Promise<string> {
+		const archPath = KNOWLEDGE_PATHS.piMonoArchitecture;
+		if (!existsSync(archPath)) {
+			return "Pi-Mono architecture document not found";
+		}
+		return this.readFile(archPath);
+	}
+
+	/**
+	 * Get agent expertise documentation
+	 */
+	async getExpertise(domain: string): Promise<string | null> {
+		const expertisePath = join(KNOWLEDGE_PATHS.expertise, `${domain}.md`);
+		if (!existsSync(expertisePath)) {
+			// Try with underscores
+			const underscorePath = join(KNOWLEDGE_PATHS.expertise, `${domain.replace(/-/g, "_")}.md`);
+			if (existsSync(underscorePath)) {
+				return this.readFile(underscorePath);
+			}
+			return null;
+		}
+		return this.readFile(expertisePath);
+	}
+
+	/**
+	 * List all available expertise domains
+	 */
+	async listExpertiseDomains(): Promise<string[]> {
+		if (!existsSync(KNOWLEDGE_PATHS.expertise)) return [];
+		const files = await this.listFiles(KNOWLEDGE_PATHS.expertise, { extensions: [".md"] });
+		return files.map((f) => f.name.replace(".md", "")).filter((n) => !n.startsWith("test_"));
+	}
+
+	/**
+	 * Get all local knowledge documents
+	 */
+	async listLocalKnowledge(): Promise<KnowledgeFile[]> {
+		if (!existsSync(KNOWLEDGE_PATHS.localKnowledge)) return [];
+		return this.listFiles(KNOWLEDGE_PATHS.localKnowledge, { extensions: [".md"] });
 	}
 
 	/**
