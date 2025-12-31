@@ -8924,14 +8924,27 @@ async function main() {
 		setDiscordClient(client);
 
 		// Register slash commands globally
+		// Disabled experimental commands to stay under Discord's 100 command limit
+		const DISABLED_COMMANDS = new Set([
+			"arc-agi", // Experimental ARC-AGI solver
+			"vedic", // Experimental quantum system
+			"gepa", // Genetic programming agent
+			"dgm", // Directed graph model
+			"ctm", // Conscious Turing machine
+			"evolve", // Evolution-based optimization
+		]);
+
+		const enabledCommands = slashCommands.filter((cmd) => !DISABLED_COMMANDS.has(cmd.name));
+		logInfo(`Filtering commands: ${slashCommands.length} total, ${enabledCommands.length} enabled, ${DISABLED_COMMANDS.size} disabled`);
+
 		try {
 			const rest = new REST({ version: "10" }).setToken(DISCORD_BOT_TOKEN!);
 
 			logInfo("Registering slash commands...");
 			await rest.put(Routes.applicationCommands(client.user!.id), {
-				body: slashCommands.map((cmd) => cmd.toJSON()),
+				body: enabledCommands.map((cmd) => cmd.toJSON()),
 			});
-			logInfo(`Registered ${slashCommands.length} slash commands: /${slashCommands.map((c) => c.name).join(", /")}`);
+			logInfo(`Registered ${enabledCommands.length} slash commands: /${enabledCommands.map((c) => c.name).join(", /")}`);
 		} catch (error) {
 			logError("Failed to register slash commands", error instanceof Error ? error.message : String(error));
 		}
