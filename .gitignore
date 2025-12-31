@@ -45,3 +45,9 @@ __pycache__/
 # OS
 .DS_Store
 Thumbs.db
+
+# Backups
+*.backup
+*.backup2
+*.backup-*
+*.bak-*
